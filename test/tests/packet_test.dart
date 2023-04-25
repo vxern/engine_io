@@ -81,7 +81,7 @@ void main() {
           heartbeatInterval: Duration.zero,
           heartbeatTimeout: Duration.zero,
           maximumChunkBytes: 1024 * 128,
-        ).toJson(),
+        ).encoded,
         returnsNormally,
       );
       expect(

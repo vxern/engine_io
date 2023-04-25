@@ -42,6 +42,18 @@ class OpenPacket extends Packet {
     required this.maximumChunkBytes,
   }) : super(type: PacketType.open);
 
+  @override
+  String get encoded => json.encode(
+        <String, dynamic>{
+          _sessionIdentifier: sessionIdentifier,
+          _availableConnectionUpgrades:
+              availableConnectionUpgrades.map((type) => type.name).toList(),
+          _heartbeatInterval: heartbeatInterval.inMilliseconds,
+          _heartbeatTimeout: heartbeatTimeout.inMilliseconds,
+          _maximumChunkBytes: maximumChunkBytes,
+        },
+      );
+
   /// Decodes `data`, creating an instance of `OpenPacket`.
   ///
   /// Throws a `FormatException` if:
@@ -79,14 +91,4 @@ class OpenPacket extends Packet {
       throw FormatException('Invalid packet data.', data);
     }
   }
-
-  @override
-  String toJson() => json.encode(<String, dynamic>{
-        _sessionIdentifier: sessionIdentifier,
-        _availableConnectionUpgrades:
-            availableConnectionUpgrades.map((type) => type.name).toList(),
-        _heartbeatInterval: heartbeatInterval.inMilliseconds,
-        _heartbeatTimeout: heartbeatTimeout.inMilliseconds,
-        _maximumChunkBytes: maximumChunkBytes,
-      });
 }

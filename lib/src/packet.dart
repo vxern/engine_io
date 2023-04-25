@@ -67,6 +67,18 @@ enum PacketType {
   const PacketType({required this.id});
 }
 
+/// Contains well-defined packet contents.
+@sealed
+class PacketContents {
+  /// Represents no content.
+  static const empty = '';
+
+  /// Applies to packets of type `PacketType.ping` and `PacketType.pong` when
+  /// used by the client to ensure the connection is still alive before
+  /// attempting to upgrade it.
+  static const probe = 'probe';
+}
+
 /// Represents a unit of data passed between parties.
 @immutable
 @sealed
@@ -77,14 +89,6 @@ abstract class Packet {
   /// Creates an instance of `Packet`.
   const Packet({required this.type});
 
-  /// Encodes this packet.
-  @protected
-  String encode() {
-    final head = type.id;
-    final body = toJson();
-    return '$head$body';
-  }
-
-  /// Encodes this packet as a JSON object in string form.
-  String toJson();
+  /// Gets the packet in its encoded format.
+  String get encoded => PacketContents.empty;
 }

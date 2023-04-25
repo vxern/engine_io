@@ -11,7 +11,4 @@ import 'package:engine_io_dart/src/packet.dart';
 class ClosePacket extends Packet {
   /// Creates an instance of `ClosePacket`.
   const ClosePacket() : super(type: PacketType.close);
-
-  @override
-  String toJson() => '';
 }
