@@ -17,15 +17,31 @@ enum PacketType {
 
   /// Used in the heartbeat mechanism.
   ///
-  /// The server attempts to verify that the connection is still operational
+  /// This packet is used in two cases:
+  /// - The server attempts to verify that the connection is still operational
   /// through asking the client to respond with a packet of type
   /// `PacketType.pong`.
+  ///
+  ///   ❗ In this case, the body of the packet is blank.
+  /// - The client attempts to verify that the connection is still operational
+  /// before asking to upgrade the connection to a different protocol.
+  ///
+  ///   ❗ In this case, the body of the packet is 'probe'.
   ping(id: 2),
 
   /// Used in the heartbeat mechanism.
   ///
-  /// The client, upon having received a packet of type `PacketType.ping`,
-  /// informs the server that the connection is still operational.
+  /// This packet is used in two cases:
+  /// - The client, upon having received a packet of type `PacketType.ping`,
+  /// uses this packet to inform the server that the connection is still
+  /// operational.
+  ///
+  ///   ❗ In this case, the body of the packet is blank.
+  /// - The server, upon having received a packet of type `PacketType.ping`,
+  /// uses this packet to inform the client that the connection is still
+  /// operational.
+  ///
+  ///   ❗ In this case, the body of the packet is 'probe'.
   pong(id: 3),
 
   /// Used in transferring data or messages.
