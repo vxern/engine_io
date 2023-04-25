@@ -1,3 +1,5 @@
+import 'package:meta/meta.dart';
+
 /// Represents the type of a packet transmitted between the two parties, client
 /// and server.
 enum PacketType {
@@ -47,4 +49,26 @@ enum PacketType {
 
   /// Creates an instance of `PacketType`.
   const PacketType({required this.id});
+}
+
+/// Represents a unit of data passed between parties.
+@immutable
+@sealed
+abstract class Packet {
+  /// The type of this packet.
+  final PacketType type;
+
+  /// Creates an instance of `Packet`.
+  const Packet({required this.type});
+
+  /// Encodes this packet.
+  @protected
+  String encode() {
+    final head = type.id;
+    final body = toJson();
+    return '$head$body';
+  }
+
+  /// Encodes this packet as a JSON object in string form.
+  String toJson();
 }
