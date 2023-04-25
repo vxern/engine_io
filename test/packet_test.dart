@@ -1,10 +1,10 @@
+import 'dart:convert';
+
 import 'package:test/test.dart';
 
 import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:engine_io_dart/src/packet.dart';
 import 'package:engine_io_dart/src/transport.dart';
-
-import '../samples.dart';
 
 void main() {
   group('The package guarantees packet IDs', () {
@@ -29,9 +29,17 @@ void main() {
   group('The package correctly decodes', () {
     group('open packets', () {
       test(
-        'with empty data.',
+        'with an empty content.',
         () => expect(
-          () => OpenPacket.fromJson(emptyMap),
+          () => OpenPacket.decode(PacketContents.empty),
+          throwsFormatException,
+        ),
+      );
+
+      test(
+        'with a non-map content type.',
+        () => expect(
+          () => OpenPacket.decode(json.encode(<dynamic>[])),
           throwsFormatException,
         ),
       );
@@ -39,23 +47,27 @@ void main() {
       test(
         'with invalid data.',
         () => expect(
-          () => OpenPacket.fromJson(const <String, dynamic>{'sid': 10}),
+          () => OpenPacket.decode(
+            json.encode(const <String, dynamic>{'sid': 10}),
+          ),
           throwsFormatException,
         ),
       );
 
       test(
-        'that is valid.',
+        'that are valid.',
         () {
           late final OpenPacket packet;
           expect(
-            () => packet = OpenPacket.fromJson(const <String, dynamic>{
-              'sid': 'session_identifier',
-              'upgrades': <String>['one', 'two'],
-              'pingInterval': 1000 * 5,
-              'pingTimeout': 1000 * 2,
-              'maxPayload': 1024 * 128,
-            }),
+            () => packet = OpenPacket.decode(
+              json.encode(const <String, dynamic>{
+                'sid': 'session_identifier',
+                'upgrades': <String>['one', 'two'],
+                'pingInterval': 1000 * 5,
+                'pingTimeout': 1000 * 2,
+                'maxPayload': 1024 * 128,
+              }),
+            ),
             returnsNormally,
           );
           expect(packet.sessionIdentifier, equals('session_identifier'));

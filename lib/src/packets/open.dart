@@ -54,12 +54,18 @@ class OpenPacket extends Packet {
         },
       );
 
-  /// Decodes `data`, creating an instance of `OpenPacket`.
+  /// Decodes `content`, creating an instance of `OpenPacket`.
   ///
   /// Throws a `FormatException` if:
-  /// - The data is not in valid.
+  /// - The content is not a valid JSON object.
+  /// - The content is not a map object.
   /// - A connection type is not supported.
-  factory OpenPacket.fromJson(Map<String, dynamic> data) {
+  factory OpenPacket.decode(String content) {
+    final dynamic data = json.decode(content);
+    if (data is! Map) {
+      throw FormatException('Packet data must be a map.', data);
+    }
+
     try {
       final sessionIdentifier = data[_sessionIdentifier] as String;
       final availableConnectionUpgrades = () {
@@ -88,7 +94,7 @@ class OpenPacket extends Packet {
         maximumChunkBytes: maximumChunkBytes,
       );
     } on TypeError {
-      throw FormatException('Invalid packet data.', data);
+      throw FormatException('Invalid packet data.', content);
     }
   }
 }
