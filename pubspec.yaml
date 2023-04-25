@@ -11,3 +11,10 @@ issue_tracker: https://github.com/wordcollector/engine_io_dart/issues
 
 environment:
   sdk: '>=2.19.0 <3.0.0'
+
+dependencies:
+  meta: ^1.9.1 # Static code analysis.
+
+dev_dependencies:
+  test: ^1.24.2 # Testing.
+  words: ^0.2.0 # Lints.
