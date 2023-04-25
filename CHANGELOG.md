@@ -4,3 +4,4 @@
 - Define the `Packet` class as the super-type of all packets.
 - Model packets:
   - `open`: `OpenPacket`
+  - `close`: `ClosePacket`
