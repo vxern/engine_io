@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:test/test.dart';
 
 import 'package:engine_io_dart/src/packets/open.dart';
+import 'package:engine_io_dart/src/packets/ping.dart';
 import 'package:engine_io_dart/src/packet.dart';
 import 'package:engine_io_dart/src/transport.dart';
 
@@ -55,7 +56,7 @@ void main() {
       );
 
       test(
-        'that are valid.',
+        'with valid data.',
         () {
           late final OpenPacket packet;
           expect(
@@ -78,6 +79,36 @@ void main() {
           expect(packet.heartbeatInterval.inMilliseconds, equals(1000 * 5));
           expect(packet.heartbeatTimeout.inMilliseconds, equals(1000 * 2));
           expect(packet.maximumChunkBytes, equals(1024 * 128));
+        },
+      );
+    });
+
+    group('ping packets', () {
+      test(
+        'with an empty content.',
+        () => expect(
+          () => PingPacket.decode(PacketContents.empty),
+          returnsNormally,
+        ),
+      );
+
+      test(
+        'with an unknown content.',
+        () => expect(
+          () => PingPacket.decode('1234567890'),
+          throwsFormatException,
+        ),
+      );
+
+      test(
+        "with content set to 'probe'.",
+        () {
+          late final PingPacket packet;
+          expect(
+            () => packet = PingPacket.decode(PacketContents.probe),
+            returnsNormally,
+          );
+          expect(packet.isProbe, equals(true));
         },
       );
     });
@@ -108,6 +139,26 @@ void main() {
           '}',
         ),
       );
+    });
+
+    group('ping packets', () {
+      test('with probe.', () {
+        late final String encoded;
+        expect(
+          () => encoded = const PingPacket(isProbe: true).encoded,
+          returnsNormally,
+        );
+        expect(encoded, equals(PacketContents.probe));
+      });
+
+      test('without probe.', () {
+        late final String encoded;
+        expect(
+          () => encoded = const PingPacket().encoded,
+          returnsNormally,
+        );
+        expect(encoded, equals(PacketContents.empty));
+      });
     });
   });
 }
