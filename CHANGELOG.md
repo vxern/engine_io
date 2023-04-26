@@ -7,3 +7,4 @@
   - `close`: `ClosePacket`
   - `ping`: `PingPacket` : `ProbePacket`
   - `pong`: `PongPacket` : `ProbePacket`
+  - `upgrade`: `UpgradePacket`
