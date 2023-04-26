@@ -7,6 +7,6 @@
   - `close`: `ClosePacket`
   - `ping`: `PingPacket` : `ProbePacket`
   - `pong`: `PongPacket` : `ProbePacket`
-  - `message`: `TextMessagePacket` : `MessagePacket`
+  - `message`: `TextMessagePacket`, `BinaryMessagePacket` : `MessagePacket`
   - `upgrade`: `UpgradePacket`
   - `noop`: `NoopPacket`

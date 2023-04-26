@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:engine_io_dart/src/packets/message.dart';
 import 'package:engine_io_dart/src/packets/pong.dart';
@@ -146,17 +147,44 @@ void main() {
     });
 
     group('message packets', () {
-      test(
-        '(text).',
-        () {
-          late final MessagePacket packet;
-          expect(
-            () => packet = TextMessagePacket.decode('sample_content'),
+      test('(text).', () {
+        late final TextMessagePacket packet;
+        expect(
+          () => packet = TextMessagePacket.decode('sample_content'),
+          returnsNormally,
+        );
+        expect(packet.data, equals('sample_content'));
+      });
+
+      group('(binary)', () {
+        test(
+          'with an empty content.',
+          () => expect(
+            () => BinaryMessagePacket.decode(PacketContents.empty),
             returnsNormally,
-          );
-          expect(packet.data, equals('sample_content'));
-        },
-      );
+          ),
+        );
+
+        test(
+          'with an invalid content.',
+          () => expect(
+            () => BinaryMessagePacket.decode('not_base64'),
+            throwsFormatException,
+          ),
+        );
+
+        test(
+          'with a valid base64-encoded content.',
+          () {
+            late final BinaryMessagePacket packet;
+            expect(
+              () => packet = BinaryMessagePacket.decode('Y29udGVudA=='),
+              returnsNormally,
+            );
+            expect(packet.encoded, equals('Y29udGVudA=='));
+          },
+        );
+      });
     });
   });
 
@@ -228,7 +256,7 @@ void main() {
     });
 
     group('message packets', () {
-      test('(text)', () {
+      test('(text).', () {
         late final String encoded;
         expect(
           () =>
@@ -236,6 +264,17 @@ void main() {
           returnsNormally,
         );
         expect(encoded, equals('sample_content'));
+      });
+
+      test('(binary)', () {
+        late final String encoded;
+        expect(
+          () => encoded = BinaryMessagePacket(
+            data: Uint8List.fromList([111, 121, 131, 141]),
+          ).encoded,
+          returnsNormally,
+        );
+        expect(encoded, equals('b3mDjQ=='));
       });
     });
   });
