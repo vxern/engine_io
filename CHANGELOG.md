@@ -10,3 +10,6 @@
   - `message`: `TextMessagePacket`, `BinaryMessagePacket` : `MessagePacket`
   - `upgrade`: `UpgradePacket`
   - `noop`: `NoopPacket`
+- [Work in progress] Define the available connection types in the
+  `ConnectionType` enum.
+- [Work in progress] Define the `Server` class.
