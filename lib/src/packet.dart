@@ -57,7 +57,8 @@ enum PacketType {
   /// Used in the upgrade process.
   ///
   /// During an upgrade to a new connection, the server responds to any
-  /// remaining, pending requests on the old connection.
+  /// remaining, pending requests on the old connection with a packet of type
+  /// `PacketType.noop`.
   noop(id: 6);
 
   /// The ID representing a given packet type.

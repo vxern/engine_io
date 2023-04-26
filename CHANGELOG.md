@@ -8,3 +8,4 @@
   - `ping`: `PingPacket` : `ProbePacket`
   - `pong`: `PongPacket` : `ProbePacket`
   - `upgrade`: `UpgradePacket`
+  - `noop`: `NoopPacket`
