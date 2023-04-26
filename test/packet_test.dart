@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:engine_io_dart/src/packets/message.dart';
 import 'package:engine_io_dart/src/packets/pong.dart';
 import 'package:test/test.dart';
 
@@ -143,6 +144,20 @@ void main() {
         },
       );
     });
+
+    group('message packets', () {
+      test(
+        '(text).',
+        () {
+          late final MessagePacket packet;
+          expect(
+            () => packet = TextMessagePacket.decode('sample_content'),
+            returnsNormally,
+          );
+          expect(packet.data, equals('sample_content'));
+        },
+      );
+    });
   });
 
   group('The package correctly encodes', () {
@@ -209,6 +224,18 @@ void main() {
           returnsNormally,
         );
         expect(encoded, equals(PacketContents.empty));
+      });
+    });
+
+    group('message packets', () {
+      test('(text)', () {
+        late final String encoded;
+        expect(
+          () =>
+              encoded = const TextMessagePacket(data: 'sample_content').encoded,
+          returnsNormally,
+        );
+        expect(encoded, equals('sample_content'));
       });
     });
   });
