@@ -17,19 +17,9 @@ import 'package:engine_io_dart/src/packet.dart';
 ///   ❗ In this case, the body of the packet is 'probe'.
 @immutable
 @sealed
-class PongPacket extends Packet {
-  /// Determines whether or not this is a probe packet.
-  final bool isProbe;
-
+class PongPacket extends ProbePacket {
   /// Creates an instance of `PongPacket`.
-  const PongPacket({this.isProbe = false})
-      : _content = isProbe ? PacketContents.probe : PacketContents.empty,
-        super(type: PacketType.pong);
-
-  final String _content;
-
-  @override
-  String get encoded => _content;
+  const PongPacket({super.isProbe = false}) : super(type: PacketType.pong);
 
   /// Decodes `content`, creating an instance of `PongPacket`.
   ///

@@ -5,5 +5,5 @@
 - Model packets:
   - `open`: `OpenPacket`
   - `close`: `ClosePacket`
-  - `ping`: `PingPacket`
-  - `pong`: `PongPacket`
+  - `ping`: `PingPacket` : `ProbePacket`
+  - `pong`: `PongPacket` : `ProbePacket`

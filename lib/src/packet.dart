@@ -92,3 +92,21 @@ abstract class Packet {
   /// Gets the packet in its encoded format.
   String get encoded => PacketContents.empty;
 }
+
+/// Represents a packet that serves as a probe to verify that a connection is
+/// still alive before attempting to upgrade.
+@immutable
+@sealed
+abstract class ProbePacket extends Packet {
+  /// Determines whether or not this is a probe packet.
+  final bool isProbe;
+
+  /// Creates an instance of `ProbePacket`.
+  const ProbePacket({required super.type, required this.isProbe})
+      : _content = isProbe ? PacketContents.probe : PacketContents.empty;
+
+  final String _content;
+
+  @override
+  String get encoded => _content;
+}
