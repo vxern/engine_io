@@ -6,3 +6,4 @@
   - `open`: `OpenPacket`
   - `close`: `ClosePacket`
   - `ping`: `PingPacket`
+  - `pong`: `PongPacket`

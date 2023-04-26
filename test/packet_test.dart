@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:engine_io_dart/src/packets/pong.dart';
 import 'package:test/test.dart';
 
 import 'package:engine_io_dart/src/packets/open.dart';
@@ -112,6 +113,36 @@ void main() {
         },
       );
     });
+
+    group('pong packets', () {
+      test(
+        'with an empty content.',
+        () => expect(
+          () => PongPacket.decode(PacketContents.empty),
+          returnsNormally,
+        ),
+      );
+
+      test(
+        'with an unknown content.',
+        () => expect(
+          () => PongPacket.decode('1234567890'),
+          throwsFormatException,
+        ),
+      );
+
+      test(
+        "with content set to 'probe'.",
+        () {
+          late final PongPacket packet;
+          expect(
+            () => packet = PongPacket.decode(PacketContents.probe),
+            returnsNormally,
+          );
+          expect(packet.isProbe, equals(true));
+        },
+      );
+    });
   });
 
   group('The package correctly encodes', () {
@@ -155,6 +186,26 @@ void main() {
         late final String encoded;
         expect(
           () => encoded = const PingPacket().encoded,
+          returnsNormally,
+        );
+        expect(encoded, equals(PacketContents.empty));
+      });
+    });
+
+    group('pong packets', () {
+      test('with probe.', () {
+        late final String encoded;
+        expect(
+          () => encoded = const PongPacket(isProbe: true).encoded,
+          returnsNormally,
+        );
+        expect(encoded, equals(PacketContents.probe));
+      });
+
+      test('without probe.', () {
+        late final String encoded;
+        expect(
+          () => encoded = const PongPacket().encoded,
           returnsNormally,
         );
         expect(encoded, equals(PacketContents.empty));
