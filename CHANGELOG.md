@@ -12,4 +12,6 @@
   - `noop`: `NoopPacket`
 - [Work in progress] Define the available connection types in the
   `ConnectionType` enum.
-- [Work in progress] Define the `Server` class.
+- [Work in progress] Define the `Server` class:
+  - [Work in progress] Define the `ServerConfiguration` class to contain the
+    available configuration options for the server.

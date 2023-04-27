@@ -6,42 +6,91 @@ import 'package:engine_io_dart/src/server/server.dart';
 final url = Uri.http(InternetAddress.loopbackIPv4.address, '/');
 
 void main() {
-  final client = HttpClient();
+  late HttpClient client;
 
-  group('Server', () {
+  setUp(() => client = HttpClient());
+  tearDown(() async => client.close());
+
+  group('Server setup and disposal:', () {
     late final Server server;
 
     test(
-      'is set up.',
-      () => expect(
-        () async => server = await Server.bind(url),
-        returnsNormally,
+      'Server binds to a URL.',
+      () async => expect(
+        Server.bind(url).then((server_) => server = server_),
+        completes,
       ),
     );
 
     test(
-      'responds to HTTP requests.',
+      'Server is disposed of.',
       () async {
+        await expectLater(server.dispose(), completes);
+        expect(
+          client.postUrl(url).then((request) => request.close()),
+          throwsA(isA<SocketException>()),
+        );
+      },
+    );
+  });
+
+  test('Custom configuration is set.', () async {
+    const configuration = ServerConfiguration(path: 'custom-path/');
+
+    late final Server server;
+    await expectLater(
+      Server.bind(url, configuration: configuration)
+          .then((server_) => server = server_)
+          .then((server) => server.dispose()),
+      completes,
+    );
+
+    expect(server.configuration, equals(configuration));
+  });
+
+  group('Server', () {
+    late Server server;
+
+    setUp(() async => server = await Server.bind(url));
+    tearDown(() async => server.dispose());
+
+    test(
+      'rejects requests made to an invalid path.',
+      () async {
+        final urlWithInvalidPath =
+            Uri.http(InternetAddress.loopbackIPv4.address, '/invalid-path/');
+
         late final HttpClientResponse response;
         await expectLater(
           client
-              .postUrl(url)
+              .postUrl(urlWithInvalidPath)
+              .then((request) => request.close())
+              .then((response_) => response = response_),
+          completes,
+        );
+        expect(response.statusCode, equals(HttpStatus.forbidden));
+        expect(response.reasonPhrase, equals('Forbidden'));
+      },
+    );
+
+    test(
+      'accepts requests made to a valid path.',
+      () async {
+        final urlWithValidPath = Uri.http(
+          InternetAddress.loopbackIPv4.address,
+          '/${server.configuration.path}',
+        );
+
+        late final HttpClientResponse response;
+        await expectLater(
+          client
+              .postUrl(urlWithValidPath)
               .then((request) => request.close())
               .then((response_) => response = response_),
           completes,
         );
         expect(response.statusCode, equals(HttpStatus.ok));
-        expect(response.reasonPhrase, equals('ok'));
-      },
-    );
-    test(
-      'is disposed.',
-      () async {
-        await expectLater(server.dispose(), completes);
-        expect(
-          client.postUrl(url).then((request) => request.close()),
-          throwsA(isA<HttpException>()),
-        );
+        expect(response.reasonPhrase, equals('OK'));
       },
     );
   });
