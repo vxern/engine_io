@@ -70,8 +70,12 @@ class Server {
       return;
     }
 
-    // TODO(vxern): Ensure that HTTP requests that aren't GET or POST are
-    //  rejected and the connection is severed.
+    if (!allowedMethods.contains(request.method)) {
+      request.response
+        ..statusCode = HttpStatus.methodNotAllowed
+        ..close().ignore();
+      return;
+    }
 
     // TODO(vxern): Handle upgrade requests to WebSocket.
 

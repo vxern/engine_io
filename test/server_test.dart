@@ -117,5 +117,21 @@ void main() {
         );
       },
     );
+
+    test(
+      'rejects requests with an invalid HTTP method.',
+      () async {
+        late final HttpClientResponse response;
+        await expectLater(
+          client
+              .putUrl(url)
+              .then((request) => request.close())
+              .then((response_) => response = response_),
+          completes,
+        );
+        expect(response.statusCode, equals(HttpStatus.methodNotAllowed));
+        expect(response.reasonPhrase, equals('Method Not Allowed'));
+      },
+    );
   });
 }
