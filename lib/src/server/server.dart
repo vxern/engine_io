@@ -23,6 +23,11 @@ class Server {
   /// clients.
   final HttpServer httpServer;
 
+  /// The HTTP methods allowed for an engine.io server.
+  static const allowedMethods = {'GET', 'POST'};
+
+  static final _allowedMethodsString = allowedMethods.join(', ');
+
   bool _isDisposing = false;
 
   Server._construct({
@@ -51,6 +56,16 @@ class Server {
     if (request.uri.path != '/${configuration.path}') {
       request.response
         ..statusCode = HttpStatus.forbidden
+        ..close().ignore();
+      return;
+    }
+
+    if (request.method == 'OPTIONS') {
+      request.response
+        ..statusCode = HttpStatus.noContent
+        ..headers.add('Access-Control-Allow-Origin', '*')
+        ..headers.add('Access-Control-Allow-Methods', _allowedMethodsString)
+        ..headers.add('Access-Control-Max-Age', 60 * 60 * 24) // 24 hours
         ..close().ignore();
       return;
     }
