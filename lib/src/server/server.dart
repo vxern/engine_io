@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
@@ -16,6 +18,22 @@ class ServerConfiguration {
 /// The engine.io server.
 @sealed
 class Server {
+  /// The HTTP methods allowed for an engine.io server.
+  static const allowedMethods = {'GET', 'POST'};
+
+  /// HTTP methods concatenated to eliminate the need to concatenate them on
+  /// every preflight request.
+  static final _allowedMethodsString = allowedMethods.join(', ');
+
+  /// (Query parameter) The version of the engine.io protocol used.
+  static const _protocolVersion = 'EIO';
+
+  /// (Query parameter) The type of connection used or desired.
+  static const _connectionType = 'transport';
+
+  /// (Query parameter) The session identifier of a client.
+  static const _sessionIdentifier = 'sid';
+
   /// The configuration settings used to modify the server's behaviour.
   final ServerConfiguration configuration;
 
@@ -23,10 +41,8 @@ class Server {
   /// clients.
   final HttpServer httpServer;
 
-  /// The HTTP methods allowed for an engine.io server.
-  static const allowedMethods = {'GET', 'POST'};
-
-  static final _allowedMethodsString = allowedMethods.join(', ');
+  /// Manager responsible for handling clients connected to the server.
+  final ClientManager clientManager = ClientManager();
 
   bool _isDisposing = false;
 
@@ -56,6 +72,7 @@ class Server {
     if (request.uri.path != '/${configuration.path}') {
       request.response
         ..statusCode = HttpStatus.forbidden
+        ..reasonPhrase = 'Invalid path'
         ..close().ignore();
       return;
     }
@@ -77,6 +94,44 @@ class Server {
       return;
     }
 
+    final protocolVersion = request.uri.queryParameters[_protocolVersion];
+    final connectionType = request.uri.queryParameters[_connectionType];
+    final sessionIdentifier = request.uri.queryParameters[_sessionIdentifier];
+
+    if (protocolVersion == null || connectionType == null) {
+      request.response
+        ..statusCode = HttpStatus.badRequest
+        ..reasonPhrase =
+            '''Parameters '$_protocolVersion' and '$_connectionType' must be present in every query.'''
+        ..close().ignore();
+      return;
+    }
+
+    final ipAddress = request.connectionInfo?.remoteAddress.address;
+    final isConnected =
+        ipAddress != null && clientManager.isConnected(ipAddress);
+    if (isConnected) {
+      if (sessionIdentifier == null) {
+        request.response
+          ..statusCode = HttpStatus.badRequest
+          ..reasonPhrase =
+              '''Clients with an active connection must provide the '$_sessionIdentifier' parameter.'''
+          ..close().ignore();
+        return;
+      }
+    } else if (sessionIdentifier != null) {
+      request.response
+        ..statusCode = HttpStatus.badRequest
+        ..reasonPhrase =
+            'Provided session identifier when connection not established.'
+        ..close().ignore();
+      return;
+    }
+
+    // TODO(vxern): Reject requests with an unsupported protocol version.
+    // TODO(vxern): Reject requests with an invalid connection type.
+    // TODO(vxern): Reject requests with an inexistent session identifier.
+
     // TODO(vxern): Handle upgrade requests to WebSocket.
 
     request.response
@@ -95,6 +150,25 @@ class Server {
 
     await httpServer.close().catchError((dynamic _) {});
 
-    // TODO(vxern): Remove all client sockets.
+    clientManager.dispose();
+  }
+}
+
+/// Class responsible for maintaining references to and handling sockets of
+/// clients connected to the server.
+@sealed
+@immutable
+class ClientManager {
+  /// Session IDs identified by the remote IP address of the client they belong
+  /// to.
+  final HashMap<String, String> clientsByIP = HashMap();
+
+  /// Determines whether a client is connected by checking if their IP address
+  /// is present in [clientsByIP].
+  bool isConnected(String ipAddress) => clientsByIP.containsKey(ipAddress);
+
+  /// Removes all registered clients.
+  void dispose() {
+    clientsByIP.clear();
   }
 }

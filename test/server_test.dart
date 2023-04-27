@@ -3,8 +3,8 @@ import 'package:universal_io/io.dart';
 
 import 'package:engine_io_dart/src/server/server.dart';
 
-final bareUrl = Uri.http(InternetAddress.loopbackIPv4.address, '/');
-final url = Uri.http(InternetAddress.loopbackIPv4.address, '/engine.io/');
+final remoteUrl = Uri.http(InternetAddress.loopbackIPv4.address, '/');
+final serverUrl = remoteUrl.replace(path: '/engine.io/');
 
 void main() {
   late HttpClient client;
@@ -15,24 +15,22 @@ void main() {
   group('Server setup and disposal:', () {
     late final Server server;
 
-    test(
-      'Server binds to a URL.',
-      () async => expect(
-        Server.bind(bareUrl).then((server_) => server = server_),
+    test('Server binds to a URL.', () async {
+      expect(
+        Server.bind(remoteUrl).then((server_) => server = server_),
         completes,
-      ),
-    );
+      );
+    });
 
-    test(
-      'Server is disposed of.',
-      () async {
-        await expectLater(server.dispose(), completes);
-        expect(
-          client.postUrl(bareUrl).then((request) => request.close()),
-          throwsA(isA<SocketException>()),
-        );
-      },
-    );
+    test('Server is disposed of.', () async {
+      await expectLater(server.dispose(), completes);
+
+      expect(
+        client.postUrl(remoteUrl).then((request) => request.close()),
+        throwsA(isA<SocketException>()),
+      );
+      expect(server.clientManager.clientsByIP.isEmpty, equals(true));
+    });
   });
 
   test('Custom configuration is set.', () async {
@@ -40,7 +38,7 @@ void main() {
 
     late final Server server;
     await expectLater(
-      Server.bind(bareUrl, configuration: configuration)
+      Server.bind(remoteUrl, configuration: configuration)
           .then((server_) => server = server_)
           .then((server) => server.dispose()),
       completes,
@@ -52,85 +50,145 @@ void main() {
   group('Server', () {
     late Server server;
 
-    setUp(() async => server = await Server.bind(bareUrl));
+    setUp(() async => server = await Server.bind(remoteUrl));
     tearDown(() async => server.dispose());
 
+    test('rejects requests made to an invalid path.', () async {
+      final urlWithInvalidPath =
+          Uri.http(InternetAddress.loopbackIPv4.address, '/invalid-path/');
+
+      late final HttpClientResponse response;
+      await expectLater(
+        client
+            .getUrl(urlWithInvalidPath)
+            .then((request) => request.close())
+            .then((response_) => response = response_),
+        completes,
+      );
+
+      expect(response.statusCode, equals(HttpStatus.forbidden));
+      expect(response.reasonPhrase, equals('Invalid path'));
+    });
+
+    test('handles CORS requests.', () async {
+      late final HttpClientResponse response;
+      await expectLater(
+        client
+            .openUrl('OPTIONS', serverUrl)
+            .then((request) => request.close())
+            .then((response_) => response = response_),
+        completes,
+      );
+
+      expect(response.statusCode, equals(HttpStatus.noContent));
+      expect(response.reasonPhrase, equals('No Content'));
+
+      expect(
+        response.headers.value('Access-Control-Allow-Origin'),
+        equals('*'),
+      );
+      expect(
+        response.headers.value('Access-Control-Allow-Methods'),
+        equals('GET, POST'),
+      );
+      expect(
+        response.headers.value('Access-Control-Max-Age'),
+        equals('86400'),
+      );
+    });
+
+    test('rejects requests with an invalid HTTP method.', () async {
+      late final HttpClientResponse response;
+      await expectLater(
+        client
+            .putUrl(serverUrl)
+            .then((request) => request.close())
+            .then((response_) => response = response_),
+        completes,
+      );
+
+      expect(response.statusCode, equals(HttpStatus.methodNotAllowed));
+      expect(response.reasonPhrase, equals('Method Not Allowed'));
+    });
+
+    test('rejects requests without mandatory query parameters.', () async {
+      late final HttpClientResponse response;
+      await expectLater(
+        client
+            .getUrl(serverUrl)
+            .then((request) => request.close())
+            .then((response_) => response = response_),
+        completes,
+      );
+
+      expect(response.statusCode, equals(HttpStatus.badRequest));
+      expect(
+        response.reasonPhrase,
+        equals(
+          '''Parameters 'EIO' and 'transport' must be present in every query.''',
+        ),
+      );
+    });
+
     test(
-      'rejects requests made to an invalid path.',
+      'rejects requests without session identifier when client is connected.',
       () async {
-        final urlWithInvalidPath =
-            Uri.http(InternetAddress.loopbackIPv4.address, '/invalid-path/');
+        // Register the client IP manually.
+        server.clientManager.clientsByIP[InternetAddress.loopbackIPv4.address] =
+            '';
+
+        final url = serverUrl.replace(
+          queryParameters: <String, String>{
+            'EIO': '4',
+            'transport': 'polling',
+          },
+        );
 
         late final HttpClientResponse response;
         await expectLater(
           client
-              .postUrl(urlWithInvalidPath)
+              .getUrl(url)
               .then((request) => request.close())
               .then((response_) => response = response_),
           completes,
         );
-        expect(response.statusCode, equals(HttpStatus.forbidden));
-        expect(response.reasonPhrase, equals('Forbidden'));
+
+        expect(response.statusCode, equals(HttpStatus.badRequest));
+        expect(
+          response.reasonPhrase,
+          equals(
+            '''Clients with an active connection must provide the 'sid' parameter.''',
+          ),
+        );
       },
     );
-
     test(
-      'accepts requests made to a valid path.',
+      'rejects requests with session identifier when client is not connected.',
       () async {
+        final url = serverUrl.replace(
+          queryParameters: <String, String>{
+            'EIO': '4',
+            'transport': 'polling',
+            'sid': 'session_identifier',
+          },
+        );
+
         late final HttpClientResponse response;
         await expectLater(
           client
-              .postUrl(url)
+              .getUrl(url)
               .then((request) => request.close())
               .then((response_) => response = response_),
           completes,
         );
-        expect(response.statusCode, equals(HttpStatus.ok));
-        expect(response.reasonPhrase, equals('OK'));
-      },
-    );
 
-    test(
-      'handles CORS requests.',
-      () async {
-        late final HttpClientResponse response;
-        await expectLater(
-          client
-              .openUrl('OPTIONS', url)
-              .then((request) => request.close())
-              .then((response_) => response = response_),
-          completes,
-        );
-        expect(response.statusCode, equals(HttpStatus.noContent));
-        expect(response.reasonPhrase, equals('No Content'));
+        expect(response.statusCode, equals(HttpStatus.badRequest));
         expect(
-          response.headers.value('Access-Control-Allow-Origin'),
-          equals('*'),
+          response.reasonPhrase,
+          equals(
+            'Provided session identifier when connection not established.',
+          ),
         );
-        expect(
-          response.headers.value('Access-Control-Allow-Methods'),
-          equals('GET, POST'),
-        );
-        expect(
-          response.headers.value('Access-Control-Max-Age'),
-          equals('86400'),
-        );
-      },
-    );
-
-    test(
-      'rejects requests with an invalid HTTP method.',
-      () async {
-        late final HttpClientResponse response;
-        await expectLater(
-          client
-              .putUrl(url)
-              .then((request) => request.close())
-              .then((response_) => response = response_),
-          completes,
-        );
-        expect(response.statusCode, equals(HttpStatus.methodNotAllowed));
-        expect(response.reasonPhrase, equals('Method Not Allowed'));
       },
     );
   });

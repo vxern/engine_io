@@ -15,3 +15,5 @@
 - [Work in progress] Define the `Server` class:
   - [Work in progress] Define the `ServerConfiguration` class to contain the
     available configuration options for the server.
+  - [Work in progress] Define the `ClientManager` class to manage references to
+    connected clients.
