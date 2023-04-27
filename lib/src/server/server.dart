@@ -94,6 +94,17 @@ class Server {
       return;
     }
 
+    final ipAddress = request.connectionInfo?.remoteAddress.address;
+    final isConnected =
+        ipAddress != null && clientManager.isConnected(ipAddress);
+    if (!isConnected && request.method != 'GET') {
+      request.response
+        ..statusCode = HttpStatus.methodNotAllowed
+        ..reasonPhrase = 'Expected a GET request.'
+        ..close().ignore();
+      return;
+    }
+
     final protocolVersion = request.uri.queryParameters[_protocolVersion];
     final connectionType = request.uri.queryParameters[_connectionType];
     final sessionIdentifier = request.uri.queryParameters[_sessionIdentifier];
@@ -107,9 +118,6 @@ class Server {
       return;
     }
 
-    final ipAddress = request.connectionInfo?.remoteAddress.address;
-    final isConnected =
-        ipAddress != null && clientManager.isConnected(ipAddress);
     if (isConnected) {
       if (sessionIdentifier == null) {
         request.response

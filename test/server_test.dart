@@ -111,6 +111,23 @@ void main() {
       expect(response.reasonPhrase, equals('Method Not Allowed'));
     });
 
+    test(
+      'rejects requests other than a GET when establishing a connection.',
+      () async {
+        late final HttpClientResponse response;
+        await expectLater(
+          client
+              .postUrl(serverUrl)
+              .then((request) => request.close())
+              .then((response_) => response = response_),
+          completes,
+        );
+
+        expect(response.statusCode, equals(HttpStatus.methodNotAllowed));
+        expect(response.reasonPhrase, equals('Expected a GET request.'));
+      },
+    );
+
     test('rejects requests without mandatory query parameters.', () async {
       late final HttpClientResponse response;
       await expectLater(
