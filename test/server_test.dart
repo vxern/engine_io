@@ -160,7 +160,7 @@ void main() {
           final url = serverUrl.replace(
             queryParameters: <String, String>{
               'EIO': '4',
-              'transport': ConnectionType.one.name,
+              'transport': ConnectionType.polling.name,
             },
           );
 
@@ -189,7 +189,7 @@ void main() {
           final url = serverUrl.replace(
             queryParameters: <String, String>{
               'EIO': '4',
-              'transport': ConnectionType.one.name,
+              'transport': ConnectionType.polling.name,
               'sid': 'session_identifier',
             },
           );
@@ -223,7 +223,7 @@ void main() {
           final url = serverUrl.replace(
             queryParameters: <String, String>{
               'EIO': 'abc',
-              'transport': ConnectionType.one.name,
+              'transport': ConnectionType.polling.name,
               'sid': 'session_identifier',
             },
           );
@@ -287,7 +287,7 @@ void main() {
           final url = serverUrl.replace(
             queryParameters: <String, String>{
               'EIO': '-1',
-              'transport': ConnectionType.one.name,
+              'transport': ConnectionType.polling.name,
               'sid': 'session_identifier',
             },
           );
@@ -316,7 +316,7 @@ void main() {
           final url = serverUrl.replace(
             queryParameters: <String, String>{
               'EIO': '3',
-              'transport': ConnectionType.one.name,
+              'transport': ConnectionType.polling.name,
               'sid': 'session_identifier',
             },
           );

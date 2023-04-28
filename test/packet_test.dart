@@ -64,9 +64,9 @@ void main() {
           late final OpenPacket packet;
           expect(
             () => packet = OpenPacket.decode(
-              json.encode(const <String, dynamic>{
+              json.encode(<String, dynamic>{
                 'sid': 'session_identifier',
-                'upgrades': <String>['one', 'two'],
+                'upgrades': <String>[ConnectionType.websocket.name],
                 'pingInterval': 1000 * 5,
                 'pingTimeout': 1000 * 2,
                 'maxPayload': 1024 * 128,
@@ -77,7 +77,7 @@ void main() {
           expect(packet.sessionIdentifier, equals('session_identifier'));
           expect(
             packet.availableConnectionUpgrades,
-            equals({ConnectionType.one, ConnectionType.two}),
+            equals({ConnectionType.websocket}),
           );
           expect(packet.heartbeatInterval.inMilliseconds, equals(1000 * 5));
           expect(packet.heartbeatTimeout.inMilliseconds, equals(1000 * 2));
@@ -194,7 +194,7 @@ void main() {
       expect(
         () => encoded = const OpenPacket(
           sessionIdentifier: 'session_identifier',
-          availableConnectionUpgrades: {ConnectionType.one, ConnectionType.two},
+          availableConnectionUpgrades: {ConnectionType.websocket},
           heartbeatInterval: Duration.zero,
           heartbeatTimeout: Duration.zero,
           maximumChunkBytes: 1024 * 128,
@@ -206,7 +206,7 @@ void main() {
         equals(
           '{'
           '"sid":"${'session_identifier'}",'
-          '"upgrades":["${'one'}","${'two'}"],'
+          '"upgrades":["${ConnectionType.websocket.name}"],'
           '"pingInterval":${0},'
           '"pingTimeout":${0},'
           '"maxPayload":${1024 * 128}'

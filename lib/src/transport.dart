@@ -1,13 +1,17 @@
 /// The type of connection used for communication between a client and a server.
 enum ConnectionType {
-  /// This is a test value.
-  one,
+  /// A websocket connection leveraging the use of websockets.
+  websocket(upgradesTo: null),
 
-  /// This is a test value.
-  two;
+  /// A polling connection over HTTP imitating a real-time connection.
+  polling(upgradesTo: {ConnectionType.websocket});
 
-  /// Creates an instance of `ContentType`.
-  const ConnectionType();
+  /// Creates an instance of `ConnectionType`.
+  const ConnectionType({required Set<ConnectionType>? upgradesTo})
+      : upgradesTo = upgradesTo ?? const {};
+
+  /// Defines the `ConnectionType`s this `ConnectionType` can be upgraded to.
+  final Set<ConnectionType> upgradesTo;
 
   /// Matches [name] to a `ConnectionType`.
   ///
