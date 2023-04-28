@@ -143,17 +143,30 @@ class Server {
     late final int protocolVersion;
     late final ConnectionType connectionType;
     final sessionIdentifier = request.uri.queryParameters[_sessionIdentifier];
-    try {
-      protocolVersion =
-          int.parse(request.uri.queryParameters[_protocolVersion]!);
-      connectionType =
-          ConnectionType.byName(request.uri.queryParameters[_connectionType]!);
-    } on FormatException {
-      request.response
-        ..statusCode = HttpStatus.badRequest
-        ..reasonPhrase = 'Invalid parameter'
-        ..close().ignore();
-      return;
+
+    {
+      try {
+        protocolVersion =
+            int.parse(request.uri.queryParameters[_protocolVersion]!);
+      } on FormatException {
+        request.response
+          ..statusCode = HttpStatus.badRequest
+          ..reasonPhrase = 'The protocol version must be an integer.'
+          ..close().ignore();
+        return;
+      }
+
+      try {
+        connectionType = ConnectionType.byName(
+          request.uri.queryParameters[_connectionType]!,
+        );
+      } on FormatException catch (error) {
+        request.response
+          ..statusCode = HttpStatus.notImplemented
+          ..reasonPhrase = error.message
+          ..close().ignore();
+        return;
+      }
     }
 
     // TODO(vxern): Reject requests with an unsupported protocol version.

@@ -20,6 +20,6 @@ enum ConnectionType {
       }
     }
 
-    throw FormatException('Invalid connection type.', name);
+    throw FormatException("Transport type '$name' not supported or invalid.");
   }
 }
