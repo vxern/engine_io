@@ -30,7 +30,7 @@ void main() {
         client.postUrl(remoteUrl).then((request) => request.close()),
         throwsA(isA<SocketException>()),
       );
-      expect(server.clientManager.clientsByIP.isEmpty, equals(true));
+      expect(server.clientManager.sessionIdentifiers.isEmpty, equals(true));
     });
   });
 
@@ -155,7 +155,7 @@ void main() {
         () async {
           // Register the client IP manually.
           server.clientManager
-              .clientsByIP[InternetAddress.loopbackIPv4.address] = '';
+              .sessionIdentifiers[InternetAddress.loopbackIPv4.address] = '';
 
           final url = serverUrl.replace(
             queryParameters: <String, String>{
@@ -218,7 +218,7 @@ void main() {
         () async {
           // Register the client IP manually.
           server.clientManager
-              .clientsByIP[InternetAddress.loopbackIPv4.address] = '';
+              .sessionIdentifiers[InternetAddress.loopbackIPv4.address] = '';
 
           final url = serverUrl.replace(
             queryParameters: <String, String>{
@@ -250,7 +250,7 @@ void main() {
         () async {
           // Register the client IP manually.
           server.clientManager
-              .clientsByIP[InternetAddress.loopbackIPv4.address] = '';
+              .sessionIdentifiers[InternetAddress.loopbackIPv4.address] = '';
 
           final url = serverUrl.replace(
             queryParameters: <String, String>{
@@ -282,7 +282,7 @@ void main() {
         () async {
           // Register the client IP manually.
           server.clientManager
-              .clientsByIP[InternetAddress.loopbackIPv4.address] = '';
+              .sessionIdentifiers[InternetAddress.loopbackIPv4.address] = '';
 
           final url = serverUrl.replace(
             queryParameters: <String, String>{
@@ -311,7 +311,7 @@ void main() {
         () async {
           // Register the client IP manually.
           server.clientManager
-              .clientsByIP[InternetAddress.loopbackIPv4.address] = '';
+              .sessionIdentifiers[InternetAddress.loopbackIPv4.address] = '';
 
           final url = serverUrl.replace(
             queryParameters: <String, String>{

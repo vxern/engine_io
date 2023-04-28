@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
+import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transport.dart';
 
 /// Settings used to configure the engine.io server.
@@ -75,10 +76,9 @@ class Server {
   /// Handles an incoming HTTP request.
   Future<void> handleHttpRequest(HttpRequest request) async {
     if (request.uri.path != '/${configuration.path}') {
-      request.response
-        ..statusCode = HttpStatus.forbidden
-        ..reasonPhrase = 'Invalid path'
-        ..close().ignore();
+      // TODO(vxern): Disconnect client.
+
+      request.response.reject(HttpStatus.forbidden, 'Invalid path');
       return;
     }
 
@@ -93,9 +93,9 @@ class Server {
     }
 
     if (!allowedMethods.contains(request.method)) {
-      request.response
-        ..statusCode = HttpStatus.methodNotAllowed
-        ..close().ignore();
+      // TODO(vxern): Disconnect client.
+
+      request.response.reject(HttpStatus.methodNotAllowed);
       return;
     }
 
@@ -103,10 +103,10 @@ class Server {
     final isConnected =
         ipAddress != null && clientManager.isConnected(ipAddress);
     if (!isConnected && request.method != 'GET') {
-      request.response
-        ..statusCode = HttpStatus.methodNotAllowed
-        ..reasonPhrase = 'Expected a GET request.'
-        ..close().ignore();
+      request.response.reject(
+        HttpStatus.methodNotAllowed,
+        'Expected a GET request.',
+      );
       return;
     }
 
@@ -118,11 +118,10 @@ class Server {
       if (protocolVersion == null || connectionType == null) {
         // TODO(vxern): Disconnect client.
 
-        request.response
-          ..statusCode = HttpStatus.badRequest
-          ..reasonPhrase =
-              '''Parameters '$_protocolVersion' and '$_connectionType' must be present in every query.'''
-          ..close().ignore();
+        request.response.reject(
+          HttpStatus.badRequest,
+          '''Parameters '$_protocolVersion' and '$_connectionType' must be present in every query.''',
+        );
         return;
       }
 
@@ -130,19 +129,17 @@ class Server {
         if (sessionIdentifier == null) {
           // TODO(vxern): Disconnect client.
 
-          request.response
-            ..statusCode = HttpStatus.badRequest
-            ..reasonPhrase =
-                '''Clients with an active connection must provide the '$_sessionIdentifier' parameter.'''
-            ..close().ignore();
+          request.response.reject(
+            HttpStatus.badRequest,
+            '''Clients with an active connection must provide the '$_sessionIdentifier' parameter.''',
+          );
           return;
         }
       } else if (sessionIdentifier != null) {
-        request.response
-          ..statusCode = HttpStatus.badRequest
-          ..reasonPhrase =
-              'Provided session identifier when connection not established.'
-          ..close().ignore();
+        request.response.reject(
+          HttpStatus.badRequest,
+          'Provided session identifier when connection not established.',
+        );
         return;
       }
     }
@@ -158,10 +155,10 @@ class Server {
       } on FormatException {
         // TODO(vxern): Disconnect client.
 
-        request.response
-          ..statusCode = HttpStatus.badRequest
-          ..reasonPhrase = 'The protocol version must be an integer.'
-          ..close().ignore();
+        request.response.reject(
+          HttpStatus.badRequest,
+          'The protocol version must be an integer.',
+        );
         return;
       }
 
@@ -172,10 +169,7 @@ class Server {
       } on FormatException catch (error) {
         // TODO(vxern): Disconnect client.
 
-        request.response
-          ..statusCode = HttpStatus.notImplemented
-          ..reasonPhrase = error.message
-          ..close().ignore();
+        request.response.reject(HttpStatus.notImplemented, error.message);
         return;
       }
     }
@@ -185,19 +179,19 @@ class Server {
           protocolVersion > Server.protocolVersion + 1) {
         // TODO(vxern): Disconnect client.
 
-        request.response
-          ..statusCode = HttpStatus.badRequest
-          ..reasonPhrase = 'Invalid protocol version.'
-          ..close().ignore();
+        request.response.reject(
+          HttpStatus.badRequest,
+          'Invalid protocol version.',
+        );
         return;
       }
 
       // TODO(vxern): Disconnect client.
 
-      request.response
-        ..statusCode = HttpStatus.notImplemented
-        ..reasonPhrase = 'Protocol version $protocolVersion not supported.'
-        ..close().ignore();
+      request.response.reject(
+        HttpStatus.notImplemented,
+        'Protocol version $protocolVersion not supported.',
+      );
       return;
     }
 
@@ -230,14 +224,26 @@ class Server {
 class ClientManager {
   /// Session IDs identified by the remote IP address of the client they belong
   /// to.
-  final HashMap<String, String> clientsByIP = HashMap();
+  final HashMap<String, String> sessionIdentifiers = HashMap();
 
   /// Determines whether a client is connected by checking if their IP address
-  /// is present in [clientsByIP].
-  bool isConnected(String ipAddress) => clientsByIP.containsKey(ipAddress);
+  /// is present in [sessionIdentifiers].
+  bool isConnected(String ipAddress) =>
+      sessionIdentifiers.containsKey(ipAddress);
 
   /// Removes all registered clients.
   void dispose() {
-    clientsByIP.clear();
+    sessionIdentifiers.clear();
+  }
+}
+
+extension _Reject on HttpResponse {
+  /// Rejects this request, giving a [status] and a [reason].
+  Future<void> reject(int status, [String? reason]) async {
+    statusCode = status;
+    if (reason != null) {
+      reasonPhrase = reason;
+    }
+    close().ignore();
   }
 }
