@@ -16,3 +16,6 @@
     available configuration options for the server.
   - [Work in progress] Define the `ClientManager` class to manage references to
     connected clients.
+- [Work in progress] Define the `Socket` class as the super-type of sockets.
+  - [Work in progress] Define the server/`Socket` class to represent clients
+    connected to the server.

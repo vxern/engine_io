@@ -70,7 +70,7 @@ void main() {
         );
 
         expect(response.statusCode, equals(HttpStatus.forbidden));
-        expect(response.reasonPhrase, equals('Invalid path'));
+        expect(response.reasonPhrase, equals('Invalid server path.'));
       });
 
       test('handles CORS requests.', () async {
@@ -184,7 +184,7 @@ void main() {
       );
 
       test(
-        'rejects requests with session identifier when client is not connected.',
+        '''rejects requests with session identifier when client is not connected.''',
         () async {
           final url = serverUrl.replace(
             queryParameters: <String, String>{

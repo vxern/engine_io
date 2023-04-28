@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:engine_io_dart/src/packets/message.dart';
-import 'package:engine_io_dart/src/packets/pong.dart';
 import 'package:test/test.dart';
 
+import 'package:engine_io_dart/src/packets/message.dart';
 import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:engine_io_dart/src/packets/ping.dart';
+import 'package:engine_io_dart/src/packets/pong.dart';
 import 'package:engine_io_dart/src/packet.dart';
 import 'package:engine_io_dart/src/transport.dart';
 

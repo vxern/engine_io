@@ -75,10 +75,15 @@ class Server {
 
   /// Handles an incoming HTTP request.
   Future<void> handleHttpRequest(HttpRequest request) async {
-    if (request.uri.path != '/${configuration.path}') {
-      // TODO(vxern): Disconnect client.
+    final ipAddress = request.connectionInfo?.remoteAddress.address;
+    final isConnected =
+        ipAddress != null && clientManager.isConnected(ipAddress);
 
-      request.response.reject(HttpStatus.forbidden, 'Invalid path');
+    var client = clientManager.get(ipAddress: ipAddress);
+
+    if (request.uri.path != '/${configuration.path}') {
+      disconnect(client);
+      request.response.reject(HttpStatus.forbidden, 'Invalid server path.');
       return;
     }
 
@@ -93,15 +98,11 @@ class Server {
     }
 
     if (!allowedMethods.contains(request.method)) {
-      // TODO(vxern): Disconnect client.
-
+      disconnect(client);
       request.response.reject(HttpStatus.methodNotAllowed);
       return;
     }
 
-    final ipAddress = request.connectionInfo?.remoteAddress.address;
-    final isConnected =
-        ipAddress != null && clientManager.isConnected(ipAddress);
     if (!isConnected && request.method != 'GET') {
       request.response.reject(
         HttpStatus.methodNotAllowed,
@@ -116,8 +117,7 @@ class Server {
       final sessionIdentifier = request.uri.queryParameters[_sessionIdentifier];
 
       if (protocolVersion == null || connectionType == null) {
-        // TODO(vxern): Disconnect client.
-
+        disconnect(client);
         request.response.reject(
           HttpStatus.badRequest,
           '''Parameters '$_protocolVersion' and '$_connectionType' must be present in every query.''',
@@ -127,8 +127,7 @@ class Server {
 
       if (isConnected) {
         if (sessionIdentifier == null) {
-          // TODO(vxern): Disconnect client.
-
+          disconnect(client);
           request.response.reject(
             HttpStatus.badRequest,
             '''Clients with an active connection must provide the '$_sessionIdentifier' parameter.''',
@@ -153,8 +152,7 @@ class Server {
         protocolVersion =
             int.parse(request.uri.queryParameters[_protocolVersion]!);
       } on FormatException {
-        // TODO(vxern): Disconnect client.
-
+        disconnect(client);
         request.response.reject(
           HttpStatus.badRequest,
           'The protocol version must be an integer.',
@@ -167,18 +165,18 @@ class Server {
           request.uri.queryParameters[_connectionType]!,
         );
       } on FormatException catch (error) {
-        // TODO(vxern): Disconnect client.
-
+        disconnect(client);
         request.response.reject(HttpStatus.notImplemented, error.message);
         return;
       }
     }
 
+    client = clientManager.get(sessionIdentifier: sessionIdentifier);
+
     if (protocolVersion != Server.protocolVersion) {
       if (protocolVersion <= 0 ||
           protocolVersion > Server.protocolVersion + 1) {
-        // TODO(vxern): Disconnect client.
-
+        disconnect(client);
         request.response.reject(
           HttpStatus.badRequest,
           'Invalid protocol version.',
@@ -186,8 +184,7 @@ class Server {
         return;
       }
 
-      // TODO(vxern): Disconnect client.
-
+      disconnect(client);
       request.response.reject(
         HttpStatus.notImplemented,
         'Protocol version $protocolVersion not supported.',
@@ -200,6 +197,16 @@ class Server {
     request.response
       ..statusCode = HttpStatus.ok
       ..close().ignore();
+  }
+
+  /// Disconnects a client.
+  Future<void> disconnect(Socket? client) async {
+    if (client == null) {
+      return;
+    }
+
+    clientManager.remove(client);
+    await client.dispose();
   }
 
   /// Closes the underlying HTTP server, awaiting remaining requests to be
@@ -222,6 +229,9 @@ class Server {
 @sealed
 @immutable
 class ClientManager {
+  /// Clients identified by their session IDs.
+  final HashMap<String, Socket> clients = HashMap();
+
   /// Session IDs identified by the remote IP address of the client they belong
   /// to.
   final HashMap<String, String> sessionIdentifiers = HashMap();
@@ -231,8 +241,30 @@ class ClientManager {
   bool isConnected(String ipAddress) =>
       sessionIdentifiers.containsKey(ipAddress);
 
+  /// Taking either an [ipAddress] or a [sessionIdentifier], matches the
+  /// parameter to a client socket.
+  Socket? get({String? ipAddress, String? sessionIdentifier}) {
+    assert(
+      ipAddress != null || sessionIdentifier != null,
+      'At least one parameter must be supplied.',
+    );
+
+    final sessionIdentifier_ =
+        sessionIdentifier ?? sessionIdentifiers[ipAddress];
+    final socket = clients[sessionIdentifier_];
+
+    return socket;
+  }
+
+  /// Taking a [socket], stops managing it by removing it from the client lists.
+  void remove(Socket socket) {
+    clients.remove(socket.sessionIdentifier);
+    sessionIdentifiers.remove(socket.address);
+  }
+
   /// Removes all registered clients.
   void dispose() {
+    clients.clear();
     sessionIdentifiers.clear();
   }
 }
