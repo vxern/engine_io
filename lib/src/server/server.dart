@@ -3,6 +3,8 @@ import 'dart:collection';
 import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
+import 'package:engine_io_dart/src/transport.dart';
+
 /// Settings used to configure the engine.io server.
 class ServerConfiguration {
   /// The path the engine.io server should listen on for requests.
@@ -105,33 +107,51 @@ class Server {
       return;
     }
 
-    final protocolVersion = request.uri.queryParameters[_protocolVersion];
-    final connectionType = request.uri.queryParameters[_connectionType];
-    final sessionIdentifier = request.uri.queryParameters[_sessionIdentifier];
+    {
+      final protocolVersion = request.uri.queryParameters[_protocolVersion];
+      final connectionType = request.uri.queryParameters[_connectionType];
+      final sessionIdentifier = request.uri.queryParameters[_sessionIdentifier];
 
-    if (protocolVersion == null || connectionType == null) {
-      request.response
-        ..statusCode = HttpStatus.badRequest
-        ..reasonPhrase =
-            '''Parameters '$_protocolVersion' and '$_connectionType' must be present in every query.'''
-        ..close().ignore();
-      return;
-    }
-
-    if (isConnected) {
-      if (sessionIdentifier == null) {
+      if (protocolVersion == null || connectionType == null) {
         request.response
           ..statusCode = HttpStatus.badRequest
           ..reasonPhrase =
-              '''Clients with an active connection must provide the '$_sessionIdentifier' parameter.'''
+              '''Parameters '$_protocolVersion' and '$_connectionType' must be present in every query.'''
           ..close().ignore();
         return;
       }
-    } else if (sessionIdentifier != null) {
+
+      if (isConnected) {
+        if (sessionIdentifier == null) {
+          request.response
+            ..statusCode = HttpStatus.badRequest
+            ..reasonPhrase =
+                '''Clients with an active connection must provide the '$_sessionIdentifier' parameter.'''
+            ..close().ignore();
+          return;
+        }
+      } else if (sessionIdentifier != null) {
+        request.response
+          ..statusCode = HttpStatus.badRequest
+          ..reasonPhrase =
+              'Provided session identifier when connection not established.'
+          ..close().ignore();
+        return;
+      }
+    }
+
+    late final int protocolVersion;
+    late final ConnectionType connectionType;
+    final sessionIdentifier = request.uri.queryParameters[_sessionIdentifier];
+    try {
+      protocolVersion =
+          int.parse(request.uri.queryParameters[_protocolVersion]!);
+      connectionType =
+          ConnectionType.byName(request.uri.queryParameters[_connectionType]!);
+    } on FormatException {
       request.response
         ..statusCode = HttpStatus.badRequest
-        ..reasonPhrase =
-            'Provided session identifier when connection not established.'
+        ..reasonPhrase = 'Invalid parameter'
         ..close().ignore();
       return;
     }

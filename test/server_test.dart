@@ -157,7 +157,7 @@ void main() {
         final url = serverUrl.replace(
           queryParameters: <String, String>{
             'EIO': '4',
-            'transport': 'polling',
+            'transport': 'one',
           },
         );
 
@@ -185,7 +185,7 @@ void main() {
         final url = serverUrl.replace(
           queryParameters: <String, String>{
             'EIO': '4',
-            'transport': 'polling',
+            'transport': 'one',
             'sid': 'session_identifier',
           },
         );
@@ -206,6 +206,42 @@ void main() {
             'Provided session identifier when connection not established.',
           ),
         );
+      },
+    );
+
+    test(
+      'rejects requests with parameters of an invalid type.',
+      () async {
+        // Register the client IP manually.
+        server.clientManager.clientsByIP[InternetAddress.loopbackIPv4.address] =
+            '';
+
+        final urls = [
+          <String, String>{
+            'EIO': 'abc',
+            'transport': 'one',
+            'sid': 'session_identifier',
+          },
+          <String, String>{
+            'EIO': '4',
+            'transport': '123',
+            'sid': 'session_identifier',
+          }
+        ].map((parameters) => serverUrl.replace(queryParameters: parameters));
+
+        for (final url in urls) {
+          late final HttpClientResponse response;
+          await expectLater(
+            client
+                .getUrl(url)
+                .then((request) => request.close())
+                .then((response_) => response = response_),
+            completes,
+          );
+
+          expect(response.statusCode, equals(HttpStatus.badRequest));
+          expect(response.reasonPhrase, equals('Invalid parameter'));
+        }
       },
     );
   });

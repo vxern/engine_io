@@ -11,8 +11,8 @@ enum ConnectionType {
 
   /// Matches [name] to a `ConnectionType`.
   ///
-  /// If [name] does not match to any supported `ConnectionType`, an
-  /// `UnsupportedTypeException` will be thrown.
+  /// If [name] does not match to any supported `ConnectionType`, a
+  /// `FormatException` will be thrown.
   static ConnectionType byName(String name) {
     for (final type in ConnectionType.values) {
       if (type.name == name) {
