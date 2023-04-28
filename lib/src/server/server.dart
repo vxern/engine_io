@@ -20,6 +20,9 @@ class ServerConfiguration {
 /// The engine.io server.
 @sealed
 class Server {
+  /// The version of the engine.io protocol this server operates on.
+  static const protocolVersion = 4;
+
   /// The HTTP methods allowed for an engine.io server.
   static const allowedMethods = {'GET', 'POST'};
 
@@ -113,6 +116,8 @@ class Server {
       final sessionIdentifier = request.uri.queryParameters[_sessionIdentifier];
 
       if (protocolVersion == null || connectionType == null) {
+        // TODO(vxern): Disconnect client.
+
         request.response
           ..statusCode = HttpStatus.badRequest
           ..reasonPhrase =
@@ -123,6 +128,8 @@ class Server {
 
       if (isConnected) {
         if (sessionIdentifier == null) {
+          // TODO(vxern): Disconnect client.
+
           request.response
             ..statusCode = HttpStatus.badRequest
             ..reasonPhrase =
@@ -149,6 +156,8 @@ class Server {
         protocolVersion =
             int.parse(request.uri.queryParameters[_protocolVersion]!);
       } on FormatException {
+        // TODO(vxern): Disconnect client.
+
         request.response
           ..statusCode = HttpStatus.badRequest
           ..reasonPhrase = 'The protocol version must be an integer.'
@@ -161,6 +170,8 @@ class Server {
           request.uri.queryParameters[_connectionType]!,
         );
       } on FormatException catch (error) {
+        // TODO(vxern): Disconnect client.
+
         request.response
           ..statusCode = HttpStatus.notImplemented
           ..reasonPhrase = error.message
@@ -169,9 +180,26 @@ class Server {
       }
     }
 
-    // TODO(vxern): Reject requests with an unsupported protocol version.
-    // TODO(vxern): Reject requests with an invalid connection type.
-    // TODO(vxern): Reject requests with an inexistent session identifier.
+    if (protocolVersion != Server.protocolVersion) {
+      if (protocolVersion <= 0 ||
+          protocolVersion > Server.protocolVersion + 1) {
+        // TODO(vxern): Disconnect client.
+
+        request.response
+          ..statusCode = HttpStatus.badRequest
+          ..reasonPhrase = 'Invalid protocol version.'
+          ..close().ignore();
+        return;
+      }
+
+      // TODO(vxern): Disconnect client.
+
+      request.response
+        ..statusCode = HttpStatus.notImplemented
+        ..reasonPhrase = 'Protocol version $protocolVersion not supported.'
+        ..close().ignore();
+      return;
+    }
 
     // TODO(vxern): Handle upgrade requests to WebSocket.
 

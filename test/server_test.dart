@@ -220,7 +220,7 @@ void main() {
           server.clientManager
               .clientsByIP[InternetAddress.loopbackIPv4.address] = '';
 
-          final invalidProtocolVersionUrl = serverUrl.replace(
+          final url = serverUrl.replace(
             queryParameters: <String, String>{
               'EIO': 'abc',
               'transport': ConnectionType.one.name,
@@ -231,7 +231,7 @@ void main() {
           late final HttpClientResponse response;
           await expectLater(
             client
-                .getUrl(invalidProtocolVersionUrl)
+                .getUrl(url)
                 .then((request) => request.close())
                 .then((response_) => response = response_),
             completes,
@@ -252,7 +252,7 @@ void main() {
           server.clientManager
               .clientsByIP[InternetAddress.loopbackIPv4.address] = '';
 
-          final invalidConnectionTypeUrl = serverUrl.replace(
+          final url = serverUrl.replace(
             queryParameters: <String, String>{
               'EIO': '4',
               'transport': '123',
@@ -263,7 +263,7 @@ void main() {
           late final HttpClientResponse response;
           await expectLater(
             client
-                .getUrl(invalidConnectionTypeUrl)
+                .getUrl(url)
                 .then((request) => request.close())
                 .then((response_) => response = response_),
             completes,
@@ -273,6 +273,67 @@ void main() {
           expect(
             response.reasonPhrase,
             equals("Transport type '123' not supported or invalid."),
+          );
+        },
+      );
+
+      test(
+        'rejects requests with an invalid protocol version.',
+        () async {
+          // Register the client IP manually.
+          server.clientManager
+              .clientsByIP[InternetAddress.loopbackIPv4.address] = '';
+
+          final url = serverUrl.replace(
+            queryParameters: <String, String>{
+              'EIO': '-1',
+              'transport': ConnectionType.one.name,
+              'sid': 'session_identifier',
+            },
+          );
+
+          late final HttpClientResponse response;
+          await expectLater(
+            client
+                .getUrl(url)
+                .then((request) => request.close())
+                .then((response_) => response = response_),
+            completes,
+          );
+
+          expect(response.statusCode, equals(HttpStatus.badRequest));
+          expect(response.reasonPhrase, equals('Invalid protocol version.'));
+        },
+      );
+
+      test(
+        'rejects requests with an unsupported protocol version.',
+        () async {
+          // Register the client IP manually.
+          server.clientManager
+              .clientsByIP[InternetAddress.loopbackIPv4.address] = '';
+
+          final url = serverUrl.replace(
+            queryParameters: <String, String>{
+              'EIO': '3',
+              'transport': ConnectionType.one.name,
+              'sid': 'session_identifier',
+            },
+          );
+
+          late final HttpClientResponse response;
+          await expectLater(
+            client
+                .getUrl(url)
+                .then((request) => request.close())
+                .then((response_) => response = response_),
+            completes,
+          );
+
+          expect(response.statusCode, equals(HttpStatus.notImplemented));
+          expect(
+            response.reasonPhrase,
+            equals('Protocol version 3 not supported.'),
           );
         },
       );
