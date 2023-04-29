@@ -76,10 +76,12 @@ class Server {
   /// Handles an incoming HTTP request.
   Future<void> handleHttpRequest(HttpRequest request) async {
     final ipAddress = request.connectionInfo?.remoteAddress.address;
-    final isConnected =
-        ipAddress != null && clientManager.isConnected(ipAddress);
+    if (ipAddress == null) {
+      request.response.reject(HttpStatus.badRequest);
+      return;
+    }
 
-    var client = clientManager.get(ipAddress: ipAddress);
+    final client = clientManager.get(ipAddress: ipAddress);
 
     if (request.uri.path != '/${configuration.path}') {
       disconnect(client);
@@ -103,6 +105,8 @@ class Server {
       return;
     }
 
+    final isConnected = clientManager.isConnected(ipAddress);
+
     if (!isConnected && request.method != 'GET') {
       request.response.reject(
         HttpStatus.methodNotAllowed,
@@ -111,12 +115,16 @@ class Server {
       return;
     }
 
-    {
-      final protocolVersion = request.uri.queryParameters[_protocolVersion];
-      final connectionType = request.uri.queryParameters[_connectionType];
-      final sessionIdentifier = request.uri.queryParameters[_sessionIdentifier];
+    final int protocolVersion;
+    final ConnectionType connectionType;
+    final String? sessionIdentifier;
 
-      if (protocolVersion == null || connectionType == null) {
+    {
+      final protocolVersion_ = request.uri.queryParameters[_protocolVersion];
+      final connectionType_ = request.uri.queryParameters[_connectionType];
+      sessionIdentifier = request.uri.queryParameters[_sessionIdentifier];
+
+      if (protocolVersion_ == null || connectionType_ == null) {
         disconnect(client);
         request.response.reject(
           HttpStatus.badRequest,
@@ -125,29 +133,6 @@ class Server {
         return;
       }
 
-      if (isConnected) {
-        if (sessionIdentifier == null) {
-          disconnect(client);
-          request.response.reject(
-            HttpStatus.badRequest,
-            '''Clients with an active connection must provide the '$_sessionIdentifier' parameter.''',
-          );
-          return;
-        }
-      } else if (sessionIdentifier != null) {
-        request.response.reject(
-          HttpStatus.badRequest,
-          'Provided session identifier when connection not established.',
-        );
-        return;
-      }
-    }
-
-    late final int protocolVersion;
-    late final ConnectionType connectionType;
-    final sessionIdentifier = request.uri.queryParameters[_sessionIdentifier];
-
-    {
       try {
         protocolVersion =
             int.parse(request.uri.queryParameters[_protocolVersion]!);
@@ -171,8 +156,6 @@ class Server {
       }
     }
 
-    client = clientManager.get(sessionIdentifier: sessionIdentifier);
-
     if (protocolVersion != Server.protocolVersion) {
       if (protocolVersion <= 0 ||
           protocolVersion > Server.protocolVersion + 1) {
@@ -188,6 +171,23 @@ class Server {
       request.response.reject(
         HttpStatus.notImplemented,
         'Protocol version $protocolVersion not supported.',
+      );
+      return;
+    }
+
+    if (isConnected) {
+      if (sessionIdentifier == null) {
+        disconnect(client);
+        request.response.reject(
+          HttpStatus.badRequest,
+          '''Clients with an active connection must provide the '$_sessionIdentifier' parameter.''',
+        );
+        return;
+      }
+    } else if (sessionIdentifier != null) {
+      request.response.reject(
+        HttpStatus.badRequest,
+        'Provided session identifier when connection not established.',
       );
       return;
     }
@@ -256,10 +256,10 @@ class ClientManager {
     return socket;
   }
 
-  /// Taking a [socket], stops managing it by removing it from the client lists.
-  void remove(Socket socket) {
-    clients.remove(socket.sessionIdentifier);
-    sessionIdentifiers.remove(socket.address);
+  /// Taking a [client], stops managing it by removing it from the client lists.
+  void remove(Socket client) {
+    clients.remove(client.sessionIdentifier);
+    sessionIdentifiers.remove(client.ipAddress);
   }
 
   /// Removes all registered clients.

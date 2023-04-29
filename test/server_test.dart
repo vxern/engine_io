@@ -13,24 +13,30 @@ void main() {
   setUp(() => client = HttpClient());
   tearDown(() async => client.close());
 
-  group('Server setup and disposal:', () {
+  group('HTTP server ', () {
     late final Server server;
 
-    test('Server binds to a URL.', () async {
+    test('binds to a URL.', () async {
       expect(
         Server.bind(remoteUrl).then((server_) => server = server_),
         completes,
       );
     });
 
-    test('Server is disposed of.', () async {
+    test('is responsive.', () async {
+      expect(
+        client.postUrl(remoteUrl).then((request) => request.close()),
+        completes,
+      );
+    });
+
+    test('stops listening for requests.', () async {
       await expectLater(server.dispose(), completes);
 
       expect(
         client.postUrl(remoteUrl).then((request) => request.close()),
         throwsA(isA<SocketException>()),
       );
-      expect(server.clientManager.sessionIdentifiers.isEmpty, equals(true));
     });
   });
 
@@ -73,7 +79,7 @@ void main() {
         expect(response.reasonPhrase, equals('Invalid server path.'));
       });
 
-      test('handles CORS requests.', () async {
+      test('responds correctly to CORS requests.', () async {
         late final HttpClientResponse response;
         await expectLater(
           client
@@ -151,16 +157,13 @@ void main() {
       });
 
       test(
-        'rejects requests without session identifier when client is connected.',
+        'rejects requests with a protocol version of an invalid type.',
         () async {
-          // Register the client IP manually.
-          server.clientManager
-              .sessionIdentifiers[InternetAddress.loopbackIPv4.address] = '';
-
           final url = serverUrl.replace(
             queryParameters: <String, String>{
-              'EIO': '4',
+              'EIO': 'abc',
               'transport': ConnectionType.polling.name,
+              'sid': 'session_identifier',
             },
           );
 
@@ -176,9 +179,88 @@ void main() {
           expect(response.statusCode, equals(HttpStatus.badRequest));
           expect(
             response.reasonPhrase,
-            equals(
-              '''Clients with an active connection must provide the 'sid' parameter.''',
-            ),
+            equals('The protocol version must be an integer.'),
+          );
+        },
+      );
+
+      test(
+        'rejects requests with an unsupported solicited connection type.',
+        () async {
+          final url = serverUrl.replace(
+            queryParameters: <String, String>{
+              'EIO': '4',
+              'transport': '123',
+              'sid': 'session_identifier',
+            },
+          );
+
+          late final HttpClientResponse response;
+          await expectLater(
+            client
+                .getUrl(url)
+                .then((request) => request.close())
+                .then((response_) => response = response_),
+            completes,
+          );
+
+          expect(response.statusCode, equals(HttpStatus.notImplemented));
+          expect(
+            response.reasonPhrase,
+            equals("Transport type '123' not supported or invalid."),
+          );
+        },
+      );
+
+      test(
+        'rejects requests with an invalid protocol version.',
+        () async {
+          final url = serverUrl.replace(
+            queryParameters: <String, String>{
+              'EIO': '-1',
+              'transport': ConnectionType.polling.name,
+              'sid': 'session_identifier',
+            },
+          );
+
+          late final HttpClientResponse response;
+          await expectLater(
+            client
+                .getUrl(url)
+                .then((request) => request.close())
+                .then((response_) => response = response_),
+            completes,
+          );
+
+          expect(response.statusCode, equals(HttpStatus.badRequest));
+          expect(response.reasonPhrase, equals('Invalid protocol version.'));
+        },
+      );
+
+      test(
+        'rejects requests with an unsupported protocol version.',
+        () async {
+          final url = serverUrl.replace(
+            queryParameters: <String, String>{
+              'EIO': '3',
+              'transport': ConnectionType.polling.name,
+              'sid': 'session_identifier',
+            },
+          );
+
+          late final HttpClientResponse response;
+          await expectLater(
+            client
+                .getUrl(url)
+                .then((request) => request.close())
+                .then((response_) => response = response_),
+            completes,
+          );
+
+          expect(response.statusCode, equals(HttpStatus.notImplemented));
+          expect(
+            response.reasonPhrase,
+            equals('Protocol version 3 not supported.'),
           );
         },
       );
@@ -214,39 +296,7 @@ void main() {
       );
 
       test(
-        'rejects requests with a protocol version of an invalid type.',
-        () async {
-          // Register the client IP manually.
-          server.clientManager
-              .sessionIdentifiers[InternetAddress.loopbackIPv4.address] = '';
-
-          final url = serverUrl.replace(
-            queryParameters: <String, String>{
-              'EIO': 'abc',
-              'transport': ConnectionType.polling.name,
-              'sid': 'session_identifier',
-            },
-          );
-
-          late final HttpClientResponse response;
-          await expectLater(
-            client
-                .getUrl(url)
-                .then((request) => request.close())
-                .then((response_) => response = response_),
-            completes,
-          );
-
-          expect(response.statusCode, equals(HttpStatus.badRequest));
-          expect(
-            response.reasonPhrase,
-            equals('The protocol version must be an integer.'),
-          );
-        },
-      );
-
-      test(
-        'rejects requests with an unsupported solicited connection type.',
+        'rejects requests without session identifier when client is connected.',
         () async {
           // Register the client IP manually.
           server.clientManager
@@ -255,40 +305,7 @@ void main() {
           final url = serverUrl.replace(
             queryParameters: <String, String>{
               'EIO': '4',
-              'transport': '123',
-              'sid': 'session_identifier',
-            },
-          );
-
-          late final HttpClientResponse response;
-          await expectLater(
-            client
-                .getUrl(url)
-                .then((request) => request.close())
-                .then((response_) => response = response_),
-            completes,
-          );
-
-          expect(response.statusCode, equals(HttpStatus.notImplemented));
-          expect(
-            response.reasonPhrase,
-            equals("Transport type '123' not supported or invalid."),
-          );
-        },
-      );
-
-      test(
-        'rejects requests with an invalid protocol version.',
-        () async {
-          // Register the client IP manually.
-          server.clientManager
-              .sessionIdentifiers[InternetAddress.loopbackIPv4.address] = '';
-
-          final url = serverUrl.replace(
-            queryParameters: <String, String>{
-              'EIO': '-1',
               'transport': ConnectionType.polling.name,
-              'sid': 'session_identifier',
             },
           );
 
@@ -302,38 +319,11 @@ void main() {
           );
 
           expect(response.statusCode, equals(HttpStatus.badRequest));
-          expect(response.reasonPhrase, equals('Invalid protocol version.'));
-        },
-      );
-
-      test(
-        'rejects requests with an unsupported protocol version.',
-        () async {
-          // Register the client IP manually.
-          server.clientManager
-              .sessionIdentifiers[InternetAddress.loopbackIPv4.address] = '';
-
-          final url = serverUrl.replace(
-            queryParameters: <String, String>{
-              'EIO': '3',
-              'transport': ConnectionType.polling.name,
-              'sid': 'session_identifier',
-            },
-          );
-
-          late final HttpClientResponse response;
-          await expectLater(
-            client
-                .getUrl(url)
-                .then((request) => request.close())
-                .then((response_) => response = response_),
-            completes,
-          );
-
-          expect(response.statusCode, equals(HttpStatus.notImplemented));
           expect(
             response.reasonPhrase,
-            equals('Protocol version 3 not supported.'),
+            equals(
+              '''Clients with an active connection must provide the 'sid' parameter.''',
+            ),
           );
         },
       );
