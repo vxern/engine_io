@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
+import 'package:uuid/uuid.dart';
 
 import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transport.dart';
@@ -21,6 +22,9 @@ class ServerConfiguration {
 /// The engine.io server.
 @sealed
 class Server {
+  /// Generator responsible for creating unique identifiers for sockets.
+  static const _uuid = Uuid();
+
   /// The version of the engine.io protocol this server operates on.
   static const protocolVersion = 4;
 
@@ -192,11 +196,28 @@ class Server {
       return;
     }
 
+    if (!isConnected) {
+      final sessionIdentifier = _uuid.v4();
+
+      final client = Socket(
+        sessionIdentifier: sessionIdentifier,
+        ipAddress: ipAddress,
+      );
+
+      clientManager.add(client);
+
+      // TODO(vxern): Send an `open` packet to the client.
+      // TODO(vxern): Add a connected event to the stream.
+
+      request.response
+        ..statusCode = HttpStatus.ok
+        ..close().ignore();
+      return;
+    }
+
     // TODO(vxern): Handle upgrade requests to WebSocket.
 
-    request.response
-      ..statusCode = HttpStatus.ok
-      ..close().ignore();
+    throw UnimplementedError('Non-handshake requests are not yet handled.');
   }
 
   /// Disconnects a client.
@@ -254,6 +275,12 @@ class ClientManager {
     final socket = clients[sessionIdentifier_];
 
     return socket;
+  }
+
+  /// Taking a [client], starts managing it by adding it to the client lists.
+  void add(Socket client) {
+    clients[client.sessionIdentifier] = client;
+    sessionIdentifiers[client.ipAddress] = client.sessionIdentifier;
   }
 
   /// Taking a [client], stops managing it by removing it from the client lists.

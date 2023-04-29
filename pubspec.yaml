@@ -15,6 +15,7 @@ environment:
 dependencies:
   meta: ^1.9.1 # Static code analysis.
   universal_io: ^2.2.0 # Cross-platform dart:io.
+  uuid: ^3.0.7 # Unique identifiers for socket connections.
 
 dev_dependencies:
   test: ^1.24.2 # Testing.

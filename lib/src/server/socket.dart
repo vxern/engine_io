@@ -9,12 +9,12 @@ class Socket extends base.Socket {
   final String sessionIdentifier;
 
   /// The remote IP address of this client.
-  final String address;
+  final String ipAddress;
 
   bool _isDisposing = false;
 
   /// Creates an instance of `Socket`.
-  Socket({required this.sessionIdentifier, required this.address});
+  Socket({required this.sessionIdentifier, required this.ipAddress});
 
   /// Disposes of this socket.
   Future<void> dispose() async {

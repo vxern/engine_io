@@ -189,7 +189,7 @@ void main() {
         () async {
           final url = serverUrl.replace(
             queryParameters: <String, String>{
-              'EIO': '4',
+              'EIO': Server.protocolVersion.toString(),
               'transport': '123',
               'sid': 'session_identifier',
             },
@@ -270,7 +270,7 @@ void main() {
         () async {
           final url = serverUrl.replace(
             queryParameters: <String, String>{
-              'EIO': '4',
+              'EIO': Server.protocolVersion.toString(),
               'transport': ConnectionType.polling.name,
               'sid': 'session_identifier',
             },
@@ -304,7 +304,7 @@ void main() {
 
           final url = serverUrl.replace(
             queryParameters: <String, String>{
-              'EIO': '4',
+              'EIO': Server.protocolVersion.toString(),
               'transport': ConnectionType.polling.name,
             },
           );
@@ -325,6 +325,32 @@ void main() {
               '''Clients with an active connection must provide the 'sid' parameter.''',
             ),
           );
+        },
+      );
+
+      test(
+        'accepts a valid handshake requests.',
+        () async {
+          final url = serverUrl.replace(
+            queryParameters: <String, String>{
+              'EIO': Server.protocolVersion.toString(),
+              'transport': ConnectionType.polling.name,
+            },
+          );
+
+          late final HttpClientResponse response;
+          await expectLater(
+            client
+                .getUrl(url)
+                .then((request) => request.close())
+                .then((response_) => response = response_),
+            completes,
+          );
+
+          expect(response.statusCode, equals(HttpStatus.ok));
+          expect(response.reasonPhrase, equals('OK'));
+
+          expect(server.clientManager.clients.isNotEmpty, equals(true));
         },
       );
     },
