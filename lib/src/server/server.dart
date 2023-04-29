@@ -1,5 +1,6 @@
 import 'dart:collection';
 
+import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 import 'package:uuid/uuid.dart';
@@ -9,14 +10,43 @@ import 'package:engine_io_dart/src/transport.dart';
 
 /// Settings used to configure the engine.io server.
 class ServerConfiguration {
-  /// The path the engine.io server should listen on for requests.
+  /// The path the server should listen on for requests.
   final String path;
 
+  /// The available types of connection.
+  final Set<ConnectionType> availableConnectionTypes;
+
+  /// The amount of time the server should wait in-between sending
+  /// `PacketType.ping` packets.
+  final Duration heartbeatInterval;
+
+  /// The amount of time the server should allow for a client to respond to a
+  /// heartbeat before closing the connection.
+  final Duration heartbeatTimeout;
+
+  /// The maximum number of bytes per packet chunk.
+  final int maximumChunkBytes;
+
   /// Creates an instance of `ServerConfiguration`.
-  const ServerConfiguration({this.path = 'engine.io/'});
+  ServerConfiguration({
+    this.path = 'engine.io/',
+    this.availableConnectionTypes = const {ConnectionType.polling},
+    this.heartbeatInterval = const Duration(seconds: 15),
+    this.heartbeatTimeout = const Duration(seconds: 10),
+    this.maximumChunkBytes = 1024 * 128, // 128 KiB (Kibibytes)
+  })  : assert(!path.startsWith('/'), 'The path must not start with a slash.'),
+        assert(path.endsWith('/'), 'The path must end with a slash.'),
+        assert(
+          heartbeatTimeout < heartbeatInterval,
+          "'pingTimeout' must be shorter than 'pingInterval'.",
+        ),
+        assert(
+          maximumChunkBytes <= 1000 * 1000 * 1000 * 2, // 2 GB (Gigabytes)
+          "'maximumChunkBytes' must be smaller than or equal 2 GB.",
+        );
 
   /// The default server configuration.
-  static const defaultConfiguration = ServerConfiguration();
+  static final defaultConfiguration = ServerConfiguration();
 }
 
 /// The engine.io server.
@@ -58,15 +88,15 @@ class Server {
 
   Server._construct({
     required this.httpServer,
-    this.configuration = ServerConfiguration.defaultConfiguration,
-  });
+    ServerConfiguration? configuration,
+  }) : configuration =
+            configuration ?? ServerConfiguration.defaultConfiguration;
 
   /// Creates an instance of `Server` bound to a given [uri], which immediately
   /// begins to listen for incoming requests.
   static Future<Server> bind(
     Uri uri, {
-    ServerConfiguration configuration =
-        ServerConfiguration.defaultConfiguration,
+    ServerConfiguration? configuration,
   }) async {
     final httpServer = await HttpServer.bind(uri.host, uri.port);
     final server =

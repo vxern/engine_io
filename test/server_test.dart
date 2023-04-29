@@ -41,7 +41,7 @@ void main() {
   });
 
   test('Custom configuration is set.', () async {
-    const configuration = ServerConfiguration(path: 'custom-path/');
+    final configuration = ServerConfiguration(path: 'custom-path/');
 
     late final Server server;
     await expectLater(
