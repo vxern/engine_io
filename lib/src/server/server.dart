@@ -1,5 +1,6 @@
 import 'dart:collection';
 
+import 'package:engine_io_dart/src/packet.dart';
 import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
@@ -236,12 +237,21 @@ class Server {
 
       clientManager.add(client);
 
-      // TODO(vxern): Send an `open` packet to the client.
-      // TODO(vxern): Add a connected event to the stream.
+      final openPacket = OpenPacket(
+        sessionIdentifier: client.sessionIdentifier,
+        availableConnectionUpgrades: configuration.availableConnectionTypes,
+        heartbeatInterval: configuration.heartbeatInterval,
+        heartbeatTimeout: configuration.heartbeatTimeout,
+        maximumChunkBytes: configuration.maximumChunkBytes,
+      );
 
       request.response
         ..statusCode = HttpStatus.ok
+        ..write(Packet.encode(openPacket))
         ..close().ignore();
+
+      // TODO(vxern): Add a connected event to the stream.
+
       return;
     }
 

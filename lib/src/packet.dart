@@ -90,8 +90,11 @@ abstract class Packet {
   /// Creates an instance of `Packet`.
   const Packet({required this.type});
 
-  /// Gets the packet in its encoded format.
+  /// Gets the packet content in its encoded format.
   String get encoded => PacketContents.empty;
+
+  /// Encodes a packet ready to be sent to the other party in the connection.
+  static String encode(Packet packet) => '${packet.type.id}${packet.encoded}';
 }
 
 /// Represents a packet that serves as a probe to verify that a connection is

@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
@@ -329,7 +332,7 @@ void main() {
       );
 
       test(
-        'accepts a valid handshake requests.',
+        'accepts valid handshake requests.',
         () async {
           final url = serverUrl.replace(
             queryParameters: <String, String>{
@@ -351,6 +354,12 @@ void main() {
           expect(response.reasonPhrase, equals('OK'));
 
           expect(server.clientManager.clients.isNotEmpty, equals(true));
+
+          final body = await response.transform(utf8.decoder).join();
+          expect(
+            () => OpenPacket.decode(body.substring(1)),
+            returnsNormally,
+          );
         },
       );
     },
