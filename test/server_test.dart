@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
@@ -484,6 +485,118 @@ void main() {
           expect(packets[2], isA<PingPacket>());
           expect(packets[3], isA<TextMessagePacket>());
           expect(packets[4], isA<UpgradePacket>());
+        }
+      });
+
+      test('sets the content type header correctly.', () async {
+        late final String sessionIdentifier;
+
+        // Handshake.
+        {
+          final url = serverUrl.replace(
+            queryParameters: <String, String>{
+              'EIO': Server.protocolVersion.toString(),
+              'transport': ConnectionType.polling.name,
+            },
+          );
+
+          late final HttpClientResponse response;
+          await expectLater(
+            client
+                .getUrl(url)
+                .then((request) => request.close())
+                .then((response_) => response = response_),
+            completes,
+          );
+
+          final body = await response.transform(utf8.decoder).join();
+          final packet = Packet.decode(body) as OpenPacket;
+
+          sessionIdentifier = packet.sessionIdentifier;
+        }
+
+        final socket = server.clientManager.get(
+          sessionIdentifier: sessionIdentifier,
+        )!;
+
+        socket.transport.send(const PingPacket());
+
+        {
+          final url = serverUrl.replace(
+            queryParameters: <String, String>{
+              'EIO': Server.protocolVersion.toString(),
+              'transport': ConnectionType.polling.name,
+              'sid': sessionIdentifier,
+            },
+          );
+
+          late final HttpClientResponse response;
+          await expectLater(
+            client
+                .getUrl(url)
+                .then((request) => request.close())
+                .then((response_) => response = response_),
+            completes,
+          );
+
+          expect(
+            response.headers.contentType?.mimeType,
+            equals(ContentType.text.mimeType),
+          );
+        }
+
+        socket.transport.send(const TextMessagePacket(data: ''));
+
+        {
+          final url = serverUrl.replace(
+            queryParameters: <String, String>{
+              'EIO': Server.protocolVersion.toString(),
+              'transport': ConnectionType.polling.name,
+              'sid': sessionIdentifier,
+            },
+          );
+
+          late final HttpClientResponse response;
+          await expectLater(
+            client
+                .getUrl(url)
+                .then((request) => request.close())
+                .then((response_) => response = response_),
+            completes,
+          );
+
+          expect(
+            response.headers.contentType?.mimeType,
+            equals(ContentType.json.mimeType),
+          );
+        }
+
+        socket.transport.send(
+          BinaryMessagePacket(data: Uint8List.fromList(<int>[])),
+        );
+
+        {
+          final url = serverUrl.replace(
+            queryParameters: <String, String>{
+              'EIO': Server.protocolVersion.toString(),
+              'transport': ConnectionType.polling.name,
+              'sid': sessionIdentifier,
+            },
+          );
+
+          late final HttpClientResponse response;
+          await expectLater(
+            client
+                .getUrl(url)
+                .then((request) => request.close())
+                .then((response_) => response = response_),
+            completes,
+          );
+
+          expect(
+            response.headers.contentType?.mimeType,
+            equals(ContentType.binary.mimeType),
+          );
         }
       });
     },

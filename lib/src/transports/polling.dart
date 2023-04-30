@@ -30,10 +30,31 @@ class PollingTransport extends Transport {
   /// [packetBuffer] queue.
   void offload(HttpResponse response) {
     if (packetBuffer.isEmpty) {
+      response.headers.set(
+        HttpHeaders.contentTypeHeader,
+        ContentType.text.mimeType,
+      );
       return;
     }
 
     // TODO(vxern): Make sure the chunk limit is not crossed.
+
+    if (packetBuffer.any((packet) => packet.isBinary)) {
+      response.headers.set(
+        HttpHeaders.contentTypeHeader,
+        ContentType.binary.mimeType,
+      );
+    } else if (packetBuffer.any((packet) => packet.isJSON)) {
+      response.headers.set(
+        HttpHeaders.contentTypeHeader,
+        ContentType.json.mimeType,
+      );
+    } else {
+      response.headers.set(
+        HttpHeaders.contentTypeHeader,
+        ContentType.text.mimeType,
+      );
+    }
 
     final encodedPackets = packetBuffer.map(Packet.encode);
     response.writeAll(encodedPackets, recordSeparator);

@@ -112,6 +112,13 @@ class PacketContents {
 @immutable
 @sealed
 abstract class Packet {
+  /// Defines packets that contain binary data.
+  static const _binaryPackets = {PacketType.binaryMessage};
+
+  /// Defines packets that contain JSON data.
+  static const _jsonPackets = {PacketType.open, PacketType.textMessage};
+
+  /// Models a valid encoded packet.
   static final _packetExpression = RegExp(r'^([0-6b])(.*?)$');
 
   /// The type of this packet.
@@ -119,6 +126,12 @@ abstract class Packet {
 
   /// Creates an instance of `Packet`.
   const Packet({required this.type});
+
+  /// Indicates whether or not this packet has a binary payload.
+  bool get isBinary => _binaryPackets.contains(type);
+
+  /// Indicates whether or not this packet has a binary payload.
+  bool get isJSON => _jsonPackets.contains(type);
 
   /// Gets the packet content in its encoded format.
   String get encoded => PacketContents.empty;
