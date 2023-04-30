@@ -15,7 +15,7 @@ abstract class MessagePacket<T> extends Packet {
   final T data;
 
   /// Creates an instance of `MessagePacket`.
-  const MessagePacket({required this.data}) : super(type: PacketType.message);
+  const MessagePacket({required super.type, required this.data});
 
   @override
   String get encoded;
@@ -28,7 +28,8 @@ abstract class MessagePacket<T> extends Packet {
 @sealed
 class TextMessagePacket extends MessagePacket<String> {
   /// Creates an instance of `TextMessagePacket`.
-  const TextMessagePacket({required super.data});
+  const TextMessagePacket({required super.data})
+      : super(type: PacketType.textMessage);
 
   @override
   String get encoded => data;
@@ -49,7 +50,8 @@ class TextMessagePacket extends MessagePacket<String> {
 @sealed
 class BinaryMessagePacket extends MessagePacket<Uint8List> {
   /// Creates an instance of `BinaryMessagePacket`.
-  const BinaryMessagePacket({required super.data});
+  const BinaryMessagePacket({required super.data})
+      : super(type: PacketType.binaryMessage);
 
   @override
   String get encoded => base64.encode(data);

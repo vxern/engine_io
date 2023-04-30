@@ -7,13 +7,13 @@ enum PacketType {
   ///
   /// The server signals to the client that a connection between the two
   /// parties, client and server, has been established, and is ready to be used.
-  open(id: 0),
+  open(id: '0'),
 
   /// Used in closing a connection.
   ///
   /// Either party, server or client, signals that the connection has been or
   /// is to be abolished.
-  close(id: 1),
+  close(id: '1'),
 
   /// Used in the heartbeat mechanism.
   ///
@@ -27,7 +27,7 @@ enum PacketType {
   /// before asking to upgrade the connection to a different protocol.
   ///
   ///   ❗ In this case, the body of the packet is 'probe'.
-  ping(id: 2),
+  ping(id: '2'),
 
   /// Used in the heartbeat mechanism.
   ///
@@ -42,27 +42,33 @@ enum PacketType {
   /// operational.
   ///
   ///   ❗ In this case, the body of the packet is 'probe'.
-  pong(id: 3),
+  pong(id: '3'),
 
   /// Used in transferring data or messages.
   ///
-  /// Either party, server or client, sends a message to the other.
-  message(id: 4),
+  /// Either party, server or client, sends a text message to the other.
+  textMessage(id: '4'),
+
+  /// Used in transferring data or messages.
+  ///
+  /// Either party, server or client, sends a base64-encoded binary message to
+  /// the other.
+  binaryMessage(id: 'b'),
 
   /// Used in the upgrade process.
   ///
   /// The client solicits a connection upgrade from the server.
-  upgrade(id: 5),
+  upgrade(id: '5'),
 
   /// Used in the upgrade process.
   ///
   /// During an upgrade to a new connection, the server responds to any
   /// remaining, pending requests on the old connection with a packet of type
   /// `PacketType.noop`.
-  noop(id: 6);
+  noop(id: '6');
 
-  /// The ID representing a given packet type.
-  final int id;
+  /// The ID of a given packet type.
+  final String id;
 
   /// Creates an instance of `PacketType`.
   const PacketType({required this.id});
