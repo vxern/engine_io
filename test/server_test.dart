@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
+import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:engine_io_dart/src/server/server.dart';
 import 'package:engine_io_dart/src/transport.dart';
 
@@ -16,7 +16,7 @@ void main() {
   setUp(() => client = HttpClient());
   tearDown(() async => client.close());
 
-  group('HTTP server ', () {
+  group('HTTP server', () {
     late final Server server;
 
     test('binds to a URL.', () async {
