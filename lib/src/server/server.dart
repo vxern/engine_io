@@ -38,6 +38,10 @@ class ServerConfiguration {
   })  : assert(!path.startsWith('/'), 'The path must not start with a slash.'),
         assert(path.endsWith('/'), 'The path must end with a slash.'),
         assert(
+          availableConnectionTypes.isNotEmpty,
+          'There must be at least one connection type enabled.',
+        ),
+        assert(
           heartbeatTimeout < heartbeatInterval,
           "'pingTimeout' must be shorter than 'pingInterval'.",
         ),
