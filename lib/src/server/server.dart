@@ -291,11 +291,30 @@ class Server {
           connection.get.unlock();
           return;
         }
+        break;
+      case 'POST':
+        if (client.transport is PollingTransport) {
+          final connection = client.transport as PollingTransport;
+          if (connection.post.isLocked) {
+            disconnect(client);
+            request.response.reject(
+              HttpStatus.badRequest,
+              '''There may not be more than one POST request active at any given time.''',
+            );
+          }
+
+          connection.post.lock();
+
+          request.response
+            ..statusCode = HttpStatus.ok
+            ..close().ignore();
+
+          connection.post.unlock();
+          return;
+        }
     }
 
     // TODO(vxern): Handle upgrade requests to WebSocket.
-
-    throw UnimplementedError('Non-handshake requests are not yet handled.');
   }
 
   /// Disconnects a client.

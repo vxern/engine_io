@@ -21,7 +21,8 @@ class PollingTransport extends Transport {
   /// Lock for GET requests.
   final get = Lock();
 
-  // TODO(vxern): Add locks for POST requests.
+  /// Lock for POST requests.
+  final post = Lock();
 
   @override
   void send(Packet packet) => packetBuffer.add(packet);
