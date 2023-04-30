@@ -1,5 +1,13 @@
 import 'package:meta/meta.dart';
 
+import 'package:engine_io_dart/src/packets/close.dart';
+import 'package:engine_io_dart/src/packets/message.dart';
+import 'package:engine_io_dart/src/packets/noop.dart';
+import 'package:engine_io_dart/src/packets/open.dart';
+import 'package:engine_io_dart/src/packets/ping.dart';
+import 'package:engine_io_dart/src/packets/pong.dart';
+import 'package:engine_io_dart/src/packets/upgrade.dart';
+
 /// Represents the type of a packet transmitted between the two parties, client
 /// and server.
 enum PacketType {
@@ -72,6 +80,20 @@ enum PacketType {
 
   /// Creates an instance of `PacketType`.
   const PacketType({required this.id});
+
+  /// Matches [id] to a `PacketType`.
+  ///
+  /// If [id] does not match to any supported `PacketType`, a
+  /// `FormatException` will be thrown.
+  static PacketType byId(String id) {
+    for (final type in PacketType.values) {
+      if (type.id == id) {
+        return type;
+      }
+    }
+
+    throw FormatException("Packet type '$id' not supported or invalid.");
+  }
 }
 
 /// Contains well-defined packet contents.
@@ -90,6 +112,8 @@ class PacketContents {
 @immutable
 @sealed
 abstract class Packet {
+  static final _packetExpression = RegExp(r'^([0-6b])(.*?)$');
+
   /// The type of this packet.
   final PacketType type;
 
@@ -101,6 +125,51 @@ abstract class Packet {
 
   /// Encodes a packet ready to be sent to the other party in the connection.
   static String encode(Packet packet) => '${packet.type.id}${packet.encoded}';
+
+  /// Taking an packet in its [encoded] format, attempts to decode it.
+  ///
+  /// If the packet is invalid, throws a `FormatException`.
+  static Packet decode(String encoded) {
+    final match = _packetExpression.firstMatch(encoded);
+    if (match == null) {
+      throw const FormatException('Invalid packet encoding.');
+    }
+
+    final id = match[1]!;
+    final content = match[2]!;
+
+    final packetType = PacketType.byId(id);
+
+    final Packet packet;
+    switch (packetType) {
+      case PacketType.open:
+        packet = OpenPacket.decode(content);
+        break;
+      case PacketType.close:
+        packet = const ClosePacket();
+        break;
+      case PacketType.ping:
+        packet = PingPacket.decode(content);
+        break;
+      case PacketType.pong:
+        packet = PongPacket.decode(content);
+        break;
+      case PacketType.textMessage:
+        packet = TextMessagePacket.decode(content);
+        break;
+      case PacketType.binaryMessage:
+        packet = BinaryMessagePacket.decode(content);
+        break;
+      case PacketType.upgrade:
+        packet = const UpgradePacket();
+        break;
+      case PacketType.noop:
+        packet = const NoopPacket();
+        break;
+    }
+
+    return packet;
+  }
 }
 
 /// Represents a packet that serves as a probe to verify that a connection is
