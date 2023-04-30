@@ -269,12 +269,28 @@ class Server {
       client = client_;
     }
 
-    if (request.method == 'GET' && client.transport is PollingTransport) {
-      final connection = client.transport as PollingTransport;
-      request.response.statusCode = HttpStatus.ok;
-      connection.offload(request.response);
-      request.response.close().ignore();
-      return;
+    switch (request.method) {
+      case 'GET':
+        if (client.transport is PollingTransport) {
+          final connection = client.transport as PollingTransport;
+          if (connection.get.isLocked) {
+            disconnect(client);
+            request.response.reject(
+              HttpStatus.badRequest,
+              '''There may not be more than one GET request active at any given time.''',
+            );
+            return;
+          }
+
+          connection.get.lock();
+
+          request.response.statusCode = HttpStatus.ok;
+          connection.offload(request.response);
+          request.response.close().ignore();
+
+          connection.get.unlock();
+          return;
+        }
     }
 
     // TODO(vxern): Handle upgrade requests to WebSocket.

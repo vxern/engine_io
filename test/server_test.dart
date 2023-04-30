@@ -373,125 +373,119 @@ void main() {
         },
       );
 
-      test(
-        'rejects invalid session identifiers.',
-        () async {
-          // Handshake.
-          {
-            final url = serverUrl.replace(
-              queryParameters: <String, String>{
-                'EIO': Server.protocolVersion.toString(),
-                'transport': ConnectionType.polling.name,
-              },
-            );
+      test('rejects invalid session identifiers.', () async {
+        // Handshake.
+        {
+          final url = serverUrl.replace(
+            queryParameters: <String, String>{
+              'EIO': Server.protocolVersion.toString(),
+              'transport': ConnectionType.polling.name,
+            },
+          );
 
-            await expectLater(
-              client.getUrl(url).then((request) => request.close()),
-              completes,
-            );
-          }
-          {
-            final url = serverUrl.replace(
-              queryParameters: <String, String>{
-                'EIO': Server.protocolVersion.toString(),
-                'transport': ConnectionType.polling.name,
-                'sid': 'invalid_sid',
-              },
-            );
+          await expectLater(
+            client.getUrl(url).then((request) => request.close()),
+            completes,
+          );
+        }
+        {
+          final url = serverUrl.replace(
+            queryParameters: <String, String>{
+              'EIO': Server.protocolVersion.toString(),
+              'transport': ConnectionType.polling.name,
+              'sid': 'invalid_sid',
+            },
+          );
 
-            late final HttpClientResponse response;
-            await expectLater(
-              client
-                  .getUrl(url)
-                  .then((request) => request.close())
-                  .then((response_) => response = response_),
-              completes,
-            );
+          late final HttpClientResponse response;
+          await expectLater(
+            client
+                .getUrl(url)
+                .then((request) => request.close())
+                .then((response_) => response = response_),
+            completes,
+          );
 
-            expect(response.statusCode, equals(HttpStatus.badRequest));
-            expect(
-              response.reasonPhrase,
-              equals('Invalid session identifier.'),
-            );
-          }
-        },
-      );
+          expect(response.statusCode, equals(HttpStatus.badRequest));
+          expect(
+            response.reasonPhrase,
+            equals('Invalid session identifier.'),
+          );
+        }
+      });
 
-      test(
-        'offloads packets correctly.',
-        () async {
-          late final String sessionIdentifier;
+      test('offloads packets correctly.', () async {
+        late final String sessionIdentifier;
 
-          // Handshake.
-          {
-            final url = serverUrl.replace(
-              queryParameters: <String, String>{
-                'EIO': Server.protocolVersion.toString(),
-                'transport': ConnectionType.polling.name,
-              },
-            );
+        // Handshake.
+        {
+          final url = serverUrl.replace(
+            queryParameters: <String, String>{
+              'EIO': Server.protocolVersion.toString(),
+              'transport': ConnectionType.polling.name,
+            },
+          );
 
-            late final HttpClientResponse response;
-            await expectLater(
-              client
-                  .getUrl(url)
-                  .then((request) => request.close())
-                  .then((response_) => response = response_),
-              completes,
-            );
+          late final HttpClientResponse response;
+          await expectLater(
+            client
+                .getUrl(url)
+                .then((request) => request.close())
+                .then((response_) => response = response_),
+            completes,
+          );
 
-            final body = await response.transform(utf8.decoder).join();
-            final packet = Packet.decode(body) as OpenPacket;
+          final body = await response.transform(utf8.decoder).join();
+          final packet = Packet.decode(body) as OpenPacket;
 
-            sessionIdentifier = packet.sessionIdentifier;
-          }
+          sessionIdentifier = packet.sessionIdentifier;
+        }
 
-          final socket = server.clientManager.get(
-            sessionIdentifier: sessionIdentifier,
-          )!;
+        final socket = server.clientManager.get(
+          sessionIdentifier: sessionIdentifier,
+        )!;
 
-          socket.transport
-            ..send(const TextMessagePacket(data: 'first'))
-            ..send(const TextMessagePacket(data: 'second'))
-            ..send(const PingPacket())
-            ..send(const TextMessagePacket(data: 'third'))
-            ..send(const UpgradePacket());
+        socket.transport
+          ..send(const TextMessagePacket(data: 'first'))
+          ..send(const TextMessagePacket(data: 'second'))
+          ..send(const PingPacket())
+          ..send(const TextMessagePacket(data: 'third'))
+          ..send(const UpgradePacket());
 
-          {
-            final url = serverUrl.replace(
-              queryParameters: <String, String>{
-                'EIO': Server.protocolVersion.toString(),
-                'transport': ConnectionType.polling.name,
-                'sid': sessionIdentifier,
-              },
-            );
+        {
+          final url = serverUrl.replace(
+            queryParameters: <String, String>{
+              'EIO': Server.protocolVersion.toString(),
+              'transport': ConnectionType.polling.name,
+              'sid': sessionIdentifier,
+            },
+          );
 
-            late final HttpClientResponse response;
-            await expectLater(
-              client
-                  .getUrl(url)
-                  .then((request) => request.close())
-                  .then((response_) => response = response_),
-              completes,
-            );
+          late final HttpClientResponse response;
+          await expectLater(
+            client
+                .getUrl(url)
+                .then((request) => request.close())
+                .then((response_) => response = response_),
+            completes,
+          );
 
-            final transport = socket.transport as PollingTransport;
-            expect(transport.packetBuffer.isEmpty, equals(true));
+          final transport = socket.transport as PollingTransport;
+          expect(transport.packetBuffer.isEmpty, equals(true));
 
-            final body = await response.transform(utf8.decoder).join();
-            final packets = body
-                .split(PollingTransport.recordSeparator)
-                .map(Packet.decode)
-                .toList();
+          final body = await response.transform(utf8.decoder).join();
+          final packets = body
+              .split(PollingTransport.recordSeparator)
+              .map(Packet.decode)
+              .toList();
 
-            expect(packets[0], isA<TextMessagePacket>());
-            expect(packets[1], isA<TextMessagePacket>());
-            expect(packets[2], isA<PingPacket>());
-            expect(packets[3], isA<TextMessagePacket>());
-            expect(packets[4], isA<UpgradePacket>());
-          }
-        },
-      );
+          expect(packets[0], isA<TextMessagePacket>());
+          expect(packets[1], isA<TextMessagePacket>());
+          expect(packets[2], isA<PingPacket>());
+          expect(packets[3], isA<TextMessagePacket>());
+          expect(packets[4], isA<UpgradePacket>());
+        }
+      });
     },
   );
 }

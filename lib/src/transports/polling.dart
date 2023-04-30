@@ -18,7 +18,10 @@ class PollingTransport extends Transport {
   /// the next HTTP poll cycle.
   final Queue<Packet> packetBuffer = Queue();
 
-  // TODO(vxern): Add locks for GET and POST requests.
+  /// Lock for GET requests.
+  final get = Lock();
+
+  // TODO(vxern): Add locks for POST requests.
 
   @override
   void send(Packet packet) => packetBuffer.add(packet);
@@ -37,4 +40,18 @@ class PollingTransport extends Transport {
 
     packetBuffer.clear();
   }
+}
+
+/// Used for keeping track and managing the lock state of requests.
+class Lock {
+  bool _isLocked = false;
+
+  /// Returns the lock state.
+  bool get isLocked => _isLocked;
+
+  /// Sets the state to locked.
+  void lock() => _isLocked = true;
+
+  /// Sets the state to unlocked.
+  void unlock() => _isLocked = false;
 }
