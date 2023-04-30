@@ -10,7 +10,11 @@
   - `message`: `TextMessagePacket`, `BinaryMessagePacket` : `MessagePacket`
   - `upgrade`: `UpgradePacket`
   - `noop`: `NoopPacket`
-- Define the available connection types in the `ConnectionType` enum.
+- [Work in progress] Define the `Transport` class:
+  - [Work in progress] Define the available connection types in the
+    `ConnectionType` enum.
+  - [Work in progress] Model transports:
+    - `polling`: `PollingTransport`
 - [Work in progress] Define the `Server` class:
   - [Work in progress] Define the `ServerConfiguration` class to contain the
     available configuration options for the server.

@@ -3,9 +3,14 @@ import 'dart:convert';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
+import 'package:engine_io_dart/src/packets/message.dart';
 import 'package:engine_io_dart/src/packets/open.dart';
+import 'package:engine_io_dart/src/packets/ping.dart';
+import 'package:engine_io_dart/src/packets/upgrade.dart';
 import 'package:engine_io_dart/src/server/server.dart';
+import 'package:engine_io_dart/src/transports/polling.dart';
 import 'package:engine_io_dart/src/transport.dart';
+import 'package:engine_io_dart/src/packet.dart';
 
 final remoteUrl = Uri.http(InternetAddress.loopbackIPv4.address, '/');
 final serverUrl = remoteUrl.replace(path: '/engine.io/');
@@ -299,39 +304,6 @@ void main() {
       );
 
       test(
-        'rejects requests without session identifier when client is connected.',
-        () async {
-          // Register the client IP manually.
-          server.clientManager
-              .sessionIdentifiers[InternetAddress.loopbackIPv4.address] = '';
-
-          final url = serverUrl.replace(
-            queryParameters: <String, String>{
-              'EIO': Server.protocolVersion.toString(),
-              'transport': ConnectionType.polling.name,
-            },
-          );
-
-          late final HttpClientResponse response;
-          await expectLater(
-            client
-                .getUrl(url)
-                .then((request) => request.close())
-                .then((response_) => response = response_),
-            completes,
-          );
-
-          expect(response.statusCode, equals(HttpStatus.badRequest));
-          expect(
-            response.reasonPhrase,
-            equals(
-              '''Clients with an active connection must provide the 'sid' parameter.''',
-            ),
-          );
-        },
-      );
-
-      test(
         'accepts valid handshake requests.',
         () async {
           final url = serverUrl.replace(
@@ -360,6 +332,164 @@ void main() {
             () => OpenPacket.decode(body.substring(1)),
             returnsNormally,
           );
+        },
+      );
+
+      test(
+        'rejects requests without session identifier when client is connected.',
+        () async {
+          final url = serverUrl.replace(
+            queryParameters: <String, String>{
+              'EIO': Server.protocolVersion.toString(),
+              'transport': ConnectionType.polling.name,
+            },
+          );
+
+          late HttpClientResponse response;
+          // Handshake.
+          await expectLater(
+            client
+                .getUrl(url)
+                .then((request) => request.close())
+                .then((response_) => response = response_),
+            completes,
+          );
+
+          await expectLater(
+            client
+                .getUrl(url)
+                .then((request) => request.close())
+                .then((response_) => response = response_),
+            completes,
+          );
+
+          expect(response.statusCode, equals(HttpStatus.badRequest));
+          expect(
+            response.reasonPhrase,
+            equals(
+              '''Clients with an active connection must provide the 'sid' parameter.''',
+            ),
+          );
+        },
+      );
+
+      test(
+        'rejects invalid session identifiers.',
+        () async {
+          // Handshake.
+          {
+            final url = serverUrl.replace(
+              queryParameters: <String, String>{
+                'EIO': Server.protocolVersion.toString(),
+                'transport': ConnectionType.polling.name,
+              },
+            );
+
+            await expectLater(
+              client.getUrl(url).then((request) => request.close()),
+              completes,
+            );
+          }
+          {
+            final url = serverUrl.replace(
+              queryParameters: <String, String>{
+                'EIO': Server.protocolVersion.toString(),
+                'transport': ConnectionType.polling.name,
+                'sid': 'invalid_sid',
+              },
+            );
+
+            late final HttpClientResponse response;
+            await expectLater(
+              client
+                  .getUrl(url)
+                  .then((request) => request.close())
+                  .then((response_) => response = response_),
+              completes,
+            );
+
+            expect(response.statusCode, equals(HttpStatus.badRequest));
+            expect(
+              response.reasonPhrase,
+              equals('Invalid session identifier.'),
+            );
+          }
+        },
+      );
+
+      test(
+        'offloads packets correctly.',
+        () async {
+          late final String sessionIdentifier;
+
+          // Handshake.
+          {
+            final url = serverUrl.replace(
+              queryParameters: <String, String>{
+                'EIO': Server.protocolVersion.toString(),
+                'transport': ConnectionType.polling.name,
+              },
+            );
+
+            late final HttpClientResponse response;
+            await expectLater(
+              client
+                  .getUrl(url)
+                  .then((request) => request.close())
+                  .then((response_) => response = response_),
+              completes,
+            );
+
+            final body = await response.transform(utf8.decoder).join();
+            final packet = Packet.decode(body) as OpenPacket;
+
+            sessionIdentifier = packet.sessionIdentifier;
+          }
+
+          final socket = server.clientManager.get(
+            sessionIdentifier: sessionIdentifier,
+          )!;
+
+          socket.transport
+            ..send(const TextMessagePacket(data: 'first'))
+            ..send(const TextMessagePacket(data: 'second'))
+            ..send(const PingPacket())
+            ..send(const TextMessagePacket(data: 'third'))
+            ..send(const UpgradePacket());
+
+          {
+            final url = serverUrl.replace(
+              queryParameters: <String, String>{
+                'EIO': Server.protocolVersion.toString(),
+                'transport': ConnectionType.polling.name,
+                'sid': sessionIdentifier,
+              },
+            );
+
+            late final HttpClientResponse response;
+            await expectLater(
+              client
+                  .getUrl(url)
+                  .then((request) => request.close())
+                  .then((response_) => response = response_),
+              completes,
+            );
+
+            final transport = socket.transport as PollingTransport;
+            expect(transport.packetBuffer.isEmpty, equals(true));
+
+            final body = await response.transform(utf8.decoder).join();
+            final packets = body
+                .split(PollingTransport.recordSeparator)
+                .map(Packet.decode)
+                .toList();
+
+            expect(packets[0], isA<TextMessagePacket>());
+            expect(packets[1], isA<TextMessagePacket>());
+            expect(packets[2], isA<PingPacket>());
+            expect(packets[3], isA<TextMessagePacket>());
+            expect(packets[4], isA<UpgradePacket>());
+          }
         },
       );
     },

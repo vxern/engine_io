@@ -1,12 +1,12 @@
 import 'dart:collection';
 
-import 'package:engine_io_dart/src/packet.dart';
-import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 import 'package:uuid/uuid.dart';
 
+import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
+import 'package:engine_io_dart/src/transports/polling.dart';
 import 'package:engine_io_dart/src/transport.dart';
 
 /// Settings used to configure the engine.io server.
@@ -120,10 +120,10 @@ class Server {
       return;
     }
 
-    final client = clientManager.get(ipAddress: ipAddress);
+    final clientByIP = clientManager.get(ipAddress: ipAddress);
 
     if (request.uri.path != '/${configuration.path}') {
-      disconnect(client);
+      disconnect(clientByIP);
       request.response.reject(HttpStatus.forbidden, 'Invalid server path.');
       return;
     }
@@ -139,7 +139,7 @@ class Server {
     }
 
     if (!allowedMethods.contains(request.method)) {
-      disconnect(client);
+      disconnect(clientByIP);
       request.response.reject(HttpStatus.methodNotAllowed);
       return;
     }
@@ -164,7 +164,7 @@ class Server {
       sessionIdentifier = request.uri.queryParameters[_sessionIdentifier];
 
       if (protocolVersion_ == null || connectionType_ == null) {
-        disconnect(client);
+        disconnect(clientByIP);
         request.response.reject(
           HttpStatus.badRequest,
           '''Parameters '$_protocolVersion' and '$_connectionType' must be present in every query.''',
@@ -176,7 +176,7 @@ class Server {
         protocolVersion =
             int.parse(request.uri.queryParameters[_protocolVersion]!);
       } on FormatException {
-        disconnect(client);
+        disconnect(clientByIP);
         request.response.reject(
           HttpStatus.badRequest,
           'The protocol version must be an integer.',
@@ -189,7 +189,7 @@ class Server {
           request.uri.queryParameters[_connectionType]!,
         );
       } on FormatException catch (error) {
-        disconnect(client);
+        disconnect(clientByIP);
         request.response.reject(HttpStatus.notImplemented, error.message);
         return;
       }
@@ -198,7 +198,7 @@ class Server {
     if (protocolVersion != Server.protocolVersion) {
       if (protocolVersion <= 0 ||
           protocolVersion > Server.protocolVersion + 1) {
-        disconnect(client);
+        disconnect(clientByIP);
         request.response.reject(
           HttpStatus.badRequest,
           'Invalid protocol version.',
@@ -206,7 +206,7 @@ class Server {
         return;
       }
 
-      disconnect(client);
+      disconnect(clientByIP);
       request.response.reject(
         HttpStatus.notImplemented,
         'Protocol version $protocolVersion not supported.',
@@ -216,7 +216,7 @@ class Server {
 
     if (isConnected) {
       if (sessionIdentifier == null) {
-        disconnect(client);
+        disconnect(clientByIP);
         request.response.reject(
           HttpStatus.badRequest,
           '''Clients with an active connection must provide the '$_sessionIdentifier' parameter.''',
@@ -231,10 +231,13 @@ class Server {
       return;
     }
 
+    late final Socket client;
+
     if (!isConnected) {
       final sessionIdentifier = _uuid.v4();
 
-      final client = Socket(
+      client = Socket(
+        connectionType: connectionType,
         sessionIdentifier: sessionIdentifier,
         ipAddress: ipAddress,
       );
@@ -249,13 +252,28 @@ class Server {
         maximumChunkBytes: configuration.maximumChunkBytes,
       );
 
-      request.response
-        ..statusCode = HttpStatus.ok
-        ..write(Packet.encode(openPacket))
-        ..close().ignore();
+      client.transport.send(openPacket);
 
       // TODO(vxern): Add a connected event to the stream.
+    } else {
+      final client_ = clientManager.get(sessionIdentifier: sessionIdentifier);
+      if (client_ == null) {
+        disconnect(clientByIP);
+        request.response.reject(
+          HttpStatus.badRequest,
+          'Invalid session identifier.',
+        );
+        return;
+      }
 
+      client = client_;
+    }
+
+    if (request.method == 'GET' && client.transport is PollingTransport) {
+      final connection = client.transport as PollingTransport;
+      request.response.statusCode = HttpStatus.ok;
+      connection.offload(request.response);
+      request.response.close().ignore();
       return;
     }
 

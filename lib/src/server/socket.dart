@@ -1,10 +1,15 @@
 import 'package:meta/meta.dart';
 
 import 'package:engine_io_dart/src/socket.dart' as base;
+import 'package:engine_io_dart/src/transport.dart';
 
 /// An interface for a client connected to the engine.io server.
 @sealed
 class Socket extends base.Socket {
+  /// The transport currently in use for sending messages to and receiving
+  /// messages from this client.
+  final Transport transport;
+
   /// The session ID of this client.
   final String sessionIdentifier;
 
@@ -14,7 +19,11 @@ class Socket extends base.Socket {
   bool _isDisposing = false;
 
   /// Creates an instance of `Socket`.
-  Socket({required this.sessionIdentifier, required this.ipAddress});
+  Socket({
+    required this.sessionIdentifier,
+    required this.ipAddress,
+    required ConnectionType connectionType,
+  }) : transport = Transport.fromType(connectionType);
 
   /// Disposes of this socket.
   Future<void> dispose() async {

@@ -1,3 +1,8 @@
+import 'package:meta/meta.dart';
+
+import 'package:engine_io_dart/src/packet.dart';
+import 'package:engine_io_dart/src/transports/polling.dart';
+
 /// The type of connection used for communication between a client and a server.
 enum ConnectionType {
   /// A websocket connection leveraging the use of websockets.
@@ -6,12 +11,12 @@ enum ConnectionType {
   /// A polling connection over HTTP imitating a real-time connection.
   polling(upgradesTo: {ConnectionType.websocket});
 
+  /// Defines the `ConnectionType`s this `ConnectionType` can be upgraded to.
+  final Set<ConnectionType> upgradesTo;
+
   /// Creates an instance of `ConnectionType`.
   const ConnectionType({required Set<ConnectionType>? upgradesTo})
       : upgradesTo = upgradesTo ?? const {};
-
-  /// Defines the `ConnectionType`s this `ConnectionType` can be upgraded to.
-  final Set<ConnectionType> upgradesTo;
 
   /// Matches [name] to a `ConnectionType`.
   ///
@@ -26,4 +31,24 @@ enum ConnectionType {
 
     throw FormatException("Transport type '$name' not supported or invalid.");
   }
+}
+
+/// Represents a medium by which to connected parties are able to communicate.
+/// The method by which packets are encoded or decoded depends on the transport
+/// method used.
+@immutable
+@sealed
+abstract class Transport {
+  /// Matches [type] to a `Transport`.
+  static Transport fromType(ConnectionType type) {
+    switch (type) {
+      case ConnectionType.websocket:
+        throw UnimplementedError();
+      case ConnectionType.polling:
+        return PollingTransport();
+    }
+  }
+
+  /// Sends a packet to the remote party.
+  void send(Packet packet);
 }
