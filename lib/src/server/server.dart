@@ -344,8 +344,7 @@ class Server {
     _isDisposing = true;
 
     await httpServer.close().catchError((dynamic _) {});
-
-    clientManager.dispose();
+    await clientManager.dispose();
   }
 }
 
@@ -394,7 +393,11 @@ class ClientManager {
   }
 
   /// Removes all registered clients.
-  void dispose() {
+  Future<void> dispose() async {
+    for (final client in clients.values) {
+      client.dispose();
+    }
+
     clients.clear();
     sessionIdentifiers.clear();
   }
