@@ -131,9 +131,15 @@ class Server {
     if (request.method == 'OPTIONS') {
       request.response
         ..statusCode = HttpStatus.noContent
-        ..headers.add('Access-Control-Allow-Origin', '*')
-        ..headers.add('Access-Control-Allow-Methods', _allowedMethodsString)
-        ..headers.add('Access-Control-Max-Age', 60 * 60 * 24) // 24 hours
+        ..headers.add(HttpHeaders.accessControlAllowOriginHeader, '*')
+        ..headers.add(
+          HttpHeaders.accessControlAllowMethodsHeader,
+          _allowedMethodsString,
+        )
+        ..headers.add(
+          HttpHeaders.accessControlMaxAgeHeader,
+          60 * 60 * 24, // 24 hours
+        )
         ..close().ignore();
       return;
     }

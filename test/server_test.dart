@@ -102,15 +102,15 @@ void main() {
         expect(response.reasonPhrase, equals('No Content'));
 
         expect(
-          response.headers.value('Access-Control-Allow-Origin'),
+          response.headers.value(HttpHeaders.accessControlAllowOriginHeader),
           equals('*'),
         );
         expect(
-          response.headers.value('Access-Control-Allow-Methods'),
+          response.headers.value(HttpHeaders.accessControlAllowMethodsHeader),
           equals('GET, POST'),
         );
         expect(
-          response.headers.value('Access-Control-Max-Age'),
+          response.headers.value(HttpHeaders.accessControlMaxAgeHeader),
           equals('86400'),
         );
       });
