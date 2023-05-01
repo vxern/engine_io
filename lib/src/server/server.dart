@@ -10,6 +10,9 @@ import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/polling.dart';
 import 'package:engine_io_dart/src/transport.dart';
 
+/// Generator responsible for creating unique identifiers for sockets.
+const _uuid = Uuid();
+
 /// Settings used to configure the engine.io server.
 class ServerConfiguration {
   /// The path the server should listen on for requests.
@@ -29,6 +32,9 @@ class ServerConfiguration {
   /// The maximum number of bytes per packet chunk.
   final int maximumChunkBytes;
 
+  /// Function used to generate session identifiers.
+  final String Function(HttpRequest request) generateId;
+
   /// Creates an instance of `ServerConfiguration`.
   ServerConfiguration({
     this.path = 'engine.io/',
@@ -36,7 +42,9 @@ class ServerConfiguration {
     this.heartbeatInterval = const Duration(seconds: 15),
     this.heartbeatTimeout = const Duration(seconds: 10),
     this.maximumChunkBytes = 1024 * 128, // 128 KiB (Kibibytes)
-  })  : assert(!path.startsWith('/'), 'The path must not start with a slash.'),
+    String Function(HttpRequest request)? idGenerator,
+  })  : generateId = idGenerator ?? ((_) => _uuid.v4()),
+        assert(!path.startsWith('/'), 'The path must not start with a slash.'),
         assert(path.endsWith('/'), 'The path must end with a slash.'),
         assert(
           availableConnectionTypes.isNotEmpty,
@@ -58,9 +66,6 @@ class ServerConfiguration {
 /// The engine.io server.
 @sealed
 class Server with EventController {
-  /// Generator responsible for creating unique identifiers for sockets.
-  static const _uuid = Uuid();
-
   /// The version of the engine.io protocol this server operates on.
   static const protocolVersion = 4;
 
@@ -243,7 +248,7 @@ class Server with EventController {
     late final Socket client;
 
     if (!isConnected) {
-      final sessionIdentifier = _uuid.v4();
+      final sessionIdentifier = configuration.generateId(request);
 
       client = Socket(
         connectionType: connectionType,
