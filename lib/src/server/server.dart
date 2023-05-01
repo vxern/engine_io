@@ -298,8 +298,12 @@ class Server with EventController {
           connection.get.lock();
 
           request.response.statusCode = HttpStatus.ok;
-          connection.offload(request.response);
+          final packets = await connection.offload(request.response);
           request.response.close().ignore();
+
+          for (final packet in packets) {
+            client.transport.onSendController.add(packet);
+          }
 
           connection.get.unlock();
           return;

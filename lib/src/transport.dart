@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:meta/meta.dart';
 
 import 'package:engine_io_dart/src/server/server.dart';
@@ -37,9 +39,10 @@ enum ConnectionType {
 /// Represents a medium by which to connected parties are able to communicate.
 /// The method by which packets are encoded or decoded depends on the transport
 /// method used.
-@immutable
 @sealed
-abstract class Transport {
+abstract class Transport with EventController {
+  bool _isDisposing = false;
+
   /// Matches [type] to a `Transport`.
   static Transport fromType(
     ConnectionType type, {
@@ -55,4 +58,30 @@ abstract class Transport {
 
   /// Sends a packet to the remote party.
   void send(Packet packet);
+
+  /// Disposes of this transport, closing event streams.
+  Future<void> dispose() async {
+    if (_isDisposing) {
+      return;
+    }
+
+    _isDisposing = true;
+
+    await closeEventStreams();
+  }
+}
+
+/// Contains streams for events that can be fired on the transport.
+mixin EventController {
+  /// Controller for the `onSend` event stream.
+  @nonVirtual
+  final onSendController = StreamController<Packet>.broadcast();
+
+  /// Added to when a packet is sent through this transport.
+  Stream<Packet> get onSend => onSendController.stream;
+
+  /// Closes event streams, disposing of this event controller.
+  Future<void> closeEventStreams() async {
+    onSendController.close().ignore();
+  }
 }

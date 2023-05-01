@@ -720,6 +720,52 @@ void main() {
           completes,
         );
       });
+
+      test('fires an `onSend` event.', () async {
+        late final String sessionIdentifier;
+
+        // Handshake.
+        {
+          final url = serverUrl.replace(
+            queryParameters: <String, String>{
+              'EIO': Server.protocolVersion.toString(),
+              'transport': ConnectionType.polling.name,
+            },
+          );
+
+          late final HttpClientResponse response;
+          await expectLater(
+            client
+                .getUrl(url)
+                .then((request) => request.close())
+                .then((response_) => response = response_),
+            completes,
+          );
+
+          final body = await response.transform(utf8.decoder).join();
+          final packet = Packet.decode(body) as OpenPacket;
+
+          sessionIdentifier = packet.sessionIdentifier;
+        }
+
+        final socket = server.clientManager.get(
+          sessionIdentifier: sessionIdentifier,
+        )!;
+
+        expectLater(socket.transport.onSend.first, completes);
+
+        socket.transport.send(const PingPacket());
+
+        final url = serverUrl.replace(
+          queryParameters: <String, String>{
+            'EIO': Server.protocolVersion.toString(),
+            'transport': ConnectionType.polling.name,
+            'sid': sessionIdentifier,
+          },
+        );
+
+        client.getUrl(url).then((request) => request.close());
+      });
     },
   );
 }

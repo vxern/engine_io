@@ -37,7 +37,7 @@ class Socket extends base.Socket with EventController {
     _onDisconnectController.add(reason);
   }
 
-  /// Disposes of this socket.
+  /// Disposes of this socket, closing event streams.
   Future<void> dispose() async {
     if (_isDisposing) {
       return;

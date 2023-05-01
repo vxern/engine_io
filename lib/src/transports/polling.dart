@@ -39,16 +39,17 @@ class PollingTransport extends Transport {
 
   /// Offloads the packets in [packetBuffer] onto [response] and clears the
   /// [packetBuffer] queue.
-  void offload(HttpResponse response) {
+  Future<List<Packet>> offload(HttpResponse response) async {
     if (packetBuffer.isEmpty) {
       response.headers.set(
         HttpHeaders.contentTypeHeader,
         ContentType.text.mimeType,
       );
-      return;
+      return [];
     }
 
     var contentType = ContentType.text;
+    final packets = <Packet>[];
     final bytes = <int>[];
     while (packetBuffer.isNotEmpty) {
       final packet = packetBuffer.first;
@@ -70,13 +71,15 @@ class PollingTransport extends Transport {
       }
 
       bytes.addAll(encoded);
-      packetBuffer.removeFirst();
+      packets.add(packetBuffer.removeFirst());
     }
 
     response
       ..contentLength = bytes.length
       ..headers.set(HttpHeaders.contentTypeHeader, contentType.mimeType)
       ..add(bytes);
+
+    return packets;
   }
 }
 
