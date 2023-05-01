@@ -193,7 +193,7 @@ class Server with EventController {
         protocolVersion =
             int.parse(request.uri.queryParameters[_protocolVersion]!);
       } on FormatException {
-        const reason = 'The protocol version must be an integer.';
+        const reason = 'The protocol version must be a positive integer.';
 
         disconnect(clientByIP, reason: reason);
         request.response.reject(HttpStatus.badRequest, reason);
