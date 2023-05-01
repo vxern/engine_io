@@ -117,15 +117,18 @@ class Server with EventController {
   Future<void> handleHttpRequest(HttpRequest request) async {
     final ipAddress = request.connectionInfo?.remoteAddress.address;
     if (ipAddress == null) {
-      request.response.reject(HttpStatus.badRequest);
+      request.response
+          .reject(HttpStatus.badRequest, 'Unable to read IP address.');
       return;
     }
 
     final clientByIP = clientManager.get(ipAddress: ipAddress);
 
     if (request.uri.path != '/${configuration.path}') {
-      disconnect(clientByIP);
-      request.response.reject(HttpStatus.forbidden, 'Invalid server path.');
+      const reason = 'Invalid server path.';
+
+      disconnect(clientByIP, reason: reason);
+      request.response.reject(HttpStatus.forbidden, reason);
       return;
     }
 
@@ -146,8 +149,10 @@ class Server with EventController {
     }
 
     if (!allowedMethods.contains(request.method)) {
-      disconnect(clientByIP);
-      request.response.reject(HttpStatus.methodNotAllowed);
+      const reason = 'Method not allowed.';
+
+      disconnect(clientByIP, reason: reason);
+      request.response.reject(HttpStatus.methodNotAllowed, reason);
       return;
     }
 
@@ -171,11 +176,11 @@ class Server with EventController {
       sessionIdentifier = request.uri.queryParameters[_sessionIdentifier];
 
       if (protocolVersion_ == null || connectionType_ == null) {
-        disconnect(clientByIP);
-        request.response.reject(
-          HttpStatus.badRequest,
-          '''Parameters '$_protocolVersion' and '$_connectionType' must be present in every query.''',
-        );
+        const reason =
+            '''Parameters '$_protocolVersion' and '$_connectionType' must be present in every query.''';
+
+        disconnect(clientByIP, reason: reason);
+        request.response.reject(HttpStatus.badRequest, reason);
         return;
       }
 
@@ -183,11 +188,10 @@ class Server with EventController {
         protocolVersion =
             int.parse(request.uri.queryParameters[_protocolVersion]!);
       } on FormatException {
-        disconnect(clientByIP);
-        request.response.reject(
-          HttpStatus.badRequest,
-          'The protocol version must be an integer.',
-        );
+        const reason = 'The protocol version must be an integer.';
+
+        disconnect(clientByIP, reason: reason);
+        request.response.reject(HttpStatus.badRequest, reason);
         return;
       }
 
@@ -196,7 +200,7 @@ class Server with EventController {
           request.uri.queryParameters[_connectionType]!,
         );
       } on FormatException catch (error) {
-        disconnect(clientByIP);
+        disconnect(clientByIP, reason: error.message);
         request.response.reject(HttpStatus.notImplemented, error.message);
         return;
       }
@@ -205,29 +209,27 @@ class Server with EventController {
     if (protocolVersion != Server.protocolVersion) {
       if (protocolVersion <= 0 ||
           protocolVersion > Server.protocolVersion + 1) {
-        disconnect(clientByIP);
-        request.response.reject(
-          HttpStatus.badRequest,
-          'Invalid protocol version.',
-        );
+        const reason = 'Invalid protocol version.';
+
+        disconnect(clientByIP, reason: reason);
+        request.response.reject(HttpStatus.badRequest, reason);
         return;
       }
 
-      disconnect(clientByIP);
-      request.response.reject(
-        HttpStatus.notImplemented,
-        'Protocol version $protocolVersion not supported.',
-      );
+      final reason = 'Protocol version $protocolVersion not supported.';
+
+      disconnect(clientByIP, reason: reason);
+      request.response.reject(HttpStatus.notImplemented, reason);
       return;
     }
 
     if (isConnected) {
       if (sessionIdentifier == null) {
-        disconnect(clientByIP);
-        request.response.reject(
-          HttpStatus.badRequest,
-          '''Clients with an active connection must provide the '$_sessionIdentifier' parameter.''',
-        );
+        const reason =
+            '''Clients with an active connection must provide the '$_sessionIdentifier' parameter.''';
+
+        disconnect(clientByIP, reason: reason);
+        request.response.reject(HttpStatus.badRequest, reason);
         return;
       }
     } else if (sessionIdentifier != null) {
@@ -265,11 +267,10 @@ class Server with EventController {
     } else {
       final client_ = clientManager.get(sessionIdentifier: sessionIdentifier);
       if (client_ == null) {
-        disconnect(clientByIP);
-        request.response.reject(
-          HttpStatus.badRequest,
-          'Invalid session identifier.',
-        );
+        const reason = 'Invalid session identifier.';
+
+        disconnect(clientByIP, reason: reason);
+        request.response.reject(HttpStatus.badRequest, reason);
         return;
       }
 
@@ -281,11 +282,11 @@ class Server with EventController {
         if (client.transport is PollingTransport) {
           final connection = client.transport as PollingTransport;
           if (connection.get.isLocked) {
-            disconnect(client);
-            request.response.reject(
-              HttpStatus.badRequest,
-              '''There may not be more than one GET request active at any given time.''',
-            );
+            const reason =
+                '''There may not be more than one GET request active at any given time.''';
+
+            disconnect(client, reason: reason);
+            request.response.reject(HttpStatus.badRequest, reason);
             return;
           }
 
@@ -303,11 +304,11 @@ class Server with EventController {
         if (client.transport is PollingTransport) {
           final connection = client.transport as PollingTransport;
           if (connection.post.isLocked) {
-            disconnect(client);
-            request.response.reject(
-              HttpStatus.badRequest,
-              '''There may not be more than one POST request active at any given time.''',
-            );
+            const reason =
+                '''There may not be more than one POST request active at any given time.''';
+
+            disconnect(client, reason: reason);
+            request.response.reject(HttpStatus.badRequest, reason);
           }
 
           connection.post.lock();
@@ -325,12 +326,13 @@ class Server with EventController {
   }
 
   /// Disconnects a client.
-  Future<void> disconnect(Socket? client) async {
+  Future<void> disconnect(Socket? client, {required String reason}) async {
     if (client == null) {
       return;
     }
 
     clientManager.remove(client);
+    client.disconnect(reason);
     await client.dispose();
   }
 
@@ -419,11 +421,9 @@ mixin EventController {
 
 extension _Reject on HttpResponse {
   /// Rejects this request, giving a [status] and a [reason].
-  Future<void> reject(int status, [String? reason]) async {
+  Future<void> reject(int status, String reason) async {
     statusCode = status;
-    if (reason != null) {
-      reasonPhrase = reason;
-    }
+    reasonPhrase = reason;
     close().ignore();
   }
 }

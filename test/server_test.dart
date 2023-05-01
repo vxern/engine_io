@@ -126,7 +126,7 @@ void main() {
         );
 
         expect(response.statusCode, equals(HttpStatus.methodNotAllowed));
-        expect(response.reasonPhrase, equals('Method Not Allowed'));
+        expect(response.reasonPhrase, equals('Method not allowed.'));
       });
 
       test(
@@ -689,6 +689,33 @@ void main() {
             completes,
           );
         }
+      });
+
+      test('fires an `onDisconnect` event.', () async {
+        expectLater(
+          server.onConnect.first.then((socket) => socket.onDisconnect.first),
+          completes,
+        );
+
+        // Handshake.
+        {
+          final url = serverUrl.replace(
+            queryParameters: <String, String>{
+              'EIO': Server.protocolVersion.toString(),
+              'transport': ConnectionType.polling.name,
+            },
+          );
+
+          await expectLater(
+            client.getUrl(url).then((request) => request.close()),
+            completes,
+          );
+        }
+
+        expectLater(
+          client.putUrl(serverUrl).then((request) => request.close()),
+          completes,
+        );
       });
     },
   );

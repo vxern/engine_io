@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:meta/meta.dart';
 
 import 'package:engine_io_dart/src/server/server.dart';
@@ -6,7 +8,7 @@ import 'package:engine_io_dart/src/transport.dart';
 
 /// An interface for a client connected to the engine.io server.
 @sealed
-class Socket extends base.Socket {
+class Socket extends base.Socket with EventController {
   /// The transport currently in use for sending messages to and receiving
   /// messages from this client.
   final Transport transport;
@@ -30,6 +32,11 @@ class Socket extends base.Socket {
           configuration: configuration,
         );
 
+  /// Disconnects this socket.
+  Future<void> disconnect(String reason) async {
+    _onDisconnectController.add(reason);
+  }
+
   /// Disposes of this socket.
   Future<void> dispose() async {
     if (_isDisposing) {
@@ -39,5 +46,20 @@ class Socket extends base.Socket {
     _isDisposing = true;
 
     // TODO(vxern): Do closing stuff here.
+
+    await closeEventStreams();
+  }
+}
+
+/// Contains streams for events that can be fired on the socket.
+mixin EventController {
+  final _onDisconnectController = StreamController<String>.broadcast();
+
+  /// Added to when this socket is disconnected.
+  Stream<String> get onDisconnect => _onDisconnectController.stream;
+
+  /// Closes event streams, disposing of this event controller.
+  Future<void> closeEventStreams() async {
+    _onDisconnectController.close().ignore();
   }
 }
