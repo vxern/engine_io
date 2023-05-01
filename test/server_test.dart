@@ -633,7 +633,7 @@ void main() {
             sessionIdentifier: sessionIdentifier,
           )!;
 
-          for (var i = 0; i < server.configuration.maximumChunkBytes + 1; i++) {
+          for (var i = 0; i < server.configuration.maximumChunkBytes; i++) {
             socket.transport.send(const PingPacket());
           }
 
@@ -655,9 +655,6 @@ void main() {
               completes,
             );
 
-            final transport = socket.transport as PollingTransport;
-            expect(transport.packetBuffer.isEmpty, equals(true));
-
             final body = await response.transform(utf8.decoder).join();
             final packets = body
                 .split(PollingTransport.recordSeparator)
@@ -667,6 +664,12 @@ void main() {
             expect(
               packets.length,
               equals(server.configuration.maximumChunkBytes ~/ 2),
+            );
+
+            final transport = socket.transport as PollingTransport;
+            expect(
+              transport.packetBuffer.length,
+              equals(server.configuration.maximumChunkBytes - packets.length),
             );
           }
         },

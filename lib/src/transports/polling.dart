@@ -77,8 +77,6 @@ class PollingTransport extends Transport {
       ..contentLength = bytes.length
       ..headers.set(HttpHeaders.contentTypeHeader, contentType.mimeType)
       ..add(bytes);
-
-    packetBuffer.clear();
   }
 }
 
