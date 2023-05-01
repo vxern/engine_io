@@ -599,6 +599,78 @@ void main() {
           );
         }
       });
+
+      test(
+        'limits the number of packets sent in accordance with chunk limits.',
+        () async {
+          late final String sessionIdentifier;
+
+          // Handshake.
+          {
+            final url = serverUrl.replace(
+              queryParameters: <String, String>{
+                'EIO': Server.protocolVersion.toString(),
+                'transport': ConnectionType.polling.name,
+              },
+            );
+
+            late final HttpClientResponse response;
+            await expectLater(
+              client
+                  .getUrl(url)
+                  .then((request) => request.close())
+                  .then((response_) => response = response_),
+              completes,
+            );
+
+            final body = await response.transform(utf8.decoder).join();
+            final packet = Packet.decode(body) as OpenPacket;
+
+            sessionIdentifier = packet.sessionIdentifier;
+          }
+
+          final socket = server.clientManager.get(
+            sessionIdentifier: sessionIdentifier,
+          )!;
+
+          for (var i = 0; i < server.configuration.maximumChunkBytes + 1; i++) {
+            socket.transport.send(const PingPacket());
+          }
+
+          {
+            final url = serverUrl.replace(
+              queryParameters: <String, String>{
+                'EIO': Server.protocolVersion.toString(),
+                'transport': ConnectionType.polling.name,
+                'sid': sessionIdentifier,
+              },
+            );
+
+            late final HttpClientResponse response;
+            await expectLater(
+              client
+                  .getUrl(url)
+                  .then((request) => request.close())
+                  .then((response_) => response = response_),
+              completes,
+            );
+
+            final transport = socket.transport as PollingTransport;
+            expect(transport.packetBuffer.isEmpty, equals(true));
+
+            final body = await response.transform(utf8.decoder).join();
+            final packets = body
+                .split(PollingTransport.recordSeparator)
+                .map(Packet.decode)
+                .toList();
+
+            expect(
+              packets.length,
+              equals(server.configuration.maximumChunkBytes ~/ 2),
+            );
+          }
+        },
+      );
     },
   );
 }

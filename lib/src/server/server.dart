@@ -238,6 +238,7 @@ class Server {
 
       client = Socket(
         connectionType: connectionType,
+        configuration: configuration,
         sessionIdentifier: sessionIdentifier,
         ipAddress: ipAddress,
       );

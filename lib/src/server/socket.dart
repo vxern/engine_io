@@ -1,5 +1,6 @@
 import 'package:meta/meta.dart';
 
+import 'package:engine_io_dart/src/server/server.dart';
 import 'package:engine_io_dart/src/socket.dart' as base;
 import 'package:engine_io_dart/src/transport.dart';
 
@@ -20,10 +21,14 @@ class Socket extends base.Socket {
 
   /// Creates an instance of `Socket`.
   Socket({
+    required ConnectionType connectionType,
+    required ServerConfiguration configuration,
     required this.sessionIdentifier,
     required this.ipAddress,
-    required ConnectionType connectionType,
-  }) : transport = Transport.fromType(connectionType);
+  }) : transport = Transport.fromType(
+          connectionType,
+          configuration: configuration,
+        );
 
   /// Disposes of this socket.
   Future<void> dispose() async {

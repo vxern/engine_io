@@ -1,18 +1,25 @@
 import 'dart:collection';
+import 'dart:convert';
 
 import 'package:universal_io/io.dart';
 
+import 'package:engine_io_dart/src/server/server.dart';
 import 'package:engine_io_dart/src/packet.dart';
 import 'package:engine_io_dart/src/transport.dart';
 
 /// Transport used with long polling connections.
 class PollingTransport extends Transport {
+  /// A reference to the server configuration.
+  final ServerConfiguration configuration;
+
   /// The character used to separate packets in the body of a long polling HTTP
   /// request.
   ///
   /// Refer to https://en.wikipedia.org/wiki/C0_and_C1_control_codes#Field_separators
   /// for more information.
-  static final recordSeparator = String.fromCharCode(30);
+  static final recordSeparator = String.fromCharCode(_recordSeparatorCharCode);
+  static const _recordSeparatorCharCode = 30;
+  static const _concatenationOverhead = 1;
 
   /// A queue containing the `Packet`s accumulated to be sent to this socket on
   /// the next HTTP poll cycle.
@@ -23,6 +30,9 @@ class PollingTransport extends Transport {
 
   /// Lock for POST requests.
   final post = Lock();
+
+  /// Creates an instance of `PollingTransport`.
+  PollingTransport({required this.configuration});
 
   @override
   void send(Packet packet) => packetBuffer.add(packet);
@@ -38,27 +48,35 @@ class PollingTransport extends Transport {
       return;
     }
 
-    // TODO(vxern): Make sure the chunk limit is not crossed.
+    var contentType = ContentType.text;
+    final bytes = <int>[];
+    while (packetBuffer.isNotEmpty) {
+      final packet = packetBuffer.first;
 
-    if (packetBuffer.any((packet) => packet.isBinary)) {
-      response.headers.set(
-        HttpHeaders.contentTypeHeader,
-        ContentType.binary.mimeType,
-      );
-    } else if (packetBuffer.any((packet) => packet.isJSON)) {
-      response.headers.set(
-        HttpHeaders.contentTypeHeader,
-        ContentType.json.mimeType,
-      );
-    } else {
-      response.headers.set(
-        HttpHeaders.contentTypeHeader,
-        ContentType.text.mimeType,
-      );
+      if (packet.isBinary && contentType != ContentType.binary) {
+        contentType = ContentType.binary;
+      } else if (packet.isJSON && contentType == ContentType.text) {
+        contentType = ContentType.json;
+      }
+
+      final encoded = utf8.encode(Packet.encode(packet));
+      if (bytes.length + encoded.length + _concatenationOverhead >
+          configuration.maximumChunkBytes) {
+        break;
+      }
+
+      if (bytes.isNotEmpty) {
+        bytes.add(_recordSeparatorCharCode);
+      }
+
+      bytes.addAll(encoded);
+      packetBuffer.removeFirst();
     }
 
-    final encodedPackets = packetBuffer.map(Packet.encode);
-    response.writeAll(encodedPackets, recordSeparator);
+    response
+      ..contentLength = bytes.length
+      ..headers.set(HttpHeaders.contentTypeHeader, contentType.mimeType)
+      ..add(bytes);
 
     packetBuffer.clear();
   }
