@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 
 import 'package:meta/meta.dart';
@@ -56,7 +57,7 @@ class ServerConfiguration {
 
 /// The engine.io server.
 @sealed
-class Server {
+class Server with EventController {
   /// Generator responsible for creating unique identifiers for sockets.
   static const _uuid = Uuid();
 
@@ -250,6 +251,7 @@ class Server {
       );
 
       clientManager.add(client);
+      _onConnectController.add(client);
 
       final openPacket = OpenPacket(
         sessionIdentifier: client.sessionIdentifier,
@@ -260,8 +262,6 @@ class Server {
       );
 
       client.transport.send(openPacket);
-
-      // TODO(vxern): Add a connected event to the stream.
     } else {
       final client_ = clientManager.get(sessionIdentifier: sessionIdentifier);
       if (client_ == null) {
@@ -344,6 +344,7 @@ class Server {
     _isDisposing = true;
 
     await httpServer.close().catchError((dynamic _) {});
+    await closeEventStreams();
     await clientManager.dispose();
   }
 }
@@ -400,6 +401,19 @@ class ClientManager {
 
     clients.clear();
     sessionIdentifiers.clear();
+  }
+}
+
+/// Contains streams for events that can be fired on the server.
+mixin EventController {
+  final _onConnectController = StreamController<Socket>.broadcast();
+
+  /// Added to when a new connection is established.
+  Stream<Socket> get onConnect => _onConnectController.stream;
+
+  /// Closes event streams, disposing of this event controller.
+  Future<void> closeEventStreams() async {
+    _onConnectController.close().ignore();
   }
 }
 

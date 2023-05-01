@@ -671,6 +671,25 @@ void main() {
           }
         },
       );
+
+      test('fires an `onConnect` event.', () async {
+        expectLater(server.onConnect.first, completes);
+
+        // Handshake.
+        {
+          final url = serverUrl.replace(
+            queryParameters: <String, String>{
+              'EIO': Server.protocolVersion.toString(),
+              'transport': ConnectionType.polling.name,
+            },
+          );
+
+          await expectLater(
+            client.getUrl(url).then((request) => request.close()),
+            completes,
+          );
+        }
+      });
     },
   );
 }
