@@ -87,6 +87,10 @@ class Server with EventController {
   /// (Query parameter) The session identifier of a client.
   static const _sessionIdentifier = 'sid';
 
+  /// The default content type for when the HTTP `Content-Type` header is not
+  /// specified.
+  static final _implicitContentType = ContentType.text;
+
   /// The configuration settings used to modify the server's behaviour.
   final ServerConfiguration configuration;
 
@@ -343,6 +347,38 @@ class Server with EventController {
           } on FormatException catch (exception) {
             disconnect(client, reason: exception.message);
             request.response.reject(HttpStatus.badRequest, exception.message);
+            return;
+          }
+
+          final specifiedContentType = request.headers.contentType;
+
+          var detectedContentType = ContentType.text;
+          for (final packet in packets) {
+            if (packet.isBinary && detectedContentType != ContentType.binary) {
+              detectedContentType = ContentType.binary;
+            } else if (packet.isJSON &&
+                detectedContentType == ContentType.text) {
+              detectedContentType = ContentType.json;
+            }
+          }
+
+          if (specifiedContentType == null) {
+            if (detectedContentType != ContentType.text) {
+              final reason =
+                  "Detected content type '${detectedContentType.mimeType}', "
+                  """which is different from the implicit '${_implicitContentType.mimeType}'""";
+
+              disconnect(client, reason: reason);
+              request.response.reject(HttpStatus.badRequest, reason);
+              return;
+            }
+          } else if (specifiedContentType != detectedContentType) {
+            final reason =
+                "Detected content type '${detectedContentType.mimeType}', "
+                """which is different from the specified '${specifiedContentType.mimeType}'""";
+
+            disconnect(client, reason: reason);
+            request.response.reject(HttpStatus.badRequest, reason);
             return;
           }
 

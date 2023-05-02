@@ -378,6 +378,53 @@ void main() {
         },
       );
 
+      test(
+        'rejects POST requests with binary data but no `Content-Type` header.',
+        () async {
+          final open = await handshake(client).then((result) => result.packet);
+
+          final response = await post(
+            client,
+            sessionIdentifier: open.sessionIdentifier,
+            packet: BinaryMessagePacket(
+              data: Uint8List.fromList(<int>[]),
+            ),
+          );
+
+          expect(response.statusCode, equals(HttpStatus.badRequest));
+          expect(
+            response.reasonPhrase,
+            equals(
+              "Detected content type 'application/octet-stream', "
+              """which is different from the implicit 'text/plain'""",
+            ),
+          );
+        },
+      );
+
+      test(
+        'rejects POST requests with invalid `Content-Type` header.',
+        () async {
+          final open = await handshake(client).then((result) => result.packet);
+
+          final response = await post(
+            client,
+            sessionIdentifier: open.sessionIdentifier,
+            packet: const TextMessagePacket(data: ''),
+            contentType: ContentType.binary,
+          );
+
+          expect(response.statusCode, equals(HttpStatus.badRequest));
+          expect(
+            response.reasonPhrase,
+            equals(
+              "Detected content type 'application/json', "
+              """which is different from the specified 'application/octet-stream'""",
+            ),
+          );
+        },
+      );
+
       test('fires an `onConnect` event.', () async {
         expectLater(server.onConnect.first, completes);
 
@@ -403,22 +450,11 @@ void main() {
 
         expectLater(socket.transport.onReceive.first, completes);
 
-        final url = serverUrl.replace(
-          queryParameters: <String, String>{
-            'EIO': Server.protocolVersion.toString(),
-            'transport': ConnectionType.polling.name,
-            'sid': open.sessionIdentifier,
-          },
+        post(
+          client,
+          sessionIdentifier: open.sessionIdentifier,
+          packet: const PingPacket(),
         );
-
-        client.postUrl(url).then(
-          (request) {
-            const packet = PingPacket();
-            final encoded = Packet.encode(packet);
-            request.write(encoded);
-            return request;
-          },
-        ).then((request) => request.close());
       });
 
       test('fires an `onSend` event.', () async {
@@ -501,3 +537,30 @@ Future<GetResult> get(
       connectionType: connectionType ?? ConnectionType.polling.name,
       sessionIdentifier: sessionIdentifier,
     );
+
+Future<HttpClientResponse> post(
+  HttpClient client, {
+  required String sessionIdentifier,
+  required Packet packet,
+  ContentType? contentType,
+}) async {
+  final url = serverUrl.replace(
+    queryParameters: <String, String>{
+      'EIO': Server.protocolVersion.toString(),
+      'transport': ConnectionType.polling.name,
+      'sid': sessionIdentifier,
+    },
+  );
+
+  final response = await client.postUrl(url).then(
+    (request) {
+      final encoded = Packet.encode(packet);
+      request
+        ..headers.contentType = contentType
+        ..write(encoded);
+      return request;
+    },
+  ).then((request) => request.close());
+
+  return response;
+}
