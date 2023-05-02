@@ -382,7 +382,7 @@ class Server with EventController {
           }
 
           if (specifiedContentType == null) {
-            if (detectedContentType != ContentType.text) {
+            if (detectedContentType.mimeType != ContentType.text.mimeType) {
               final reason =
                   "Detected content type '${detectedContentType.mimeType}', "
                   """which is different from the implicit '${_implicitContentType.mimeType}'""";
@@ -391,7 +391,8 @@ class Server with EventController {
               request.response.reject(HttpStatus.badRequest, reason);
               return;
             }
-          } else if (specifiedContentType != detectedContentType) {
+          } else if (specifiedContentType.mimeType !=
+              detectedContentType.mimeType) {
             final reason =
                 "Detected content type '${detectedContentType.mimeType}', "
                 """which is different from the specified '${specifiedContentType.mimeType}'""";
@@ -412,7 +413,7 @@ class Server with EventController {
                   request.response.reject(HttpStatus.badRequest, reason);
                   return;
                 }
-                break;
+                continue;
               case PacketType.open:
               case PacketType.ping:
               case PacketType.noop:
@@ -420,7 +421,7 @@ class Server with EventController {
               case PacketType.textMessage:
               case PacketType.binaryMessage:
               case PacketType.upgrade:
-                break;
+                continue;
             }
           }
 
