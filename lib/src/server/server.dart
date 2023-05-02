@@ -7,8 +7,10 @@ import 'package:universal_io/io.dart' hide Socket;
 import 'package:uuid/uuid.dart';
 
 import 'package:engine_io_dart/src/packets/open.dart';
+import 'package:engine_io_dart/src/packets/ping.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/polling.dart';
+import 'package:engine_io_dart/src/socket.dart' hide Socket;
 import 'package:engine_io_dart/src/packet.dart';
 import 'package:engine_io_dart/src/transport.dart';
 
@@ -103,7 +105,7 @@ class Server with EventController {
 
   bool _isDisposing = false;
 
-  Server._construct({
+  Server._({
     required this.httpServer,
     ServerConfiguration? configuration,
   }) : configuration =
@@ -117,7 +119,7 @@ class Server with EventController {
   }) async {
     final httpServer = await HttpServer.bind(uri.host, uri.port);
     final server =
-        Server._construct(httpServer: httpServer, configuration: configuration);
+        Server._(httpServer: httpServer, configuration: configuration);
 
     httpServer.listen(server.handleHttpRequest);
 
@@ -256,12 +258,29 @@ class Server with EventController {
     if (!isConnected) {
       final sessionIdentifier = configuration.generateId(request);
 
+      final heartbeat = HeartbeatManager.create(
+        interval: configuration.heartbeatInterval,
+        timeout: configuration.heartbeatTimeout,
+        onTick: () async => client.transport.send(const PingPacket()),
+        onTimeout: () => disconnect(
+          client,
+          reason: 'Did not respond to a heartbeat in time.',
+        ),
+      );
+
       client = Socket(
+        heartbeat: heartbeat,
         connectionType: connectionType,
         configuration: configuration,
         sessionIdentifier: sessionIdentifier,
         ipAddress: ipAddress,
       );
+
+      client.transport.onReceive.listen((packet) {
+        if (packet.type == PacketType.pong) {
+          heartbeat.reset();
+        }
+      });
 
       clientManager.add(client);
       _onConnectController.add(client);
@@ -380,6 +399,29 @@ class Server with EventController {
             disconnect(client, reason: reason);
             request.response.reject(HttpStatus.badRequest, reason);
             return;
+          }
+
+          for (final packet in packets) {
+            switch (packet.type) {
+              case PacketType.pong:
+                if (!client.heartbeat.isExpectingHeartbeat) {
+                  const reason =
+                      '''The server did not expect a `pong` packet at this time.''';
+
+                  disconnect(client, reason: reason);
+                  request.response.reject(HttpStatus.badRequest, reason);
+                  return;
+                }
+                break;
+              case PacketType.open:
+              case PacketType.ping:
+              case PacketType.noop:
+              case PacketType.close:
+              case PacketType.textMessage:
+              case PacketType.binaryMessage:
+              case PacketType.upgrade:
+                break;
+            }
           }
 
           for (final packet in packets) {

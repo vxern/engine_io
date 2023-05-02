@@ -7,6 +7,7 @@ import 'package:universal_io/io.dart';
 import 'package:engine_io_dart/src/packets/message.dart';
 import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:engine_io_dart/src/packets/ping.dart';
+import 'package:engine_io_dart/src/packets/pong.dart';
 import 'package:engine_io_dart/src/packets/upgrade.dart';
 import 'package:engine_io_dart/src/server/server.dart';
 import 'package:engine_io_dart/src/transports/polling.dart';
@@ -68,7 +69,15 @@ void main() {
     () {
       late Server server;
 
-      setUp(() async => server = await Server.bind(remoteUrl));
+      setUp(
+        () async => server = await Server.bind(
+          remoteUrl,
+          configuration: ServerConfiguration(
+            heartbeatInterval: const Duration(seconds: 3),
+            heartbeatTimeout: const Duration(seconds: 2),
+          ),
+        ),
+      );
       tearDown(() async => server.dispose());
 
       test('rejects requests made to an invalid path.', () async {
@@ -456,6 +465,68 @@ void main() {
 
         get(client, sessionIdentifier: open.sessionIdentifier);
       });
+
+      test(
+        'heartbeats.',
+        () async {
+          final open = await handshake(client).then((result) => result.packet);
+
+          await Future<void>.delayed(
+            server.configuration.heartbeatInterval +
+                const Duration(milliseconds: 100),
+          );
+          await expectLater(
+            get(client, sessionIdentifier: open.sessionIdentifier)
+                .then((result) => result.packets.first),
+            completion(const PingPacket()),
+          );
+          await post(
+            client,
+            sessionIdentifier: open.sessionIdentifier,
+            packet: const PongPacket(),
+          );
+          await Future<void>.delayed(
+            server.configuration.heartbeatInterval +
+                const Duration(milliseconds: 100),
+          );
+          await expectLater(
+            get(client, sessionIdentifier: open.sessionIdentifier)
+                .then((result) => result.packets.first),
+            completion(const PingPacket()),
+          );
+        },
+      );
+
+      test(
+        'disconnects a client unresponsive to heartbeats.',
+        () async {
+          final open = await handshake(client).then((result) => result.packet);
+          final socket = server.clientManager.get(
+            sessionIdentifier: open.sessionIdentifier,
+          )!;
+
+          expectLater(socket.onDisconnect.first, completes);
+        },
+      );
+
+      test(
+        'rejects unexpected pong requests.',
+        () async {
+          final open = await handshake(client).then((result) => result.packet);
+
+          final response = await post(
+            client,
+            sessionIdentifier: open.sessionIdentifier,
+            packet: const PongPacket(),
+          );
+
+          expect(response.statusCode, equals(HttpStatus.badRequest));
+          expect(
+            response.reasonPhrase,
+            equals('The server did not expect a `pong` packet at this time.'),
+          );
+        },
+      );
     },
   );
 }
@@ -492,6 +563,10 @@ Future<GetResult> unsafeGet(
 
   if (response.statusCode == HttpStatus.ok) {
     final body = await response.transform(utf8.decoder).join();
+    if (body.isEmpty) {
+      return GetResult(response, []);
+    }
+
     final packets = body
         .split(PollingTransport.recordSeparator)
         .map(Packet.decode)

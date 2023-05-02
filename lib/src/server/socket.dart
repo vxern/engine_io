@@ -23,6 +23,7 @@ class Socket extends base.Socket with EventController {
 
   /// Creates an instance of `Socket`.
   Socket({
+    required super.heartbeat,
     required ConnectionType connectionType,
     required ServerConfiguration configuration,
     required this.sessionIdentifier,
@@ -45,8 +46,7 @@ class Socket extends base.Socket with EventController {
 
     _isDisposing = true;
 
-    // TODO(vxern): Do closing stuff here.
-
+    heartbeat.dispose();
     await closeEventStreams();
   }
 }
