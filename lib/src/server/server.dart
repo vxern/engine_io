@@ -404,6 +404,15 @@ class Server with EventController {
 
           for (final packet in packets) {
             switch (packet.type) {
+              case PacketType.open:
+              case PacketType.ping:
+              case PacketType.noop:
+                final reason =
+                    '''`${packet.type.name}` packets are not legal to be sent by the client.''';
+
+                disconnect(client, reason: reason);
+                request.response.reject(HttpStatus.badRequest, reason);
+                return;
               case PacketType.pong:
                 if (!client.heartbeat.isExpectingHeartbeat) {
                   const reason =
@@ -414,9 +423,6 @@ class Server with EventController {
                   return;
                 }
                 continue;
-              case PacketType.open:
-              case PacketType.ping:
-              case PacketType.noop:
               case PacketType.close:
               case PacketType.textMessage:
               case PacketType.binaryMessage:

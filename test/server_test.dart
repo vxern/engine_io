@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:engine_io_dart/src/packets/noop.dart';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
@@ -449,7 +450,7 @@ void main() {
         post(
           client,
           sessionIdentifier: open.sessionIdentifier,
-          packet: const PingPacket(),
+          packet: const TextMessagePacket(data: ''),
         );
       });
 
@@ -461,10 +462,90 @@ void main() {
 
         expectLater(socket.transport.onSend.first, completes);
 
-        socket.transport.send(const PingPacket());
+        socket.transport.send(const TextMessagePacket(data: ''));
 
         get(client, sessionIdentifier: open.sessionIdentifier);
       });
+
+      test(
+        'rejects unexpected pong requests.',
+        () async {
+          final open = await handshake(client).then((result) => result.packet);
+
+          final response = await post(
+            client,
+            sessionIdentifier: open.sessionIdentifier,
+            packet: const PongPacket(),
+          );
+
+          expect(response.statusCode, equals(HttpStatus.badRequest));
+          expect(
+            response.reasonPhrase,
+            equals('The server did not expect a `pong` packet at this time.'),
+          );
+        },
+      );
+
+      group(
+        'rejects illegal packets:',
+        () {
+          late OpenPacket open;
+
+          setUp(
+            () async =>
+                open = await handshake(client).then((result) => result.packet),
+          );
+
+          test('open', () async {
+            final response = await post(
+              client,
+              sessionIdentifier: open.sessionIdentifier,
+              packet: const OpenPacket(
+                sessionIdentifier: 'sid',
+                availableConnectionUpgrades: {},
+                heartbeatInterval: Duration.zero,
+                heartbeatTimeout: Duration.zero,
+                maximumChunkBytes: 0,
+              ),
+              contentType: ContentType.json,
+            );
+
+            expect(response.statusCode, equals(HttpStatus.badRequest));
+            expect(
+              response.reasonPhrase,
+              equals('`open` packets are not legal to be sent by the client.'),
+            );
+          });
+
+          test('ping', () async {
+            final response = await post(
+              client,
+              sessionIdentifier: open.sessionIdentifier,
+              packet: const PingPacket(),
+            );
+
+            expect(response.statusCode, equals(HttpStatus.badRequest));
+            expect(
+              response.reasonPhrase,
+              equals('`ping` packets are not legal to be sent by the client.'),
+            );
+          });
+
+          test('noop', () async {
+            final response = await post(
+              client,
+              sessionIdentifier: open.sessionIdentifier,
+              packet: const NoopPacket(),
+            );
+
+            expect(response.statusCode, equals(HttpStatus.badRequest));
+            expect(
+              response.reasonPhrase,
+              equals('`noop` packets are not legal to be sent by the client.'),
+            );
+          });
+        },
+      );
 
       test(
         'heartbeats.',
@@ -506,25 +587,6 @@ void main() {
           )!;
 
           expectLater(socket.onDisconnect.first, completes);
-        },
-      );
-
-      test(
-        'rejects unexpected pong requests.',
-        () async {
-          final open = await handshake(client).then((result) => result.packet);
-
-          final response = await post(
-            client,
-            sessionIdentifier: open.sessionIdentifier,
-            packet: const PongPacket(),
-          );
-
-          expect(response.statusCode, equals(HttpStatus.badRequest));
-          expect(
-            response.reasonPhrase,
-            equals('The server did not expect a `pong` packet at this time.'),
-          );
         },
       );
     },
