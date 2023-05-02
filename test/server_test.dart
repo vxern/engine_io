@@ -318,19 +318,6 @@ void main() {
           );
         }
 
-        socket.transport.send(const TextMessagePacket(data: ''));
-
-        {
-          final response =
-              await get(client, sessionIdentifier: open.sessionIdentifier)
-                  .then((result) => result.response);
-
-          expect(
-            response.headers.contentType?.mimeType,
-            equals(ContentType.json.mimeType),
-          );
-        }
-
         socket.transport.send(
           BinaryMessagePacket(data: Uint8List.fromList(<int>[])),
         );
@@ -418,7 +405,7 @@ void main() {
           expect(
             response.reasonPhrase,
             equals(
-              "Detected content type 'application/json', "
+              "Detected content type 'text/plain', "
               """which is different from the specified 'application/octet-stream'""",
             ),
           );

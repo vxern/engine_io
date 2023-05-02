@@ -116,7 +116,7 @@ abstract class Packet {
   static const _binaryPackets = {PacketType.binaryMessage};
 
   /// Defines packets that contain JSON data.
-  static const _jsonPackets = {PacketType.open, PacketType.textMessage};
+  static const _jsonPackets = {PacketType.open};
 
   /// Models a valid encoded packet.
   static final _packetExpression = RegExp(r'^([0-6b])(.*?)$');
