@@ -73,15 +73,23 @@ abstract class Transport with EventController {
 
 /// Contains streams for events that can be fired on the transport.
 mixin EventController {
+  /// Controller for the `onReceive` event stream.
+  @nonVirtual
+  final onReceiveController = StreamController<Packet>.broadcast();
+
   /// Controller for the `onSend` event stream.
   @nonVirtual
   final onSendController = StreamController<Packet>.broadcast();
 
-  /// Added to when a packet is sent through this transport.
+  /// Added to when a packet is received.
+  Stream<Packet> get onReceive => onReceiveController.stream;
+
+  /// Added to when a packet is sent.
   Stream<Packet> get onSend => onSendController.stream;
 
   /// Closes event streams, disposing of this event controller.
   Future<void> closeEventStreams() async {
+    onReceiveController.close().ignore();
     onSendController.close().ignore();
   }
 }

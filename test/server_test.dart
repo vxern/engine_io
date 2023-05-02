@@ -395,6 +395,32 @@ void main() {
         expectLater(unsafeGet(client), completes);
       });
 
+      test('fires an `onReceive` event.', () async {
+        final open = await handshake(client).then((result) => result.packet);
+        final socket = server.clientManager.get(
+          sessionIdentifier: open.sessionIdentifier,
+        )!;
+
+        expectLater(socket.transport.onReceive.first, completes);
+
+        final url = serverUrl.replace(
+          queryParameters: <String, String>{
+            'EIO': Server.protocolVersion.toString(),
+            'transport': ConnectionType.polling.name,
+            'sid': open.sessionIdentifier,
+          },
+        );
+
+        client.postUrl(url).then(
+          (request) {
+            const packet = PingPacket();
+            final encoded = Packet.encode(packet);
+            request.write(encoded);
+            return request;
+          },
+        ).then((request) => request.close());
+      });
+
       test('fires an `onSend` event.', () async {
         final open = await handshake(client).then((result) => result.packet);
         final socket = server.clientManager.get(

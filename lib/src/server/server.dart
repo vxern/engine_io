@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 
 import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
@@ -8,6 +9,7 @@ import 'package:uuid/uuid.dart';
 import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/polling.dart';
+import 'package:engine_io_dart/src/packet.dart';
 import 'package:engine_io_dart/src/transport.dart';
 
 /// Generator responsible for creating unique identifiers for sockets.
@@ -285,8 +287,8 @@ class Server with EventController {
     switch (request.method) {
       case 'GET':
         if (client.transport is PollingTransport) {
-          final connection = client.transport as PollingTransport;
-          if (connection.get.isLocked) {
+          final transport = client.transport as PollingTransport;
+          if (transport.get.isLocked) {
             const reason =
                 '''There may not be more than one GET request active at any given time.''';
 
@@ -295,38 +297,64 @@ class Server with EventController {
             return;
           }
 
-          connection.get.lock();
+          transport.get.lock();
 
           request.response.statusCode = HttpStatus.ok;
-          final packets = await connection.offload(request.response);
+          final packets = await transport.offload(request.response);
           request.response.close().ignore();
 
           for (final packet in packets) {
             client.transport.onSendController.add(packet);
           }
 
-          connection.get.unlock();
+          transport.get.unlock();
           return;
         }
         break;
       case 'POST':
         if (client.transport is PollingTransport) {
-          final connection = client.transport as PollingTransport;
-          if (connection.post.isLocked) {
+          final transport = client.transport as PollingTransport;
+          if (transport.post.isLocked) {
             const reason =
                 '''There may not be more than one POST request active at any given time.''';
 
             disconnect(client, reason: reason);
             request.response.reject(HttpStatus.badRequest, reason);
+            return;
           }
 
-          connection.post.lock();
+          transport.post.lock();
+
+          final String body;
+          try {
+            body = await utf8.decodeStream(request);
+          } on FormatException catch (exception) {
+            disconnect(client, reason: exception.message);
+            request.response.reject(HttpStatus.badRequest, exception.message);
+            return;
+          }
+
+          final List<Packet> packets;
+          try {
+            packets = body
+                .split(PollingTransport.recordSeparator)
+                .map(Packet.decode)
+                .toList();
+          } on FormatException catch (exception) {
+            disconnect(client, reason: exception.message);
+            request.response.reject(HttpStatus.badRequest, exception.message);
+            return;
+          }
+
+          for (final packet in packets) {
+            transport.onReceiveController.add(packet);
+          }
 
           request.response
             ..statusCode = HttpStatus.ok
             ..close().ignore();
 
-          connection.post.unlock();
+          transport.post.unlock();
           return;
         }
     }
