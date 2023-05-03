@@ -199,6 +199,22 @@ void main() {
       );
 
       test(
+        'rejects requests with a connection type that is not enabled.',
+        () async {
+          final response = await get(
+            client,
+            connectionType: ConnectionType.websocket.name,
+          ).then((result) => result.response);
+
+          expect(response.statusCode, equals(HttpStatus.badRequest));
+          expect(
+            response.reasonPhrase,
+            equals('This server does not allow websocket connections.'),
+          );
+        },
+      );
+
+      test(
         'rejects requests with an invalid protocol version.',
         () async {
           final response = await get(client, protocolVersion: '-1')

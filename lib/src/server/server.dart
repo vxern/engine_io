@@ -236,6 +236,15 @@ class Server with EventController {
       return;
     }
 
+    if (!configuration.availableConnectionTypes.contains(connectionType)) {
+      final reason =
+          'This server does not allow ${connectionType.name} connections.';
+
+      disconnect(clientByIP, reason: reason);
+      request.response.reject(HttpStatus.badRequest, reason);
+      return;
+    }
+
     if (isConnected) {
       if (sessionIdentifier == null) {
         const reason =
@@ -308,6 +317,10 @@ class Server with EventController {
 
     switch (request.method) {
       case 'GET':
+        if (WebSocketTransformer.isUpgradeRequest(request)) {
+          // TODO(vxern): Handle websocket upgrade requests.
+        }
+
         if (client.transport is PollingTransport) {
           final transport = client.transport as PollingTransport;
           if (transport.get.isLocked) {
@@ -317,12 +330,6 @@ class Server with EventController {
             disconnect(client, reason: reason);
             request.response.reject(HttpStatus.badRequest, reason);
             return;
-          }
-
-          if (WebSocketTransformer.isUpgradeRequest(request)) {
-            // TODO(vxern): Check that websockets are allowed.
-
-            // TODO(vxern): Handle websocket upgrade requests.
           }
 
           transport.get.lock();
