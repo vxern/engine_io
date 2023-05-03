@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 
-import 'package:engine_io_dart/src/server/server.dart';
 import 'package:engine_io_dart/src/socket.dart' as base;
 import 'package:engine_io_dart/src/transport.dart';
 
@@ -24,14 +23,10 @@ class Socket extends base.Socket with EventController {
   /// Creates an instance of `Socket`.
   Socket({
     required super.heartbeat,
-    required ConnectionType connectionType,
-    required ServerConfiguration configuration,
+    required this.transport,
     required this.sessionIdentifier,
     required this.ipAddress,
-  }) : transport = Transport.fromType(
-          connectionType,
-          configuration: configuration,
-        );
+  });
 
   /// Disposes of this socket, closing event streams.
   Future<void> dispose(String reason) async {

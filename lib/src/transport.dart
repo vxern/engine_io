@@ -2,8 +2,6 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 
-import 'package:engine_io_dart/src/server/server.dart';
-import 'package:engine_io_dart/src/transports/polling.dart';
 import 'package:engine_io_dart/src/packet.dart';
 
 /// The type of connection used for communication between a client and a server.
@@ -42,19 +40,6 @@ enum ConnectionType {
 @sealed
 abstract class Transport with EventController {
   bool _isDisposing = false;
-
-  /// Matches [type] to a `Transport`.
-  static Transport fromType(
-    ConnectionType type, {
-    required ServerConfiguration configuration,
-  }) {
-    switch (type) {
-      case ConnectionType.websocket:
-        throw UnimplementedError();
-      case ConnectionType.polling:
-        return PollingTransport(configuration: configuration);
-    }
-  }
 
   /// Sends a packet to the remote party.
   void send(Packet packet);

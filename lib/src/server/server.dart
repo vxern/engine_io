@@ -270,8 +270,7 @@ class Server with EventController {
 
       client = Socket(
         heartbeat: heartbeat,
-        connectionType: connectionType,
-        configuration: configuration,
+        transport: PollingTransport(configuration: configuration),
         sessionIdentifier: sessionIdentifier,
         ipAddress: ipAddress,
       );
@@ -318,6 +317,12 @@ class Server with EventController {
             disconnect(client, reason: reason);
             request.response.reject(HttpStatus.badRequest, reason);
             return;
+          }
+
+          if (WebSocketTransformer.isUpgradeRequest(request)) {
+            // TODO(vxern): Check that websockets are allowed.
+
+            // TODO(vxern): Handle websocket upgrade requests.
           }
 
           transport.get.lock();
