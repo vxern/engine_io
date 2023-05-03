@@ -402,6 +402,7 @@ class Server with EventController {
             return;
           }
 
+          var isClosing = false;
           for (final packet in packets) {
             switch (packet.type) {
               case PacketType.open:
@@ -424,6 +425,8 @@ class Server with EventController {
                 }
                 continue;
               case PacketType.close:
+                isClosing = true;
+                continue;
               case PacketType.textMessage:
               case PacketType.binaryMessage:
               case PacketType.upgrade:
@@ -433,6 +436,13 @@ class Server with EventController {
 
           for (final packet in packets) {
             transport.onReceiveController.add(packet);
+          }
+
+          if (isClosing) {
+            const reason = 'The client requested to close the connection.';
+
+            disconnect(client, reason: reason);
+            return;
           }
 
           request.response

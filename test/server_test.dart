@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:engine_io_dart/src/packets/close.dart';
 import 'package:engine_io_dart/src/packets/noop.dart';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
@@ -548,6 +549,27 @@ void main() {
       );
 
       test(
+        'disconnects the client when it requests a closure.',
+        () async {
+          final open = await handshake(client).then((result) => result.packet);
+          final socket = server.clientManager.get(
+            sessionIdentifier: open.sessionIdentifier,
+          )!;
+
+          expect(
+            socket.onDisconnect.first,
+            completion('The client requested to close the connection.'),
+          );
+
+          post(
+            client,
+            sessionIdentifier: open.sessionIdentifier,
+            packet: const ClosePacket(),
+          );
+        },
+      );
+
+      test(
         'heartbeats.',
         () async {
           final open = await handshake(client).then((result) => result.packet);
@@ -586,7 +608,10 @@ void main() {
             sessionIdentifier: open.sessionIdentifier,
           )!;
 
-          expectLater(socket.onDisconnect.first, completes);
+          expectLater(
+            socket.onDisconnect.first,
+            completion('Did not respond to a heartbeat in time.'),
+          );
         },
       );
     },
