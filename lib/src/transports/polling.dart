@@ -32,7 +32,8 @@ class PollingTransport extends Transport {
   final post = Lock();
 
   /// Creates an instance of `PollingTransport`.
-  PollingTransport({required this.configuration});
+  PollingTransport({required this.configuration})
+      : super(connectionType: ConnectionType.polling);
 
   @override
   void send(Packet packet) => packetBuffer.add(packet);

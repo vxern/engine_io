@@ -39,7 +39,13 @@ enum ConnectionType {
 /// method used.
 @sealed
 abstract class Transport with EventController {
+  /// The connection type corresponding to this transport.
+  final ConnectionType connectionType;
+
   bool _isDisposing = false;
+
+  /// Creates an instance of `Transport`.
+  Transport({required this.connectionType});
 
   /// Sends a packet to the remote party.
   void send(Packet packet);
