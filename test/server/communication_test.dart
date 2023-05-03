@@ -78,7 +78,26 @@ void main() {
         );
       }
 
-      // TODO(vxern): Test for JSON packets.
+      socket.transport.send(
+        const OpenPacket(
+          sessionIdentifier: 'sid',
+          availableConnectionUpgrades: {},
+          heartbeatInterval: Duration.zero,
+          heartbeatTimeout: Duration.zero,
+          maximumChunkBytes: 0,
+        ),
+      );
+
+      {
+        final response =
+            await get(client, sessionIdentifier: open.sessionIdentifier)
+                .then((result) => result.response);
+
+        expect(
+          response.headers.contentType?.mimeType,
+          equals(ContentType.json.mimeType),
+        );
+      }
 
       socket.transport.send(
         BinaryMessagePacket(data: Uint8List.fromList(<int>[])),
