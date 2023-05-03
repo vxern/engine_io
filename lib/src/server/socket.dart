@@ -33,19 +33,15 @@ class Socket extends base.Socket with EventController {
           configuration: configuration,
         );
 
-  /// Disconnects this socket.
-  Future<void> disconnect(String reason) async {
-    _onDisconnectController.add(reason);
-  }
-
   /// Disposes of this socket, closing event streams.
-  Future<void> dispose() async {
+  Future<void> dispose(String reason) async {
     if (_isDisposing) {
       return;
     }
 
     _isDisposing = true;
 
+    _onDisconnectController.add(reason);
     heartbeat.dispose();
     await closeEventStreams();
   }

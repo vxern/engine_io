@@ -454,8 +454,7 @@ class Server with EventController {
     }
 
     clientManager.remove(client);
-    client.disconnect(reason);
-    await client.dispose();
+    await client.dispose(reason);
   }
 
   /// Closes the underlying HTTP server, awaiting remaining requests to be
@@ -519,12 +518,17 @@ class ClientManager {
 
   /// Removes all registered clients.
   Future<void> dispose() async {
+    final futures = <Future>[];
     for (final client in clients.values) {
-      client.dispose();
+      const reason = 'The server is disposing.';
+
+      futures.add(client.dispose(reason));
     }
 
     clients.clear();
     sessionIdentifiers.clear();
+
+    await Future.wait<void>(futures);
   }
 }
 
