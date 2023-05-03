@@ -454,7 +454,6 @@ class Server with EventController {
             const reason = 'The client requested to close the connection.';
 
             disconnect(client, reason: reason);
-            return;
           }
 
           request.response
