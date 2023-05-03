@@ -193,7 +193,19 @@ void main() {
       },
     );
 
-    // TODO(vxern): Test for valid POST requests.
+    test('accepts valid POST requests.', () async {
+      final open = await handshake(client).then((result) => result.packet);
+
+      final response = await post(
+        client,
+        sessionIdentifier: open.sessionIdentifier,
+        packet: const TextMessagePacket(data: ''),
+        contentType: ContentType.text,
+      );
+
+      expect(response.statusCode, equals(HttpStatus.ok));
+      expect(response.reasonPhrase, equals('OK'));
+    });
 
     test(
       'rejects unexpected pong requests.',
