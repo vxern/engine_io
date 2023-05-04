@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:universal_io/io.dart';
 
-import 'package:engine_io_dart/src/server/server.dart';
+import 'package:engine_io_dart/src/server/configuration.dart';
 import 'package:engine_io_dart/src/packet.dart';
 import 'package:engine_io_dart/src/transport.dart';
 

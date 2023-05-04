@@ -3,6 +3,7 @@ import 'package:universal_io/io.dart';
 
 import 'package:engine_io_dart/src/packets/ping.dart';
 import 'package:engine_io_dart/src/packets/pong.dart';
+import 'package:engine_io_dart/src/server/configuration.dart';
 import 'package:engine_io_dart/src/server/server.dart';
 
 import 'shared.dart';
