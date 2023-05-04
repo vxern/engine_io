@@ -11,6 +11,8 @@ import 'package:engine_io_dart/src/packets/pong.dart';
 import 'package:engine_io_dart/src/packets/upgrade.dart';
 import 'package:engine_io_dart/src/server/server.dart';
 import 'package:engine_io_dart/src/transports/polling.dart';
+import 'package:engine_io_dart/src/packet.dart';
+import 'package:engine_io_dart/src/transport.dart';
 
 import 'shared.dart';
 
@@ -190,6 +192,35 @@ void main() {
             """which is different from the specified 'application/octet-stream'""",
           ),
         );
+      },
+    );
+
+    test(
+      'rejects POST requests with a payload that is too large.',
+      () async {
+        final open = await handshake(client).then((result) => result.packet);
+
+        final url = serverUrl.replace(
+          queryParameters: <String, String>{
+            'EIO': Server.protocolVersion.toString(),
+            'transport': ConnectionType.polling.name,
+            'sid': open.sessionIdentifier,
+          },
+        );
+
+        final response = await client.postUrl(url).then(
+          (request) {
+            final packets = <String>[];
+            for (var i = 0; i < server.configuration.maximumChunkBytes; i++) {
+              packets.add(Packet.encode(const TextMessagePacket(data: '')));
+            }
+
+            return request..writeAll(packets, PollingTransport.recordSeparator);
+          },
+        ).then((request) => request.close());
+
+        expect(response.statusCode, equals(HttpStatus.badRequest));
+        expect(response.reasonPhrase, equals('Maximum chunk length exceeded.'));
       },
     );
 

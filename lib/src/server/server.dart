@@ -361,9 +361,38 @@ class Server with EventController {
 
           transport.post.lock();
 
+          final List<int> bytes;
+          try {
+            bytes = await request
+                .fold(<int>[], (buffer, bytes) => buffer..addAll(bytes));
+          } on Exception catch (_) {
+            const reason = 'Failed to read request body.';
+
+            disconnect(client, reason: reason);
+            request.response.reject(HttpStatus.badRequest, reason);
+            return;
+          }
+
+          final contentLength =
+              request.contentLength >= 0 ? request.contentLength : bytes.length;
+          if (bytes.length != contentLength) {
+            final reason =
+                '''The client specified a content length of $contentLength, but a length of ${bytes.length} was detected.''';
+
+            disconnect(client, reason: reason);
+            request.response.reject(HttpStatus.badRequest, reason);
+            return;
+          } else if (contentLength > configuration.maximumChunkBytes) {
+            const reason = 'Maximum chunk length exceeded.';
+
+            disconnect(client, reason: reason);
+            request.response.reject(HttpStatus.badRequest, reason);
+            return;
+          }
+
           final String body;
           try {
-            body = await utf8.decodeStream(request);
+            body = utf8.decode(bytes);
           } on FormatException catch (exception) {
             disconnect(client, reason: exception.message);
             request.response.reject(HttpStatus.badRequest, exception.message);

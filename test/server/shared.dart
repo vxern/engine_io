@@ -97,10 +97,10 @@ Future<HttpClientResponse> post(
   final response = await client.postUrl(url).then(
     (request) {
       final encoded = Packet.encode(packet);
-      request
+
+      return request
         ..headers.contentType = contentType
         ..write(encoded);
-      return request;
     },
   ).then((request) => request.close());
 
