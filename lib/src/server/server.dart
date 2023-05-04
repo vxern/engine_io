@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:engine_io_dart/src/server/configuration.dart';
+import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
@@ -10,11 +10,11 @@ import 'package:engine_io_dart/src/packets/message.dart';
 import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:engine_io_dart/src/packets/ping.dart';
 import 'package:engine_io_dart/src/packets/pong.dart';
+import 'package:engine_io_dart/src/server/configuration.dart';
 import 'package:engine_io_dart/src/server/client_manager.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
-import 'package:engine_io_dart/src/transports/polling.dart';
+import 'package:engine_io_dart/src/transports/polling/polling.dart';
 import 'package:engine_io_dart/src/transports/websocket.dart';
-import 'package:engine_io_dart/src/socket.dart' hide Socket;
 import 'package:engine_io_dart/src/packet.dart';
 import 'package:engine_io_dart/src/transport.dart';
 
@@ -218,28 +218,15 @@ class Server with EventController {
     if (!isConnected) {
       final sessionIdentifier = configuration.generateId(request);
 
-      final heartbeat = HeartbeatManager.create(
-        interval: configuration.heartbeatInterval,
-        timeout: configuration.heartbeatTimeout,
-        onTick: () async => client.transport.send(const PingPacket()),
-        onTimeout: () => disconnect(
-          client,
-          reason: 'Did not respond to a heartbeat in time.',
-        ),
-      );
-
       client = Socket(
-        heartbeat: heartbeat,
         transport: PollingTransport(configuration: configuration),
         sessionIdentifier: sessionIdentifier,
         ipAddress: ipAddress,
       );
 
-      client.transport.onReceive.listen((packet) {
-        if (packet.type == PacketType.pong) {
-          heartbeat.reset();
-        }
-      });
+      client.transport.onException.listen(
+        (exception) => disconnect(client, reason: exception.message),
+      );
 
       clientManager.add(client);
       _onConnectController.add(client);
@@ -528,7 +515,8 @@ class Server with EventController {
                 return;
               }
 
-              if (!client.heartbeat.isExpectingHeartbeat) {
+              final transport = client.transport as PollingTransport;
+              if (!transport.heartbeat.isExpectingHeartbeat) {
                 const reason =
                     '''The server did not expect a `pong` packet at this time.''';
 

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:meta/meta.dart';
 
 import 'package:engine_io_dart/src/packets/message.dart';
+import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/packet.dart';
 
 /// The type of connection used for communication between a client and a server.
@@ -85,6 +86,12 @@ mixin EventController {
   @internal
   final onHeartbeatController = StreamController<ProbePacket>.broadcast();
 
+  /// Controller for the `onException` event stream.
+  @nonVirtual
+  @internal
+  final onExceptionController =
+      StreamController<TransportException>.broadcast();
+
   /// Added to when a packet is received.
   Stream<Packet> get onReceive => onReceiveController.stream;
 
@@ -97,11 +104,15 @@ mixin EventController {
   /// Added to when a heartbeat (ping / pong) packet is received.
   Stream<ProbePacket> get onHeartbeat => onHeartbeatController.stream;
 
+  /// Added to when a heartbeat (ping / pong) packet is received.
+  Stream<TransportException> get onException => onExceptionController.stream;
+
   /// Closes event streams, disposing of this event controller.
   Future<void> closeEventStreams() async {
     onReceiveController.close().ignore();
     onSendController.close().ignore();
     onMessageController.close().ignore();
     onHeartbeatController.close().ignore();
+    onExceptionController.close().ignore();
   }
 }

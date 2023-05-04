@@ -4,7 +4,7 @@ import 'package:universal_io/io.dart';
 
 import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:engine_io_dart/src/server/server.dart';
-import 'package:engine_io_dart/src/transports/polling.dart';
+import 'package:engine_io_dart/src/transports/polling/polling.dart';
 import 'package:engine_io_dart/src/transport.dart';
 import 'package:engine_io_dart/src/packet.dart';
 

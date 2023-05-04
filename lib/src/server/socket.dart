@@ -25,7 +25,6 @@ class Socket extends base.Socket with EventController {
 
   /// Creates an instance of `Socket`.
   Socket({
-    required super.heartbeat,
     required this.transport,
     required this.sessionIdentifier,
     required this.ipAddress,
@@ -39,7 +38,6 @@ class Socket extends base.Socket with EventController {
 
     _isDisposing = true;
 
-    heartbeat.dispose();
     await transport.dispose();
 
     _onDisconnectController.add(reason);

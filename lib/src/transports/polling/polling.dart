@@ -3,12 +3,19 @@ import 'dart:convert';
 
 import 'package:universal_io/io.dart';
 
+import 'package:engine_io_dart/src/packets/ping.dart';
 import 'package:engine_io_dart/src/server/configuration.dart';
+import 'package:engine_io_dart/src/transports/polling/heartbeat_manager.dart';
+import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/packet.dart';
 import 'package:engine_io_dart/src/transport.dart';
 
 /// Transport used with long polling connections.
 class PollingTransport extends Transport {
+  /// Instance of `HeartbeatManager` responsible for checking that the
+  /// connection is still active.
+  late final HeartbeatManager heartbeat;
+
   /// A reference to the server configuration.
   final ServerConfiguration configuration;
 
@@ -33,7 +40,21 @@ class PollingTransport extends Transport {
 
   /// Creates an instance of `PollingTransport`.
   PollingTransport({required this.configuration})
-      : super(connectionType: ConnectionType.polling);
+      : super(connectionType: ConnectionType.polling) {
+    heartbeat = HeartbeatManager.create(
+      interval: configuration.heartbeatInterval,
+      timeout: configuration.heartbeatTimeout,
+      onTick: () => packetBuffer.add(const PingPacket()),
+      onTimeout: () =>
+          onExceptionController.add(TransportException.heartbeatTimedOut),
+    );
+
+    onReceive.listen((packet) {
+      if (packet.type == PacketType.pong) {
+        heartbeat.reset();
+      }
+    });
+  }
 
   @override
   void send(Packet packet) => packetBuffer.add(packet);
@@ -81,6 +102,12 @@ class PollingTransport extends Transport {
       ..add(bytes);
 
     return packets;
+  }
+
+  @override
+  Future<void> dispose() async {
+    heartbeat.dispose();
+    await super.dispose();
   }
 }
 
