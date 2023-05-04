@@ -12,7 +12,12 @@ void main() {
 
   setUp(() async {
     client = HttpClient();
-    server = await Server.bind(remoteUrl);
+    server = await Server.bind(
+      remoteUrl,
+      configuration: ServerConfiguration(
+        availableConnectionTypes: {ConnectionType.polling},
+      ),
+    );
   });
   tearDown(() async {
     client.close();
@@ -233,4 +238,6 @@ void main() {
       );
     });
   });
+
+  // TODO(vxern): Opens a connection only over websockets.
 }

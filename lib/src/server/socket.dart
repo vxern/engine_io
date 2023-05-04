@@ -10,7 +10,10 @@ import 'package:engine_io_dart/src/transport.dart';
 class Socket extends base.Socket with EventController {
   /// The transport currently in use for sending messages to and receiving
   /// messages from this client.
-  final Transport transport;
+  Transport transport;
+
+  /// The transport the connection is being upgraded to, if any.
+  Transport? probeTransport;
 
   /// The session ID of this client.
   final String sessionIdentifier;

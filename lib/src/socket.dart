@@ -9,8 +9,11 @@ abstract class Socket {
   /// connection is still active.
   final HeartbeatManager heartbeat;
 
+  /// Indicates whether the socket is upgrading to a new transport.
+  bool isUpgrading = false;
+
   /// Creates an instance of `Socket`.
-  const Socket({required this.heartbeat});
+  Socket({required this.heartbeat});
 }
 
 /// The `HeartbeatManager` is responsible for checking that connections are
@@ -62,19 +65,15 @@ class HeartbeatManager {
 
     Timer getIntervalTimer() => Timer(interval, onTick_);
 
-    void reset() {
-      timer
+    return timer = HeartbeatManager._(
+      intervalTimer: getIntervalTimer(),
+      timeoutTimer: getTimeoutTimer(),
+      reset: () => timer
         ..isExpectingHeartbeat = false
         .._intervalTimer.cancel()
         .._intervalTimer = getIntervalTimer()
         .._timeoutTimer.cancel()
-        .._timeoutTimer = getTimeoutTimer();
-    }
-
-    return timer = HeartbeatManager._(
-      intervalTimer: getIntervalTimer(),
-      timeoutTimer: getTimeoutTimer(),
-      reset: reset,
+        .._timeoutTimer = getTimeoutTimer(),
     );
   }
 

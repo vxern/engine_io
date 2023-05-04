@@ -6,12 +6,14 @@ import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 import 'package:uuid/uuid.dart';
 
+import 'package:engine_io_dart/src/packets/noop.dart';
 import 'package:engine_io_dart/src/packets/message.dart';
 import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:engine_io_dart/src/packets/ping.dart';
 import 'package:engine_io_dart/src/packets/pong.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/polling.dart';
+import 'package:engine_io_dart/src/transports/websocket.dart';
 import 'package:engine_io_dart/src/socket.dart' hide Socket;
 import 'package:engine_io_dart/src/packet.dart';
 import 'package:engine_io_dart/src/transport.dart';
@@ -44,7 +46,10 @@ class ServerConfiguration {
   /// Creates an instance of `ServerConfiguration`.
   ServerConfiguration({
     this.path = 'engine.io/',
-    this.availableConnectionTypes = const {ConnectionType.polling},
+    this.availableConnectionTypes = const {
+      ConnectionType.polling,
+      ConnectionType.websocket
+    },
     this.heartbeatInterval = const Duration(seconds: 15),
     this.heartbeatTimeout = const Duration(seconds: 10),
     this.maximumChunkBytes = 1024 * 128, // 128 KiB (Kibibytes)
@@ -173,11 +178,11 @@ class Server with EventController {
 
     final isConnected = clientManager.isConnected(ipAddress);
 
-    if (!isConnected && request.method != 'GET') {
-      request.response.reject(
-        HttpStatus.methodNotAllowed,
-        'Expected a GET request.',
-      );
+    if (request.method != 'GET' && !isConnected) {
+      const reason = 'Expected a GET request.';
+
+      disconnect(clientByIP, reason: reason);
+      request.response.reject(HttpStatus.methodNotAllowed, reason);
       return;
     }
 
@@ -317,10 +322,91 @@ class Server with EventController {
       client = client_;
     }
 
+    final isSeekingUpgrade = connectionType != client.transport.connectionType;
+
+    if (isSeekingUpgrade &&
+        !client.transport.connectionType.upgradesTo.contains(connectionType)) {
+      final reason =
+          '''A ${client.transport.connectionType.name} connection cannot be upgraded to a ${connectionType.name} connection.''';
+
+      disconnect(client, reason: reason);
+      request.response.reject(HttpStatus.badRequest, reason);
+      return;
+    }
+
     switch (request.method) {
       case 'GET':
-        if (WebSocketTransformer.isUpgradeRequest(request)) {
-          // TODO(vxern): Handle websocket upgrade requests.
+        final isWebsocketUpgradeRequest =
+            WebSocketTransformer.isUpgradeRequest(request);
+
+        // TODO(vxern): Verify websocket key.
+
+        if (isSeekingUpgrade) {
+          if (connectionType == ConnectionType.websocket &&
+              !isWebsocketUpgradeRequest) {
+            const reason = 'Invalid websocket upgrade request.';
+
+            disconnect(client, reason: reason);
+            request.response.reject(HttpStatus.badRequest, reason);
+            return;
+          }
+        } else if (isWebsocketUpgradeRequest) {
+          const reason =
+              'Sent a websocket upgrade request when not seeking upgrade.';
+
+          disconnect(client, reason: reason);
+          request.response.reject(HttpStatus.badRequest, reason);
+          return;
+        }
+
+        if (isWebsocketUpgradeRequest) {
+          if (client.isUpgrading) {
+            client.isUpgrading = false;
+
+            if (client.probeTransport != null) {
+              client.probeTransport!.dispose();
+            }
+
+            const reason =
+                '''Attempted to initiate upgrade process when one was already underway.''';
+
+            disconnect(client, reason: reason);
+            request.response.reject(HttpStatus.badRequest, reason);
+            return;
+          }
+
+          client.isUpgrading = true;
+
+          // ignore: close_sinks
+          final socket = await WebSocketTransformer.upgrade(request);
+          client.probeTransport = WebSocketTransport(socket: socket);
+
+          // TODO(vxern): Remove once upgrade completion is implemented.
+          await Future<void>.delayed(const Duration(seconds: 2));
+
+          // TODO(vxern): Expect probe `ping` packet.
+          // TODO(vxern): Expect `upgrade` packet.
+
+          if (!client.isUpgrading) {
+            return;
+          } else {
+            client.isUpgrading = false;
+          }
+
+          if (client.transport is PollingTransport) {
+            final oldTransport = client.transport as PollingTransport;
+
+            for (final packet in oldTransport.packetBuffer) {
+              client.probeTransport!.send(packet);
+            }
+          }
+
+          final oldTransport = client.transport;
+          client
+            ..transport = client.probeTransport!
+            ..probeTransport = null;
+          await oldTransport.dispose();
+          return;
         }
 
         if (client.transport is PollingTransport) {
@@ -331,6 +417,14 @@ class Server with EventController {
 
             disconnect(client, reason: reason);
             request.response.reject(HttpStatus.badRequest, reason);
+            return;
+          }
+
+          if (client.isUpgrading) {
+            request.response
+              ..statusCode = HttpStatus.ok
+              ..write(const NoopPacket())
+              ..close().ignore();
             return;
           }
 
@@ -349,189 +443,193 @@ class Server with EventController {
         }
         break;
       case 'POST':
-        if (client.transport is PollingTransport) {
-          final transport = client.transport as PollingTransport;
-          if (transport.post.isLocked) {
-            const reason =
-                '''There may not be more than one POST request active at any given time.''';
+        if (client.transport is! PollingTransport) {
+          const reason =
+              'Received POST request, but the connection is not long polling.';
 
-            disconnect(client, reason: reason);
-            request.response.reject(HttpStatus.badRequest, reason);
-            return;
+          disconnect(client, reason: reason);
+          request.response.reject(HttpStatus.badRequest, reason);
+          return;
+        }
+
+        final transport = client.transport as PollingTransport;
+        if (transport.post.isLocked) {
+          const reason =
+              '''There may not be more than one POST request active at any given time.''';
+
+          disconnect(client, reason: reason);
+          request.response.reject(HttpStatus.badRequest, reason);
+          return;
+        }
+
+        transport.post.lock();
+
+        final List<int> bytes;
+        try {
+          bytes = await request
+              .fold(<int>[], (buffer, bytes) => buffer..addAll(bytes));
+        } on Exception catch (_) {
+          const reason = 'Failed to read request body.';
+
+          disconnect(client, reason: reason);
+          request.response.reject(HttpStatus.badRequest, reason);
+          return;
+        }
+
+        final contentLength =
+            request.contentLength >= 0 ? request.contentLength : bytes.length;
+        if (bytes.length != contentLength) {
+          final reason =
+              '''The client specified a content length of $contentLength, but a length of ${bytes.length} was detected.''';
+
+          disconnect(client, reason: reason);
+          request.response.reject(HttpStatus.badRequest, reason);
+          return;
+        } else if (contentLength > configuration.maximumChunkBytes) {
+          const reason = 'Maximum chunk length exceeded.';
+
+          disconnect(client, reason: reason);
+          request.response.reject(HttpStatus.badRequest, reason);
+          return;
+        }
+
+        final String body;
+        try {
+          body = utf8.decode(bytes);
+        } on FormatException catch (exception) {
+          disconnect(client, reason: exception.message);
+          request.response.reject(HttpStatus.badRequest, exception.message);
+          return;
+        }
+
+        final List<Packet> packets;
+        try {
+          packets = body
+              .split(PollingTransport.recordSeparator)
+              .map(Packet.decode)
+              .toList();
+        } on FormatException catch (exception) {
+          disconnect(client, reason: exception.message);
+          request.response.reject(HttpStatus.badRequest, exception.message);
+          return;
+        }
+
+        final specifiedContentType = request.headers.contentType;
+
+        var detectedContentType = ContentType.text;
+        for (final packet in packets) {
+          if (packet.isBinary && detectedContentType != ContentType.binary) {
+            detectedContentType = ContentType.binary;
+          } else if (packet.isJSON && detectedContentType == ContentType.text) {
+            detectedContentType = ContentType.json;
           }
+        }
 
-          transport.post.lock();
-
-          final List<int> bytes;
-          try {
-            bytes = await request
-                .fold(<int>[], (buffer, bytes) => buffer..addAll(bytes));
-          } on Exception catch (_) {
-            const reason = 'Failed to read request body.';
-
-            disconnect(client, reason: reason);
-            request.response.reject(HttpStatus.badRequest, reason);
-            return;
-          }
-
-          final contentLength =
-              request.contentLength >= 0 ? request.contentLength : bytes.length;
-          if (bytes.length != contentLength) {
+        if (specifiedContentType == null) {
+          if (detectedContentType.mimeType != ContentType.text.mimeType) {
             final reason =
-                '''The client specified a content length of $contentLength, but a length of ${bytes.length} was detected.''';
-
-            disconnect(client, reason: reason);
-            request.response.reject(HttpStatus.badRequest, reason);
-            return;
-          } else if (contentLength > configuration.maximumChunkBytes) {
-            const reason = 'Maximum chunk length exceeded.';
+                "Detected content type '${detectedContentType.mimeType}', "
+                """which is different from the implicit '${_implicitContentType.mimeType}'""";
 
             disconnect(client, reason: reason);
             request.response.reject(HttpStatus.badRequest, reason);
             return;
           }
+        } else if (specifiedContentType.mimeType !=
+            detectedContentType.mimeType) {
+          final reason =
+              "Detected content type '${detectedContentType.mimeType}', "
+              """which is different from the specified '${specifiedContentType.mimeType}'""";
 
-          final String body;
-          try {
-            body = utf8.decode(bytes);
-          } on FormatException catch (exception) {
-            disconnect(client, reason: exception.message);
-            request.response.reject(HttpStatus.badRequest, exception.message);
-            return;
-          }
+          disconnect(client, reason: reason);
+          request.response.reject(HttpStatus.badRequest, reason);
+          return;
+        }
 
-          final List<Packet> packets;
-          try {
-            packets = body
-                .split(PollingTransport.recordSeparator)
-                .map(Packet.decode)
-                .toList();
-          } on FormatException catch (exception) {
-            disconnect(client, reason: exception.message);
-            request.response.reject(HttpStatus.badRequest, exception.message);
-            return;
-          }
-
-          final specifiedContentType = request.headers.contentType;
-
-          var detectedContentType = ContentType.text;
-          for (final packet in packets) {
-            if (packet.isBinary && detectedContentType != ContentType.binary) {
-              detectedContentType = ContentType.binary;
-            } else if (packet.isJSON &&
-                detectedContentType == ContentType.text) {
-              detectedContentType = ContentType.json;
-            }
-          }
-
-          if (specifiedContentType == null) {
-            if (detectedContentType.mimeType != ContentType.text.mimeType) {
+        var isClosing = false;
+        for (final packet in packets) {
+          switch (packet.type) {
+            case PacketType.open:
+            case PacketType.noop:
               final reason =
-                  "Detected content type '${detectedContentType.mimeType}', "
-                  """which is different from the implicit '${_implicitContentType.mimeType}'""";
+                  '''`${packet.type.name}` packets are not legal to be sent by the client.''';
 
               disconnect(client, reason: reason);
               request.response.reject(HttpStatus.badRequest, reason);
               return;
-            }
-          } else if (specifiedContentType.mimeType !=
-              detectedContentType.mimeType) {
-            final reason =
-                "Detected content type '${detectedContentType.mimeType}', "
-                """which is different from the specified '${specifiedContentType.mimeType}'""";
+            case PacketType.ping:
+              packet as PingPacket;
 
-            disconnect(client, reason: reason);
-            request.response.reject(HttpStatus.badRequest, reason);
-            return;
-          }
-
-          var isClosing = false;
-          for (final packet in packets) {
-            switch (packet.type) {
-              case PacketType.open:
-              case PacketType.noop:
-                final reason =
-                    '''`${packet.type.name}` packets are not legal to be sent by the client.''';
+              if (!packet.isProbe) {
+                const reason =
+                    '''Non-probe `ping` packets are not legal to be sent by the client.''';
 
                 disconnect(client, reason: reason);
                 request.response.reject(HttpStatus.badRequest, reason);
                 return;
-              case PacketType.ping:
-                packet as PingPacket;
+              }
 
-                if (!packet.isProbe) {
-                  const reason =
-                      '''Non-probe `ping` packets are not legal to be sent by the client.''';
+              // TODO(vxern): Reject probe ping packets sent when not upgrading.
 
-                  disconnect(client, reason: reason);
-                  request.response.reject(HttpStatus.badRequest, reason);
-                  return;
-                }
+              continue;
+            case PacketType.pong:
+              packet as PongPacket;
 
-                // TODO(vxern): Reject probe ping packets sent when not upgrading.
+              if (packet.isProbe) {
+                const reason =
+                    '''Probe `pong` packets are not legal to be sent by the client.''';
 
-                continue;
-              case PacketType.pong:
-                packet as PongPacket;
+                disconnect(client, reason: reason);
+                request.response.reject(HttpStatus.badRequest, reason);
+                return;
+              }
 
-                if (packet.isProbe) {
-                  const reason =
-                      '''Probe `pong` packets are not legal to be sent by the client.''';
+              if (!client.heartbeat.isExpectingHeartbeat) {
+                const reason =
+                    '''The server did not expect a `pong` packet at this time.''';
 
-                  disconnect(client, reason: reason);
-                  request.response.reject(HttpStatus.badRequest, reason);
-                  return;
-                }
-
-                if (!client.heartbeat.isExpectingHeartbeat) {
-                  const reason =
-                      '''The server did not expect a `pong` packet at this time.''';
-
-                  disconnect(client, reason: reason);
-                  request.response.reject(HttpStatus.badRequest, reason);
-                  return;
-                }
-                continue;
-              case PacketType.close:
-                isClosing = true;
-                continue;
-              case PacketType.upgrade:
-                // TODO(vxern): Reject upgrade packets sent when not upgrading.
-                continue;
-              case PacketType.textMessage:
-              case PacketType.binaryMessage:
-                continue;
-            }
+                disconnect(client, reason: reason);
+                request.response.reject(HttpStatus.badRequest, reason);
+                return;
+              }
+              continue;
+            case PacketType.close:
+              isClosing = true;
+              continue;
+            case PacketType.upgrade:
+              // TODO(vxern): Reject upgrade packets sent when not upgrading.
+              continue;
+            case PacketType.textMessage:
+            case PacketType.binaryMessage:
+              continue;
           }
-
-          for (final packet in packets) {
-            transport.onReceiveController.add(packet);
-
-            if (packet is MessagePacket) {
-              transport.onMessageController.add(packet);
-            }
-
-            if (packet is ProbePacket) {
-              transport.onHeartbeatController.add(packet);
-            }
-          }
-
-          if (isClosing) {
-            const reason = 'The client requested to close the connection.';
-
-            disconnect(client, reason: reason);
-          }
-
-          request.response
-            ..statusCode = HttpStatus.ok
-            ..close().ignore();
-
-          transport.post.unlock();
-          return;
         }
-    }
 
-    // TODO(vxern): Handle upgrade requests to WebSocket.
+        for (final packet in packets) {
+          transport.onReceiveController.add(packet);
+
+          if (packet is MessagePacket) {
+            transport.onMessageController.add(packet);
+          }
+
+          if (packet is ProbePacket) {
+            transport.onHeartbeatController.add(packet);
+          }
+        }
+
+        if (isClosing) {
+          const reason = 'The client requested to close the connection.';
+
+          disconnect(client, reason: reason);
+        }
+
+        request.response
+          ..statusCode = HttpStatus.ok
+          ..close().ignore();
+
+        transport.post.unlock();
+        return;
+    }
   }
 
   /// Disconnects a client.

@@ -78,6 +78,9 @@ void main() {
       );
     });
 
+    // TODO(vxern): Add test for websocket transport sending data.
+    // TODO(vxern): Add test for websocket transport receiving data.
+
     test('an `onMessage` event.', () async {
       expectLater(
         server.onConnect.first

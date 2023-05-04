@@ -84,12 +84,13 @@ Future<HttpClientResponse> post(
   HttpClient client, {
   required String sessionIdentifier,
   required Packet packet,
+  String? connectionType,
   ContentType? contentType,
 }) async {
   final url = serverUrl.replace(
     queryParameters: <String, String>{
       'EIO': Server.protocolVersion.toString(),
-      'transport': ConnectionType.polling.name,
+      'transport': connectionType ?? ConnectionType.polling.name,
       'sid': sessionIdentifier,
     },
   );
@@ -105,4 +106,54 @@ Future<HttpClientResponse> post(
   ).then((request) => request.close());
 
   return response;
+}
+
+Future<HttpClientResponse> upgradeRequest(
+  HttpClient client, {
+  required String sessionIdentifier,
+  String? connectionType,
+}) async {
+  final url = serverUrl.replace(
+    queryParameters: <String, String>{
+      'EIO': Server.protocolVersion.toString(),
+      'transport': connectionType ?? ConnectionType.websocket.name,
+      'sid': sessionIdentifier,
+    },
+  );
+
+  return client.getUrl(url).then((request) {
+    // TODO(vxern): Generate valid websocket key.
+
+    request.headers
+      ..set(HttpHeaders.connectionHeader, 'upgrade')
+      ..set(HttpHeaders.upgradeHeader, 'websocket')
+      ..set('Sec-Websocket-Version', '13')
+      ..set('Sec-Websocket-Key', 'key');
+    return request;
+  }).then((request) => request.close());
+}
+
+class WebSocketUpgradeResult {
+  final HttpClientResponse response;
+  final WebSocket socket;
+
+  WebSocketUpgradeResult(this.response, this.socket);
+}
+
+Future<WebSocketUpgradeResult> upgrade(
+  HttpClient client, {
+  required String sessionIdentifier,
+}) async {
+  final response = await upgradeRequest(
+    client,
+    sessionIdentifier: sessionIdentifier,
+    connectionType: ConnectionType.websocket.name,
+  );
+
+  // ignore: close_sinks
+  final socket_ = await response.detachSocket();
+  // ignore: close_sinks
+  final socket = WebSocket.fromUpgradedSocket(socket_, serverSide: false);
+
+  return WebSocketUpgradeResult(response, socket);
 }
