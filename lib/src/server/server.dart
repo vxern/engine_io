@@ -510,6 +510,10 @@ class Server with EventController {
             if (packet is MessagePacket) {
               transport.onMessageController.add(packet);
             }
+
+            if (packet is ProbePacket) {
+              transport.onHeartbeatController.add(packet);
+            }
           }
 
           if (isClosing) {

@@ -80,6 +80,11 @@ mixin EventController {
   @internal
   final onMessageController = StreamController<MessagePacket>.broadcast();
 
+  /// Controller for the `onHeartbeat` event stream.
+  @nonVirtual
+  @internal
+  final onHeartbeatController = StreamController<ProbePacket>.broadcast();
+
   /// Added to when a packet is received.
   Stream<Packet> get onReceive => onReceiveController.stream;
 
@@ -89,10 +94,14 @@ mixin EventController {
   /// Added to when a message packet is received.
   Stream<MessagePacket> get onMessage => onMessageController.stream;
 
+  /// Added to when a heartbeat (ping / pong) packet is received.
+  Stream<ProbePacket> get onHeartbeat => onHeartbeatController.stream;
+
   /// Closes event streams, disposing of this event controller.
   Future<void> closeEventStreams() async {
     onReceiveController.close().ignore();
     onSendController.close().ignore();
     onMessageController.close().ignore();
+    onHeartbeatController.close().ignore();
   }
 }

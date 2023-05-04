@@ -2,6 +2,7 @@ import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
 import 'package:engine_io_dart/src/packets/message.dart';
+import 'package:engine_io_dart/src/packets/pong.dart';
 import 'package:engine_io_dart/src/server/server.dart';
 
 import 'shared.dart';
@@ -12,7 +13,13 @@ void main() {
 
   setUp(() async {
     client = HttpClient();
-    server = await Server.bind(remoteUrl);
+    server = await Server.bind(
+      remoteUrl,
+      configuration: ServerConfiguration(
+        heartbeatInterval: const Duration(seconds: 2),
+        heartbeatTimeout: const Duration(seconds: 1),
+      ),
+    );
   });
   tearDown(() async {
     client.close();
@@ -84,6 +91,27 @@ void main() {
         client,
         sessionIdentifier: open.sessionIdentifier,
         packet: const TextMessagePacket(data: ''),
+      );
+    });
+
+    test('an `onHeartbeat` event.', () async {
+      expectLater(
+        server.onConnect.first
+            .then((socket) => socket.transport.onHeartbeat.first),
+        completes,
+      );
+
+      final open = await handshake(client).then((result) => result.packet);
+
+      await Future<void>.delayed(
+        server.configuration.heartbeatInterval +
+            const Duration(milliseconds: 100),
+      );
+
+      post(
+        client,
+        sessionIdentifier: open.sessionIdentifier,
+        packet: const PongPacket(),
       );
     });
   });
