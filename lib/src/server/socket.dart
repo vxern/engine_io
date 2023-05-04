@@ -37,7 +37,10 @@ class Socket extends base.Socket with EventController {
     _isDisposing = true;
 
     heartbeat.dispose();
+    await transport.dispose();
+
     _onDisconnectController.add(reason);
+
     await closeEventStreams();
   }
 }
