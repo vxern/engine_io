@@ -257,20 +257,6 @@ void main() {
           );
         });
 
-        test('ping', () async {
-          final response = await post(
-            client,
-            sessionIdentifier: open.sessionIdentifier,
-            packet: const PingPacket(),
-          );
-
-          expect(response.statusCode, equals(HttpStatus.badRequest));
-          expect(
-            response.reasonPhrase,
-            equals('`ping` packets are not legal to be sent by the client.'),
-          );
-        });
-
         test('noop', () async {
           final response = await post(
             client,
@@ -282,6 +268,38 @@ void main() {
           expect(
             response.reasonPhrase,
             equals('`noop` packets are not legal to be sent by the client.'),
+          );
+        });
+
+        test('ping (non-probe)', () async {
+          final response = await post(
+            client,
+            sessionIdentifier: open.sessionIdentifier,
+            packet: const PingPacket(),
+          );
+
+          expect(response.statusCode, equals(HttpStatus.badRequest));
+          expect(
+            response.reasonPhrase,
+            equals(
+              '''Non-probe `ping` packets are not legal to be sent by the client.''',
+            ),
+          );
+        });
+
+        test('pong (probe)', () async {
+          final response = await post(
+            client,
+            sessionIdentifier: open.sessionIdentifier,
+            packet: const PongPacket(isProbe: true),
+          );
+
+          expect(response.statusCode, equals(HttpStatus.badRequest));
+          expect(
+            response.reasonPhrase,
+            equals(
+              '''Probe `pong` packets are not legal to be sent by the client.''',
+            ),
           );
         });
       },

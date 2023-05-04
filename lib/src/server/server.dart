@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:engine_io_dart/src/packets/ping.dart';
+import 'package:engine_io_dart/src/packets/pong.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/polling.dart';
 import 'package:engine_io_dart/src/socket.dart' hide Socket;
@@ -418,7 +419,6 @@ class Server with EventController {
           for (final packet in packets) {
             switch (packet.type) {
               case PacketType.open:
-              case PacketType.ping:
               case PacketType.noop:
                 final reason =
                     '''`${packet.type.name}` packets are not legal to be sent by the client.''';
@@ -426,7 +426,33 @@ class Server with EventController {
                 disconnect(client, reason: reason);
                 request.response.reject(HttpStatus.badRequest, reason);
                 return;
+              case PacketType.ping:
+                packet as PingPacket;
+
+                if (!packet.isProbe) {
+                  const reason =
+                      '''Non-probe `ping` packets are not legal to be sent by the client.''';
+
+                  disconnect(client, reason: reason);
+                  request.response.reject(HttpStatus.badRequest, reason);
+                  return;
+                }
+
+                // TODO(vxern): Reject probe ping packets sent when not upgrading.
+
+                continue;
               case PacketType.pong:
+                packet as PongPacket;
+
+                if (packet.isProbe) {
+                  const reason =
+                      '''Probe `pong` packets are not legal to be sent by the client.''';
+
+                  disconnect(client, reason: reason);
+                  request.response.reject(HttpStatus.badRequest, reason);
+                  return;
+                }
+
                 if (!client.heartbeat.isExpectingHeartbeat) {
                   const reason =
                       '''The server did not expect a `pong` packet at this time.''';
@@ -439,9 +465,11 @@ class Server with EventController {
               case PacketType.close:
                 isClosing = true;
                 continue;
+              case PacketType.upgrade:
+                // TODO(vxern): Reject upgrade packets sent when not upgrading.
+                continue;
               case PacketType.textMessage:
               case PacketType.binaryMessage:
-              case PacketType.upgrade:
                 continue;
             }
           }
