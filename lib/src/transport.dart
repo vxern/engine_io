@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 
+import 'package:engine_io_dart/src/packets/message.dart';
 import 'package:engine_io_dart/src/packet.dart';
 
 /// The type of connection used for communication between a client and a server.
@@ -66,11 +67,18 @@ abstract class Transport with EventController {
 mixin EventController {
   /// Controller for the `onReceive` event stream.
   @nonVirtual
+  @internal
   final onReceiveController = StreamController<Packet>.broadcast();
 
   /// Controller for the `onSend` event stream.
   @nonVirtual
+  @internal
   final onSendController = StreamController<Packet>.broadcast();
+
+  /// Controller for the `onMessage` event stream.
+  @nonVirtual
+  @internal
+  final onMessageController = StreamController<MessagePacket>.broadcast();
 
   /// Added to when a packet is received.
   Stream<Packet> get onReceive => onReceiveController.stream;
@@ -78,9 +86,13 @@ mixin EventController {
   /// Added to when a packet is sent.
   Stream<Packet> get onSend => onSendController.stream;
 
+  /// Added to when a message packet is received.
+  Stream<MessagePacket> get onMessage => onMessageController.stream;
+
   /// Closes event streams, disposing of this event controller.
   Future<void> closeEventStreams() async {
     onReceiveController.close().ignore();
     onSendController.close().ignore();
+    onMessageController.close().ignore();
   }
 }

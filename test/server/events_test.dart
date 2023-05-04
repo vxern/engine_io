@@ -40,6 +40,21 @@ void main() {
   });
 
   group('Transport fires', () {
+    test('an `onSend` event.', () async {
+      final socket_ = server.onConnect.first;
+
+      final open = await handshake(client).then((result) => result.packet);
+      final socket = await socket_;
+
+      expectLater(socket.transport.onSend.first, completes);
+
+      socket.transport.send(const TextMessagePacket(data: ''));
+
+      // Since this is a long polling connection, the sent packets have to be
+      // fetched manually for them to be received.
+      get(client, sessionIdentifier: open.sessionIdentifier);
+    });
+
     test('an `onReceive` event.', () async {
       expectLater(
         server.onConnect.first
@@ -56,19 +71,20 @@ void main() {
       );
     });
 
-    test('an `onSend` event.', () async {
-      final socket_ = server.onConnect.first;
+    test('an `onMessage` event.', () async {
+      expectLater(
+        server.onConnect.first
+            .then((socket) => socket.transport.onMessage.first),
+        completes,
+      );
 
       final open = await handshake(client).then((result) => result.packet);
-      final socket = await socket_;
 
-      expectLater(socket.transport.onSend.first, completes);
-
-      socket.transport.send(const TextMessagePacket(data: ''));
-
-      // Since this is a long polling connection, the sent packets have to be
-      // fetched manually for them to be received.
-      get(client, sessionIdentifier: open.sessionIdentifier);
+      post(
+        client,
+        sessionIdentifier: open.sessionIdentifier,
+        packet: const TextMessagePacket(data: ''),
+      );
     });
   });
 }

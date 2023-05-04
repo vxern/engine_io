@@ -6,6 +6,7 @@ import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 import 'package:uuid/uuid.dart';
 
+import 'package:engine_io_dart/src/packets/message.dart';
 import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:engine_io_dart/src/packets/ping.dart';
 import 'package:engine_io_dart/src/packets/pong.dart';
@@ -505,6 +506,10 @@ class Server with EventController {
 
           for (final packet in packets) {
             transport.onReceiveController.add(packet);
+
+            if (packet is MessagePacket) {
+              transport.onMessageController.add(packet);
+            }
           }
 
           if (isClosing) {
