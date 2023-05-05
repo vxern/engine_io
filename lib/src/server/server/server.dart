@@ -14,8 +14,8 @@ import 'package:engine_io_dart/src/server/server/exception.dart';
 import 'package:engine_io_dart/src/server/server/query.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/polling/polling.dart';
-import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/transports/websocket.dart';
+import 'package:engine_io_dart/src/engine.dart';
 import 'package:engine_io_dart/src/packet.dart';
 import 'package:engine_io_dart/src/transport.dart';
 
@@ -186,13 +186,12 @@ class Server with EventController {
           return;
         }
 
-        try {
-          await (client.transport as PollingTransport)
-              .offload(request.response);
-        } on TransportException {
-          respond(request, ServerException.transportException);
-          return;
+        final exception = await (client.transport as PollingTransport)
+            .offload(request.response);
+        if (exception != null) {
+          respond(request, exception);
         }
+
         break;
       case 'POST':
         if (client.transport is! PollingTransport) {
@@ -451,7 +450,7 @@ class Server with EventController {
   /// Responds to a HTTP request.
   Future<void> respond(
     HttpRequest request,
-    ServerException exception,
+    EngineException exception,
   ) async {
     request.response
       ..statusCode = exception.statusCode

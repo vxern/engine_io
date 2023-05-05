@@ -5,13 +5,13 @@ import 'package:universal_io/io.dart';
 
 import 'package:engine_io_dart/src/packets/ping.dart';
 import 'package:engine_io_dart/src/server/server/configuration.dart';
+import 'package:engine_io_dart/src/transports/polling/exception.dart';
 import 'package:engine_io_dart/src/transports/polling/heartbeat_manager.dart';
-import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/packet.dart';
 import 'package:engine_io_dart/src/transport.dart';
 
 /// Transport used with long polling connections.
-class PollingTransport extends Transport {
+class PollingTransport extends Transport<PollingTransportException> {
   /// Instance of `HeartbeatManager` responsible for checking that the
   /// connection is still active.
   late final HeartbeatManager heartbeat;
@@ -45,8 +45,8 @@ class PollingTransport extends Transport {
       interval: configuration.heartbeatInterval,
       timeout: configuration.heartbeatTimeout,
       onTick: () => packetBuffer.add(const PingPacket()),
-      onTimeout: () =>
-          onExceptionController.add(TransportException.heartbeatTimedOut),
+      onTimeout: () => onExceptionController
+          .add(PollingTransportException.heartbeatTimedOut),
     );
 
     onReceive.listen((packet) {
@@ -62,11 +62,10 @@ class PollingTransport extends Transport {
   /// Taking a HTTP response object, attempts to offload packets onto it,
   /// concatenating them before closing the response.
   ///
-  /// Throws a `TransportException` on failure.
-  Future<void> offload(HttpResponse response) async {
+  /// Returns a `PollingTransportException` on failure, otherwise `null`.
+  Future<PollingTransportException?> offload(HttpResponse response) async {
     if (get.isLocked) {
-      onExceptionController.add(TransportException.duplicateGetRequest);
-      throw TransportException.duplicateGetRequest;
+      return except(PollingTransportException.duplicateGetRequest);
     }
 
     get.lock();
@@ -122,6 +121,8 @@ class PollingTransport extends Transport {
     get.unlock();
 
     response.close().ignore();
+
+    return null;
   }
 
   @override

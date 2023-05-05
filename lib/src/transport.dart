@@ -40,7 +40,7 @@ enum ConnectionType {
 /// The method by which packets are encoded or decoded depends on the transport
 /// method used.
 @sealed
-abstract class Transport with EventController {
+abstract class Transport<E extends TransportException> with EventController<E> {
   /// The connection type corresponding to this transport.
   final ConnectionType connectionType;
 
@@ -51,6 +51,13 @@ abstract class Transport with EventController {
 
   /// Sends a packet to the remote party.
   void send(Packet packet);
+
+  /// Signals an exception occurred on the transport and returns it to be
+  /// handled by the server.
+  E except(E exception) {
+    onExceptionController.add(exception);
+    return exception;
+  }
 
   /// Disposes of this transport, closing event streams.
   Future<void> dispose() async {
@@ -65,7 +72,7 @@ abstract class Transport with EventController {
 }
 
 /// Contains streams for events that can be fired on the transport.
-mixin EventController {
+mixin EventController<E extends TransportException> {
   /// Controller for the `onReceive` event stream.
   @nonVirtual
   @internal
@@ -89,8 +96,7 @@ mixin EventController {
   /// Controller for the `onException` event stream.
   @nonVirtual
   @internal
-  final onExceptionController =
-      StreamController<TransportException>.broadcast();
+  final onExceptionController = StreamController<E>.broadcast();
 
   /// Added to when a packet is received.
   Stream<Packet> get onReceive => onReceiveController.stream;
@@ -104,8 +110,8 @@ mixin EventController {
   /// Added to when a heartbeat (ping / pong) packet is received.
   Stream<ProbePacket> get onHeartbeat => onHeartbeatController.stream;
 
-  /// Added to when a heartbeat (ping / pong) packet is received.
-  Stream<TransportException> get onException => onExceptionController.stream;
+  /// Added to when an exception occurs.
+  Stream<E> get onException => onExceptionController.stream;
 
   /// Closes event streams, disposing of this event controller.
   Future<void> closeEventStreams() async {
