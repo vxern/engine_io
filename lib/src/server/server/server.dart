@@ -143,30 +143,7 @@ class Server with EventController {
 
     final Socket client;
     if (!isConnected) {
-      final sessionIdentifier = configuration.generateId(request);
-
-      client = Socket(
-        transport: PollingTransport(configuration: configuration),
-        sessionIdentifier: sessionIdentifier,
-        ipAddress: ipAddress,
-      );
-
-      client.transport.onException.listen(
-        (_) => disconnect(client, ConnectionException.transportException),
-      );
-
-      clientManager.add(client);
-      _onConnectController.add(client);
-
-      final openPacket = OpenPacket(
-        sessionIdentifier: client.sessionIdentifier,
-        availableConnectionUpgrades: configuration.availableConnectionTypes,
-        heartbeatInterval: configuration.heartbeatInterval,
-        heartbeatTimeout: configuration.heartbeatTimeout,
-        maximumChunkBytes: configuration.maximumChunkBytes,
-      );
-
-      client.transport.send(openPacket);
+      client = await handshake(request, ipAddress: ipAddress);
     } else {
       final client_ =
           clientManager.get(sessionIdentifier: parameters.sessionIdentifier);
@@ -458,6 +435,39 @@ class Server with EventController {
         transport.post.unlock();
         return;
     }
+  }
+
+  /// Opens a connection with a client.
+  Future<Socket> handshake(
+    HttpRequest request, {
+    required String ipAddress,
+  }) async {
+    final sessionIdentifier = configuration.generateId(request);
+
+    final client = Socket(
+      transport: PollingTransport(configuration: configuration),
+      sessionIdentifier: sessionIdentifier,
+      ipAddress: ipAddress,
+    );
+
+    client.transport.onException.listen(
+      (_) => disconnect(client, ConnectionException.transportException),
+    );
+
+    clientManager.add(client);
+    _onConnectController.add(client);
+
+    final openPacket = OpenPacket(
+      sessionIdentifier: client.sessionIdentifier,
+      availableConnectionUpgrades: configuration.availableConnectionTypes,
+      heartbeatInterval: configuration.heartbeatInterval,
+      heartbeatTimeout: configuration.heartbeatTimeout,
+      maximumChunkBytes: configuration.maximumChunkBytes,
+    );
+
+    client.transport.send(openPacket);
+
+    return client;
   }
 
   /// Responds to a HTTP request.
