@@ -1,17 +1,13 @@
 import 'package:universal_io/io.dart';
 
+import 'package:engine_io_dart/src/engine.dart';
+
 /// An exception that occurred on the server.
-class ServerException implements Exception {
-  /// The HTTP status corresponding to the exception.
-  final int statusCode;
-
-  /// A human-readable representation of the exception.
-  final String reasonPhrase;
-
+class ServerException extends EngineException {
   /// Creates an instance of `ServerException`.
   const ServerException({
-    required this.statusCode,
-    required this.reasonPhrase,
+    required super.statusCode,
+    required super.reasonPhrase,
   });
 
   /// The server could not obtain the IP address of the party making a request.
