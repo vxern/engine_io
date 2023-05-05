@@ -135,14 +135,6 @@ class ConnectionException implements Exception {
     reasonPhrase: 'Received unexpected GET request.',
   );
 
-  /// The client sent a GET request, even though one was already active at the
-  /// time.
-  static const duplicateGetRequest = ConnectionException(
-    statusCode: HttpStatus.badRequest,
-    reasonPhrase:
-        'There may not be more than one GET request active at any given time.',
-  );
-
   /// The client sent a POST request when the connection was not polling.
   static const postRequestUnexpected = ConnectionException(
     statusCode: HttpStatus.badRequest,
@@ -173,7 +165,7 @@ class ConnectionException implements Exception {
   /// request body.
   static const decodingPacketsFailed = ConnectionException(
     statusCode: HttpStatus.badRequest,
-    reasonPhrase: 'Failed to decode packets from the request body.',
+    reasonPhrase: 'Failed to decode packet(s) from the request body.',
   );
 
   /// The client specified a content length that did not match the actual

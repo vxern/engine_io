@@ -59,49 +59,69 @@ class PollingTransport extends Transport {
   @override
   void send(Packet packet) => packetBuffer.add(packet);
 
-  /// Offloads the packets in [packetBuffer] onto [response] and clears the
-  /// [packetBuffer] queue.
-  Future<List<Packet>> offload(HttpResponse response) async {
+  /// Taking a HTTP response object, attempts to offload packets onto it,
+  /// concatenating them before closing the response.
+  ///
+  /// Throws a `TransportException` on failure.
+  Future<void> offload(HttpResponse response) async {
+    if (get.isLocked) {
+      onExceptionController.add(TransportException.duplicateGetRequest);
+      throw TransportException.duplicateGetRequest;
+    }
+
+    get.lock();
+
+    // NOTE: The code responsible for sending back a `noop` packet to a
+    // pending GET request that would normally be here is not required
+    // because this package does not support deferred responses.
+
+    response.statusCode = HttpStatus.ok;
+
     if (packetBuffer.isEmpty) {
       response.headers.set(
         HttpHeaders.contentTypeHeader,
         ContentType.text.mimeType,
       );
-      return [];
+    } else {
+      var contentType = ContentType.text;
+      final packets = <Packet>[];
+      final bytes = <int>[];
+      while (packetBuffer.isNotEmpty) {
+        final packet = packetBuffer.first;
+
+        if (packet.isBinary && contentType != ContentType.binary) {
+          contentType = ContentType.binary;
+        } else if (packet.isJSON && contentType == ContentType.text) {
+          contentType = ContentType.json;
+        }
+
+        final encoded = utf8.encode(Packet.encode(packet));
+        if (bytes.length + encoded.length + _concatenationOverhead >
+            configuration.maximumChunkBytes) {
+          break;
+        }
+
+        if (bytes.isNotEmpty) {
+          bytes.add(_recordSeparatorCharCode);
+        }
+
+        bytes.addAll(encoded);
+        packets.add(packetBuffer.removeFirst());
+      }
+
+      response
+        ..headers.set(HttpHeaders.contentTypeHeader, contentType.mimeType)
+        ..contentLength = bytes.length
+        ..add(bytes);
+
+      for (final packet in packets) {
+        onSendController.add(packet);
+      }
     }
 
-    var contentType = ContentType.text;
-    final packets = <Packet>[];
-    final bytes = <int>[];
-    while (packetBuffer.isNotEmpty) {
-      final packet = packetBuffer.first;
+    get.unlock();
 
-      if (packet.isBinary && contentType != ContentType.binary) {
-        contentType = ContentType.binary;
-      } else if (packet.isJSON && contentType == ContentType.text) {
-        contentType = ContentType.json;
-      }
-
-      final encoded = utf8.encode(Packet.encode(packet));
-      if (bytes.length + encoded.length + _concatenationOverhead >
-          configuration.maximumChunkBytes) {
-        break;
-      }
-
-      if (bytes.isNotEmpty) {
-        bytes.add(_recordSeparatorCharCode);
-      }
-
-      bytes.addAll(encoded);
-      packets.add(packetBuffer.removeFirst());
-    }
-
-    response
-      ..contentLength = bytes.length
-      ..headers.set(HttpHeaders.contentTypeHeader, contentType.mimeType)
-      ..add(bytes);
-
-    return packets;
+    response.close().ignore();
   }
 
   @override

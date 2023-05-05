@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
-import 'package:engine_io_dart/src/packets/noop.dart';
 import 'package:engine_io_dart/src/packets/message.dart';
 import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:engine_io_dart/src/packets/ping.dart';
@@ -15,6 +14,7 @@ import 'package:engine_io_dart/src/server/server/exception.dart';
 import 'package:engine_io_dart/src/server/server/query.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/polling/polling.dart';
+import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/transports/websocket.dart';
 import 'package:engine_io_dart/src/packet.dart';
 import 'package:engine_io_dart/src/transport.dart';
@@ -190,28 +190,14 @@ class Server with EventController {
           return;
         }
 
-        final transport = client.transport as PollingTransport;
-        if (transport.get.isLocked) {
-          close(clientByIP, request, ConnectionException.duplicateGetRequest);
+        try {
+          await (client.transport as PollingTransport)
+              .offload(request.response);
+        } on TransportException {
+          respond(request, ConnectionException.transportException);
           return;
         }
-
-        transport.get.lock();
-
-        // NOTE: The code responsible for sending back a `noop` packet to a
-        // pending GET request that would normally be here is not required
-        // because this package does not support deferred responses.
-
-        request.response.statusCode = HttpStatus.ok;
-        final packets = await transport.offload(request.response);
-        request.response.close().ignore();
-
-        for (final packet in packets) {
-          client.transport.onSendController.add(packet);
-        }
-
-        transport.get.unlock();
-        return;
+        break;
       case 'POST':
         if (client.transport is! PollingTransport) {
           close(clientByIP, request, ConnectionException.postRequestUnexpected);
@@ -408,6 +394,7 @@ class Server with EventController {
     return client;
   }
 
+  /// Handles a request to upgrade the connection.
   Future<void> handleUpgradeRequest(
     HttpRequest request,
     Socket client, {
