@@ -9,9 +9,10 @@ import 'package:engine_io_dart/src/packets/message.dart';
 import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:engine_io_dart/src/packets/ping.dart';
 import 'package:engine_io_dart/src/packets/pong.dart';
+import 'package:engine_io_dart/src/server/server/client_manager.dart';
 import 'package:engine_io_dart/src/server/server/configuration.dart';
 import 'package:engine_io_dart/src/server/server/exception.dart';
-import 'package:engine_io_dart/src/server/server/client_manager.dart';
+import 'package:engine_io_dart/src/server/server/query.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/polling/polling.dart';
 import 'package:engine_io_dart/src/transports/websocket.dart';
@@ -30,15 +31,6 @@ class Server with EventController {
   /// HTTP methods concatenated to eliminate the need to concatenate them on
   /// every preflight request.
   static final _allowedMethodsString = allowedMethods.join(', ');
-
-  /// (Query parameter) The version of the engine.io protocol in use.
-  static const _protocolVersion = 'EIO';
-
-  /// (Query parameter) The type of connection used or desired.
-  static const _connectionType = 'transport';
-
-  /// (Query parameter) The session identifier of a client.
-  static const _sessionIdentifier = 'sid';
 
   /// The default content type for when the HTTP `Content-Type` header is not
   /// specified.
@@ -120,76 +112,19 @@ class Server with EventController {
       return;
     }
 
-    final int protocolVersion;
-    final ConnectionType connectionType;
-    final String? sessionIdentifier;
-
-    {
-      final protocolVersion_ = request.uri.queryParameters[_protocolVersion];
-      final connectionType_ = request.uri.queryParameters[_connectionType];
-      sessionIdentifier = request.uri.queryParameters[_sessionIdentifier];
-
-      if (protocolVersion_ == null || connectionType_ == null) {
-        close(
-          clientByIP,
-          request,
-          ConnectionException.missingMandatoryParameters,
-        );
-        return;
-      }
-
-      try {
-        protocolVersion =
-            int.parse(request.uri.queryParameters[_protocolVersion]!);
-      } on FormatException {
-        close(
-          clientByIP,
-          request,
-          ConnectionException.protocolVersionInvalidType,
-        );
-        return;
-      }
-
-      if (protocolVersion != Server.protocolVersion) {
-        if (protocolVersion <= 0 ||
-            protocolVersion > Server.protocolVersion + 1) {
-          close(
-            clientByIP,
-            request,
-            ConnectionException.protocolVersionInvalid,
-          );
-          return;
-        }
-
-        close(
-          clientByIP,
-          request,
-          ConnectionException.protocolVersionUnsupported,
-        );
-        return;
-      }
-
-      try {
-        connectionType = ConnectionType.byName(
-          request.uri.queryParameters[_connectionType]!,
-        );
-      } on FormatException {
-        close(clientByIP, request, ConnectionException.connectionTypeInvalid);
-        return;
-      }
-
-      if (!configuration.availableConnectionTypes.contains(connectionType)) {
-        close(
-          clientByIP,
-          request,
-          ConnectionException.connectionTypeUnavailable,
-        );
-        return;
-      }
+    final QueryParameters parameters;
+    try {
+      parameters = await QueryParameters.read(
+        request,
+        availableConnectionTypes: configuration.availableConnectionTypes,
+      );
+    } on ConnectionException catch (exception) {
+      close(clientByIP, request, exception);
+      return;
     }
 
     if (isConnected) {
-      if (sessionIdentifier == null) {
+      if (parameters.sessionIdentifier == null) {
         close(
           clientByIP,
           request,
@@ -197,7 +132,7 @@ class Server with EventController {
         );
         return;
       }
-    } else if (sessionIdentifier != null) {
+    } else if (parameters.sessionIdentifier != null) {
       close(
         clientByIP,
         request,
@@ -206,8 +141,7 @@ class Server with EventController {
       return;
     }
 
-    late final Socket client;
-
+    final Socket client;
     if (!isConnected) {
       final sessionIdentifier = configuration.generateId(request);
 
@@ -234,7 +168,8 @@ class Server with EventController {
 
       client.transport.send(openPacket);
     } else {
-      final client_ = clientManager.get(sessionIdentifier: sessionIdentifier);
+      final client_ =
+          clientManager.get(sessionIdentifier: parameters.sessionIdentifier);
       if (client_ == null) {
         close(
           clientByIP,
@@ -247,10 +182,12 @@ class Server with EventController {
       client = client_;
     }
 
-    final isSeekingUpgrade = connectionType != client.transport.connectionType;
+    final isSeekingUpgrade =
+        parameters.connectionType != client.transport.connectionType;
 
     if (isSeekingUpgrade &&
-        !client.transport.connectionType.upgradesTo.contains(connectionType)) {
+        !client.transport.connectionType.upgradesTo
+            .contains(parameters.connectionType)) {
       close(clientByIP, request, ConnectionException.upgradeCourseNotAllowed);
       return;
     }
@@ -263,7 +200,7 @@ class Server with EventController {
         // TODO(vxern): Verify websocket key.
 
         if (isSeekingUpgrade) {
-          if (connectionType == ConnectionType.websocket &&
+          if (parameters.connectionType == ConnectionType.websocket &&
               !isWebsocketUpgradeRequest) {
             close(
               clientByIP,
