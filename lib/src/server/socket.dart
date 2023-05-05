@@ -32,7 +32,7 @@ class Socket extends base.Socket with EventController {
   });
 
   /// Indicates that this socket has been disconnected.
-  Future<void> disconnect(ConnectionException exception) async {
+  Future<void> disconnect(ServerException exception) async {
     _onDisconnectController.add(exception);
   }
 
@@ -52,12 +52,10 @@ class Socket extends base.Socket with EventController {
 
 /// Contains streams for events that can be fired on the socket.
 mixin EventController {
-  final _onDisconnectController =
-      StreamController<ConnectionException>.broadcast();
+  final _onDisconnectController = StreamController<ServerException>.broadcast();
 
   /// Added to when this socket is disconnected.
-  Stream<ConnectionException> get onDisconnect =>
-      _onDisconnectController.stream;
+  Stream<ServerException> get onDisconnect => _onDisconnectController.stream;
 
   /// Closes event streams, disposing of this event controller.
   Future<void> closeEventStreams() async {
