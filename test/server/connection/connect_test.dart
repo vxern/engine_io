@@ -129,15 +129,15 @@ void main() {
     );
 
     test(
-      'rejects requests with an unsupported solicited connection type.',
+      'rejects requests with an invalid connection type.',
       () async {
         final response = await get(client, connectionType: '123')
             .then((result) => result.response);
 
-        expect(response.statusCode, equals(HttpStatus.notImplemented));
+        expect(response.statusCode, equals(HttpStatus.badRequest));
         expect(
           response.reasonPhrase,
-          equals("Transport type '123' not supported or invalid."),
+          equals('Invalid connection type.'),
         );
       },
     );
@@ -150,10 +150,10 @@ void main() {
           connectionType: ConnectionType.websocket.name,
         ).then((result) => result.response);
 
-        expect(response.statusCode, equals(HttpStatus.badRequest));
+        expect(response.statusCode, equals(HttpStatus.forbidden));
         expect(
           response.reasonPhrase,
-          equals('This server does not allow websocket connections.'),
+          equals('Connection type not accepted by this server.'),
         );
       },
     );
@@ -175,10 +175,10 @@ void main() {
         final response = await get(client, protocolVersion: '3')
             .then((result) => result.response);
 
-        expect(response.statusCode, equals(HttpStatus.notImplemented));
+        expect(response.statusCode, equals(HttpStatus.forbidden));
         expect(
           response.reasonPhrase,
-          equals('Protocol version 3 not supported.'),
+          equals('Protocol version not supported.'),
         );
       },
     );

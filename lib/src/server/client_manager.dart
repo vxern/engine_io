@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:meta/meta.dart';
 
 import 'package:engine_io_dart/src/server/socket.dart';
@@ -53,9 +54,8 @@ class ClientManager {
   Future<void> dispose() async {
     final futures = <Future>[];
     for (final client in clients.values) {
-      const reason = 'The server is disposing.';
-
-      futures.add(client.dispose(reason));
+      client.disconnect(ConnectionException.serverClosing);
+      futures.add(client.dispose());
     }
 
     clients.clear();

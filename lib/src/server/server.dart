@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
@@ -11,6 +10,7 @@ import 'package:engine_io_dart/src/packets/open.dart';
 import 'package:engine_io_dart/src/packets/ping.dart';
 import 'package:engine_io_dart/src/packets/pong.dart';
 import 'package:engine_io_dart/src/server/configuration.dart';
+import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:engine_io_dart/src/server/client_manager.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/polling/polling.dart';
@@ -31,7 +31,7 @@ class Server with EventController {
   /// every preflight request.
   static final _allowedMethodsString = allowedMethods.join(', ');
 
-  /// (Query parameter) The version of the engine.io protocol used.
+  /// (Query parameter) The version of the engine.io protocol in use.
   static const _protocolVersion = 'EIO';
 
   /// (Query parameter) The type of connection used or desired.
@@ -81,18 +81,14 @@ class Server with EventController {
   Future<void> handleHttpRequest(HttpRequest request) async {
     final ipAddress = request.connectionInfo?.remoteAddress.address;
     if (ipAddress == null) {
-      request.response
-          .reject(HttpStatus.badRequest, 'Unable to read IP address.');
+      respond(request, ConnectionException.ipAddressUnobtainable);
       return;
     }
 
     final clientByIP = clientManager.get(ipAddress: ipAddress);
 
     if (request.uri.path != '/${configuration.path}') {
-      const reason = 'Invalid server path.';
-
-      disconnect(clientByIP, reason: reason);
-      request.response.reject(HttpStatus.forbidden, reason);
+      close(clientByIP, request, ConnectionException.serverPathInvalid);
       return;
     }
 
@@ -113,20 +109,14 @@ class Server with EventController {
     }
 
     if (!allowedMethods.contains(request.method)) {
-      const reason = 'Method not allowed.';
-
-      disconnect(clientByIP, reason: reason);
-      request.response.reject(HttpStatus.methodNotAllowed, reason);
+      close(clientByIP, request, ConnectionException.methodNotAllowed);
       return;
     }
 
     final isConnected = clientManager.isConnected(ipAddress);
 
     if (request.method != 'GET' && !isConnected) {
-      const reason = 'Expected a GET request.';
-
-      disconnect(clientByIP, reason: reason);
-      request.response.reject(HttpStatus.methodNotAllowed, reason);
+      close(clientByIP, request, ConnectionException.getExpected);
       return;
     }
 
@@ -140,11 +130,11 @@ class Server with EventController {
       sessionIdentifier = request.uri.queryParameters[_sessionIdentifier];
 
       if (protocolVersion_ == null || connectionType_ == null) {
-        const reason =
-            '''Parameters '$_protocolVersion' and '$_connectionType' must be present in every query.''';
-
-        disconnect(clientByIP, reason: reason);
-        request.response.reject(HttpStatus.badRequest, reason);
+        close(
+          clientByIP,
+          request,
+          ConnectionException.missingMandatoryParameters,
+        );
         return;
       }
 
@@ -152,10 +142,30 @@ class Server with EventController {
         protocolVersion =
             int.parse(request.uri.queryParameters[_protocolVersion]!);
       } on FormatException {
-        const reason = 'The protocol version must be a positive integer.';
+        close(
+          clientByIP,
+          request,
+          ConnectionException.protocolVersionInvalidType,
+        );
+        return;
+      }
 
-        disconnect(clientByIP, reason: reason);
-        request.response.reject(HttpStatus.badRequest, reason);
+      if (protocolVersion != Server.protocolVersion) {
+        if (protocolVersion <= 0 ||
+            protocolVersion > Server.protocolVersion + 1) {
+          close(
+            clientByIP,
+            request,
+            ConnectionException.protocolVersionInvalid,
+          );
+          return;
+        }
+
+        close(
+          clientByIP,
+          request,
+          ConnectionException.protocolVersionUnsupported,
+        );
         return;
       }
 
@@ -163,52 +173,35 @@ class Server with EventController {
         connectionType = ConnectionType.byName(
           request.uri.queryParameters[_connectionType]!,
         );
-      } on FormatException catch (error) {
-        disconnect(clientByIP, reason: error.message);
-        request.response.reject(HttpStatus.notImplemented, error.message);
-        return;
-      }
-    }
-
-    if (protocolVersion != Server.protocolVersion) {
-      if (protocolVersion <= 0 ||
-          protocolVersion > Server.protocolVersion + 1) {
-        const reason = 'Invalid protocol version.';
-
-        disconnect(clientByIP, reason: reason);
-        request.response.reject(HttpStatus.badRequest, reason);
+      } on FormatException {
+        close(clientByIP, request, ConnectionException.connectionTypeInvalid);
         return;
       }
 
-      final reason = 'Protocol version $protocolVersion not supported.';
-
-      disconnect(clientByIP, reason: reason);
-      request.response.reject(HttpStatus.notImplemented, reason);
-      return;
-    }
-
-    if (!configuration.availableConnectionTypes.contains(connectionType)) {
-      final reason =
-          'This server does not allow ${connectionType.name} connections.';
-
-      disconnect(clientByIP, reason: reason);
-      request.response.reject(HttpStatus.badRequest, reason);
-      return;
+      if (!configuration.availableConnectionTypes.contains(connectionType)) {
+        close(
+          clientByIP,
+          request,
+          ConnectionException.connectionTypeUnavailable,
+        );
+        return;
+      }
     }
 
     if (isConnected) {
       if (sessionIdentifier == null) {
-        const reason =
-            '''Clients with an active connection must provide the '$_sessionIdentifier' parameter.''';
-
-        disconnect(clientByIP, reason: reason);
-        request.response.reject(HttpStatus.badRequest, reason);
+        close(
+          clientByIP,
+          request,
+          ConnectionException.sessionIdentifierRequired,
+        );
         return;
       }
     } else if (sessionIdentifier != null) {
-      request.response.reject(
-        HttpStatus.badRequest,
-        'Provided session identifier when connection not established.',
+      close(
+        clientByIP,
+        request,
+        ConnectionException.sessionIdentifierUnexpected,
       );
       return;
     }
@@ -225,7 +218,7 @@ class Server with EventController {
       );
 
       client.transport.onException.listen(
-        (exception) => disconnect(client, reason: exception.message),
+        (_) => disconnect(client, ConnectionException.transportException),
       );
 
       clientManager.add(client);
@@ -243,10 +236,11 @@ class Server with EventController {
     } else {
       final client_ = clientManager.get(sessionIdentifier: sessionIdentifier);
       if (client_ == null) {
-        const reason = 'Invalid session identifier.';
-
-        disconnect(clientByIP, reason: reason);
-        request.response.reject(HttpStatus.badRequest, reason);
+        close(
+          clientByIP,
+          request,
+          ConnectionException.sessionIdentifierInvalid,
+        );
         return;
       }
 
@@ -257,11 +251,7 @@ class Server with EventController {
 
     if (isSeekingUpgrade &&
         !client.transport.connectionType.upgradesTo.contains(connectionType)) {
-      final reason =
-          '''A ${client.transport.connectionType.name} connection cannot be upgraded to a ${connectionType.name} connection.''';
-
-      disconnect(client, reason: reason);
-      request.response.reject(HttpStatus.badRequest, reason);
+      close(clientByIP, request, ConnectionException.upgradeCourseNotAllowed);
       return;
     }
 
@@ -275,18 +265,19 @@ class Server with EventController {
         if (isSeekingUpgrade) {
           if (connectionType == ConnectionType.websocket &&
               !isWebsocketUpgradeRequest) {
-            const reason = 'Invalid websocket upgrade request.';
-
-            disconnect(client, reason: reason);
-            request.response.reject(HttpStatus.badRequest, reason);
+            close(
+              clientByIP,
+              request,
+              ConnectionException.upgradeRequestInvalid,
+            );
             return;
           }
         } else if (isWebsocketUpgradeRequest) {
-          const reason =
-              'Sent a websocket upgrade request when not seeking upgrade.';
-
-          disconnect(client, reason: reason);
-          request.response.reject(HttpStatus.badRequest, reason);
+          close(
+            clientByIP,
+            request,
+            ConnectionException.upgradeRequestUnexpected,
+          );
           return;
         }
 
@@ -298,11 +289,11 @@ class Server with EventController {
               client.probeTransport!.dispose();
             }
 
-            const reason =
-                '''Attempted to initiate upgrade process when one was already underway.''';
-
-            disconnect(client, reason: reason);
-            request.response.reject(HttpStatus.badRequest, reason);
+            close(
+              clientByIP,
+              request,
+              ConnectionException.upgradeAlreadyInitiated,
+            );
             return;
           }
 
@@ -343,11 +334,7 @@ class Server with EventController {
         if (client.transport is PollingTransport) {
           final transport = client.transport as PollingTransport;
           if (transport.get.isLocked) {
-            const reason =
-                '''There may not be more than one GET request active at any given time.''';
-
-            disconnect(client, reason: reason);
-            request.response.reject(HttpStatus.badRequest, reason);
+            close(clientByIP, request, ConnectionException.duplicateGetRequest);
             return;
           }
 
@@ -375,21 +362,13 @@ class Server with EventController {
         break;
       case 'POST':
         if (client.transport is! PollingTransport) {
-          const reason =
-              'Received POST request, but the connection is not long polling.';
-
-          disconnect(client, reason: reason);
-          request.response.reject(HttpStatus.badRequest, reason);
+          close(clientByIP, request, ConnectionException.postRequestUnexpected);
           return;
         }
 
         final transport = client.transport as PollingTransport;
         if (transport.post.isLocked) {
-          const reason =
-              '''There may not be more than one POST request active at any given time.''';
-
-          disconnect(client, reason: reason);
-          request.response.reject(HttpStatus.badRequest, reason);
+          close(clientByIP, request, ConnectionException.duplicatePostRequest);
           return;
         }
 
@@ -400,36 +379,33 @@ class Server with EventController {
           bytes = await request
               .fold(<int>[], (buffer, bytes) => buffer..addAll(bytes));
         } on Exception catch (_) {
-          const reason = 'Failed to read request body.';
-
-          disconnect(client, reason: reason);
-          request.response.reject(HttpStatus.badRequest, reason);
+          close(clientByIP, request, ConnectionException.readingBodyFailed);
           return;
         }
 
         final contentLength =
             request.contentLength >= 0 ? request.contentLength : bytes.length;
         if (bytes.length != contentLength) {
-          final reason =
-              '''The client specified a content length of $contentLength, but a length of ${bytes.length} was detected.''';
-
-          disconnect(client, reason: reason);
-          request.response.reject(HttpStatus.badRequest, reason);
+          close(
+            clientByIP,
+            request,
+            ConnectionException.contentLengthDisparity,
+          );
           return;
         } else if (contentLength > configuration.maximumChunkBytes) {
-          const reason = 'Maximum chunk length exceeded.';
-
-          disconnect(client, reason: reason);
-          request.response.reject(HttpStatus.badRequest, reason);
+          close(
+            clientByIP,
+            request,
+            ConnectionException.contentLengthLimitExceeded,
+          );
           return;
         }
 
         final String body;
         try {
           body = utf8.decode(bytes);
-        } on FormatException catch (exception) {
-          disconnect(client, reason: exception.message);
-          request.response.reject(HttpStatus.badRequest, exception.message);
+        } on FormatException {
+          close(clientByIP, request, ConnectionException.decodingBodyFailed);
           return;
         }
 
@@ -439,15 +415,14 @@ class Server with EventController {
               .split(PollingTransport.recordSeparator)
               .map(Packet.decode)
               .toList();
-        } on FormatException catch (exception) {
-          disconnect(client, reason: exception.message);
-          request.response.reject(HttpStatus.badRequest, exception.message);
+        } on FormatException {
+          close(clientByIP, request, ConnectionException.decodingPacketsFailed);
           return;
         }
 
         final specifiedContentType = request.headers.contentType;
 
-        var detectedContentType = ContentType.text;
+        var detectedContentType = _implicitContentType;
         for (final packet in packets) {
           if (packet.isBinary && detectedContentType != ContentType.binary) {
             detectedContentType = ContentType.binary;
@@ -458,22 +433,20 @@ class Server with EventController {
 
         if (specifiedContentType == null) {
           if (detectedContentType.mimeType != ContentType.text.mimeType) {
-            final reason =
-                "Detected content type '${detectedContentType.mimeType}', "
-                """which is different from the implicit '${_implicitContentType.mimeType}'""";
-
-            disconnect(client, reason: reason);
-            request.response.reject(HttpStatus.badRequest, reason);
+            close(
+              clientByIP,
+              request,
+              ConnectionException.contentTypeDifferentToImplicit,
+            );
             return;
           }
         } else if (specifiedContentType.mimeType !=
             detectedContentType.mimeType) {
-          final reason =
-              "Detected content type '${detectedContentType.mimeType}', "
-              """which is different from the specified '${specifiedContentType.mimeType}'""";
-
-          disconnect(client, reason: reason);
-          request.response.reject(HttpStatus.badRequest, reason);
+          close(
+            clientByIP,
+            request,
+            ConnectionException.contentTypeDifferentToSpecified,
+          );
           return;
         }
 
@@ -482,21 +455,13 @@ class Server with EventController {
           switch (packet.type) {
             case PacketType.open:
             case PacketType.noop:
-              final reason =
-                  '''`${packet.type.name}` packets are not legal to be sent by the client.''';
-
-              disconnect(client, reason: reason);
-              request.response.reject(HttpStatus.badRequest, reason);
+              close(clientByIP, request, ConnectionException.packetIllegal);
               return;
             case PacketType.ping:
               packet as PingPacket;
 
               if (!packet.isProbe) {
-                const reason =
-                    '''Non-probe `ping` packets are not legal to be sent by the client.''';
-
-                disconnect(client, reason: reason);
-                request.response.reject(HttpStatus.badRequest, reason);
+                close(clientByIP, request, ConnectionException.packetIllegal);
                 return;
               }
 
@@ -507,21 +472,17 @@ class Server with EventController {
               packet as PongPacket;
 
               if (packet.isProbe) {
-                const reason =
-                    '''Probe `pong` packets are not legal to be sent by the client.''';
-
-                disconnect(client, reason: reason);
-                request.response.reject(HttpStatus.badRequest, reason);
+                close(clientByIP, request, ConnectionException.packetIllegal);
                 return;
               }
 
               final transport = client.transport as PollingTransport;
               if (!transport.heartbeat.isExpectingHeartbeat) {
-                const reason =
-                    '''The server did not expect a `pong` packet at this time.''';
-
-                disconnect(client, reason: reason);
-                request.response.reject(HttpStatus.badRequest, reason);
+                close(
+                  clientByIP,
+                  request,
+                  ConnectionException.heartbeatUnexpected,
+                );
                 return;
               }
               continue;
@@ -550,9 +511,7 @@ class Server with EventController {
         }
 
         if (isClosing) {
-          const reason = 'The client requested to close the connection.';
-
-          disconnect(client, reason: reason);
+          disconnect(client, ConnectionException.requestedClosure);
         }
 
         request.response
@@ -564,14 +523,38 @@ class Server with EventController {
     }
   }
 
+  /// Responds to a HTTP request.
+  Future<void> respond(
+    HttpRequest request,
+    ConnectionException exception,
+  ) async {
+    request.response
+      ..statusCode = exception.statusCode
+      ..reasonPhrase = exception.reasonPhrase
+      ..close().ignore();
+  }
+
   /// Disconnects a client.
-  Future<void> disconnect(Socket? client, {required String reason}) async {
-    if (client == null) {
-      return;
+  Future<void> disconnect(Socket client, ConnectionException exception) async {
+    clientManager.remove(client);
+    client.disconnect(exception);
+    await client.dispose();
+  }
+
+  /// Closes a connection with a client, responding to their request and
+  /// disconnecting them.
+  Future<void> close(
+    Socket? client,
+    HttpRequest request,
+    ConnectionException exception,
+  ) async {
+    if (client == null || exception.statusCode != HttpStatus.ok) {
+      _onConnectExceptionController.add(exception);
+    } else {
+      disconnect(client, exception);
     }
 
-    clientManager.remove(client);
-    await client.dispose(reason);
+    respond(request, exception);
   }
 
   /// Closes the underlying HTTP server, awaiting remaining requests to be
@@ -593,20 +576,19 @@ class Server with EventController {
 mixin EventController {
   final _onConnectController = StreamController<Socket>.broadcast();
 
+  final _onConnectExceptionController =
+      StreamController<ConnectionException>.broadcast();
+
   /// Added to when a new connection is established.
   Stream<Socket> get onConnect => _onConnectController.stream;
+
+  /// Added to when a connection could not be established.
+  Stream<ConnectionException> get onConnectException =>
+      _onConnectExceptionController.stream;
 
   /// Closes event streams, disposing of this event controller.
   Future<void> closeEventStreams() async {
     _onConnectController.close().ignore();
-  }
-}
-
-extension _Reject on HttpResponse {
-  /// Rejects this request, giving a [status] and a [reason].
-  Future<void> reject(int status, String reason) async {
-    statusCode = status;
-    reasonPhrase = reason;
-    close().ignore();
+    _onConnectExceptionController.close().ignore();
   }
 }

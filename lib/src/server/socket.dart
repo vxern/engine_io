@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 
+import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:engine_io_dart/src/socket.dart' as base;
 import 'package:engine_io_dart/src/transport.dart';
 
@@ -30,8 +31,13 @@ class Socket extends base.Socket with EventController {
     required this.ipAddress,
   });
 
+  /// Indicates that this socket has been disconnected.
+  Future<void> disconnect(ConnectionException exception) async {
+    _onDisconnectController.add(exception);
+  }
+
   /// Disposes of this socket, closing event streams.
-  Future<void> dispose(String reason) async {
+  Future<void> dispose() async {
     if (_isDisposing) {
       return;
     }
@@ -40,18 +46,18 @@ class Socket extends base.Socket with EventController {
 
     await transport.dispose();
 
-    _onDisconnectController.add(reason);
-
     await closeEventStreams();
   }
 }
 
 /// Contains streams for events that can be fired on the socket.
 mixin EventController {
-  final _onDisconnectController = StreamController<String>.broadcast();
+  final _onDisconnectController =
+      StreamController<ConnectionException>.broadcast();
 
   /// Added to when this socket is disconnected.
-  Stream<String> get onDisconnect => _onDisconnectController.stream;
+  Stream<ConnectionException> get onDisconnect =>
+      _onDisconnectController.stream;
 
   /// Closes event streams, disposing of this event controller.
   Future<void> closeEventStreams() async {

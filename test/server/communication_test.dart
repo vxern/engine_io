@@ -165,8 +165,7 @@ void main() {
         expect(
           response.reasonPhrase,
           equals(
-            "Detected content type 'application/octet-stream', "
-            """which is different from the implicit 'text/plain'""",
+            '''Detected a content type different to the implicit content type.''',
           ),
         );
       },
@@ -188,8 +187,7 @@ void main() {
         expect(
           response.reasonPhrase,
           equals(
-            "Detected content type 'text/plain', "
-            """which is different from the specified 'application/octet-stream'""",
+            '''Detected a content type different to the one specified by the client.''',
           ),
         );
       },
@@ -220,7 +218,10 @@ void main() {
         ).then((request) => request.close());
 
         expect(response.statusCode, equals(HttpStatus.badRequest));
-        expect(response.reasonPhrase, equals('Maximum chunk length exceeded.'));
+        expect(
+          response.reasonPhrase,
+          equals('Maximum payload chunk length exceeded.'),
+        );
       },
     );
 
@@ -252,7 +253,9 @@ void main() {
         expect(response.statusCode, equals(HttpStatus.badRequest));
         expect(
           response.reasonPhrase,
-          equals('The server did not expect a `pong` packet at this time.'),
+          equals(
+            'The server did not expect to receive a heartbeat at this time.',
+          ),
         );
       },
     );
@@ -284,7 +287,9 @@ void main() {
           expect(response.statusCode, equals(HttpStatus.badRequest));
           expect(
             response.reasonPhrase,
-            equals('`open` packets are not legal to be sent by the client.'),
+            equals(
+              'Received a packet that is not legal to be sent by the client.',
+            ),
           );
         });
 
@@ -298,7 +303,9 @@ void main() {
           expect(response.statusCode, equals(HttpStatus.badRequest));
           expect(
             response.reasonPhrase,
-            equals('`noop` packets are not legal to be sent by the client.'),
+            equals(
+              'Received a packet that is not legal to be sent by the client.',
+            ),
           );
         });
 
@@ -313,7 +320,7 @@ void main() {
           expect(
             response.reasonPhrase,
             equals(
-              '''Non-probe `ping` packets are not legal to be sent by the client.''',
+              'Received a packet that is not legal to be sent by the client.',
             ),
           );
         });
@@ -329,7 +336,7 @@ void main() {
           expect(
             response.reasonPhrase,
             equals(
-              '''Probe `pong` packets are not legal to be sent by the client.''',
+              'Received a packet that is not legal to be sent by the client.',
             ),
           );
         });

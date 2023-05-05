@@ -2,6 +2,7 @@ import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
 import 'package:engine_io_dart/src/packets/close.dart';
+import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:engine_io_dart/src/server/server.dart';
 
 import '../shared.dart';
@@ -30,7 +31,7 @@ void main() {
 
         expect(
           socket.onDisconnect.first,
-          completion('The client requested to close the connection.'),
+          completion(ConnectionException.requestedClosure),
         );
 
         post(

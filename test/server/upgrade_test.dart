@@ -35,7 +35,9 @@ void main() {
         expect(response.statusCode, equals(HttpStatus.badRequest));
         expect(
           response.reasonPhrase,
-          equals('Invalid websocket upgrade request.'),
+          equals(
+            '''The HTTP request received is not a valid websocket upgrade request.''',
+          ),
         );
       },
     );
@@ -54,7 +56,9 @@ void main() {
         expect(response.statusCode, equals(HttpStatus.badRequest));
         expect(
           response.reasonPhrase,
-          equals('Sent a websocket upgrade request when not seeking upgrade.'),
+          equals(
+            'Sent a HTTP websocket upgrade request when not seeking upgrade.',
+          ),
         );
       },
     );
@@ -127,7 +131,7 @@ void main() {
         expect(
           response.reasonPhrase,
           equals(
-            '''A websocket connection cannot be upgraded to a polling connection.''',
+            '''Upgrades from the current connection method to the desired one are not allowed.''',
           ),
         );
 
@@ -154,7 +158,7 @@ void main() {
       expect(
         response.reasonPhrase,
         equals(
-          'Received POST request, but the connection is not long polling.',
+          'Received POST request, but the connection is not polling.',
         ),
       );
 

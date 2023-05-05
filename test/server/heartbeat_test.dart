@@ -4,6 +4,7 @@ import 'package:universal_io/io.dart';
 import 'package:engine_io_dart/src/packets/ping.dart';
 import 'package:engine_io_dart/src/packets/pong.dart';
 import 'package:engine_io_dart/src/server/configuration.dart';
+import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:engine_io_dart/src/server/server.dart';
 
 import 'shared.dart';
@@ -66,7 +67,7 @@ void main() {
       () async {
         expectLater(
           server.onConnect.first.then((socket) => socket.onDisconnect.first),
-          completion('Did not respond to a heartbeat in time.'),
+          completion(ConnectionException.transportException),
         );
 
         handshake(client);
