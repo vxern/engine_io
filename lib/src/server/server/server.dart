@@ -175,18 +175,14 @@ class Server with EventController {
     }
 
     if (isWebsocketUpgradeRequest) {
-      close(
-        clientByIP,
-        request,
-        ConnectionException.upgradeRequestUnexpected,
-      );
+      close(client, request, ConnectionException.upgradeRequestUnexpected);
       return;
     }
 
     switch (request.method) {
       case 'GET':
         if (client.transport is! PollingTransport) {
-          close(clientByIP, request, ConnectionException.getRequestUnexpected);
+          close(client, request, ConnectionException.getRequestUnexpected);
           return;
         }
 
@@ -200,13 +196,13 @@ class Server with EventController {
         break;
       case 'POST':
         if (client.transport is! PollingTransport) {
-          close(clientByIP, request, ConnectionException.postRequestUnexpected);
+          close(client, request, ConnectionException.postRequestUnexpected);
           return;
         }
 
         final transport = client.transport as PollingTransport;
         if (transport.post.isLocked) {
-          close(clientByIP, request, ConnectionException.duplicatePostRequest);
+          close(client, request, ConnectionException.duplicatePostRequest);
           return;
         }
 
@@ -217,22 +213,18 @@ class Server with EventController {
           bytes = await request
               .fold(<int>[], (buffer, bytes) => buffer..addAll(bytes));
         } on Exception catch (_) {
-          close(clientByIP, request, ConnectionException.readingBodyFailed);
+          close(client, request, ConnectionException.readingBodyFailed);
           return;
         }
 
         final contentLength =
             request.contentLength >= 0 ? request.contentLength : bytes.length;
         if (bytes.length != contentLength) {
-          close(
-            clientByIP,
-            request,
-            ConnectionException.contentLengthDisparity,
-          );
+          close(client, request, ConnectionException.contentLengthDisparity);
           return;
         } else if (contentLength > configuration.maximumChunkBytes) {
           close(
-            clientByIP,
+            client,
             request,
             ConnectionException.contentLengthLimitExceeded,
           );
@@ -243,7 +235,7 @@ class Server with EventController {
         try {
           body = utf8.decode(bytes);
         } on FormatException {
-          close(clientByIP, request, ConnectionException.decodingBodyFailed);
+          close(client, request, ConnectionException.decodingBodyFailed);
           return;
         }
 
@@ -254,7 +246,7 @@ class Server with EventController {
               .map(Packet.decode)
               .toList();
         } on FormatException {
-          close(clientByIP, request, ConnectionException.decodingPacketsFailed);
+          close(client, request, ConnectionException.decodingPacketsFailed);
           return;
         }
 
@@ -272,7 +264,7 @@ class Server with EventController {
         if (specifiedContentType == null) {
           if (detectedContentType.mimeType != ContentType.text.mimeType) {
             close(
-              clientByIP,
+              client,
               request,
               ConnectionException.contentTypeDifferentToImplicit,
             );
@@ -281,7 +273,7 @@ class Server with EventController {
         } else if (specifiedContentType.mimeType !=
             detectedContentType.mimeType) {
           close(
-            clientByIP,
+            client,
             request,
             ConnectionException.contentTypeDifferentToSpecified,
           );
@@ -293,13 +285,13 @@ class Server with EventController {
           switch (packet.type) {
             case PacketType.open:
             case PacketType.noop:
-              close(clientByIP, request, ConnectionException.packetIllegal);
+              close(client, request, ConnectionException.packetIllegal);
               return;
             case PacketType.ping:
               packet as PingPacket;
 
               if (!packet.isProbe) {
-                close(clientByIP, request, ConnectionException.packetIllegal);
+                close(client, request, ConnectionException.packetIllegal);
                 return;
               }
 
@@ -310,17 +302,13 @@ class Server with EventController {
               packet as PongPacket;
 
               if (packet.isProbe) {
-                close(clientByIP, request, ConnectionException.packetIllegal);
+                close(client, request, ConnectionException.packetIllegal);
                 return;
               }
 
               final transport = client.transport as PollingTransport;
               if (!transport.heartbeat.isExpectingHeartbeat) {
-                close(
-                  clientByIP,
-                  request,
-                  ConnectionException.heartbeatUnexpected,
-                );
+                close(client, request, ConnectionException.heartbeatUnexpected);
                 return;
               }
               continue;
