@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:collection';
 
-import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:meta/meta.dart';
 
+import 'package:engine_io_dart/src/server/server/exception.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
 
 /// Class responsible for maintaining references to and handling sockets of

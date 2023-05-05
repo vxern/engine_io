@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:universal_io/io.dart';
 
 import 'package:engine_io_dart/src/packets/ping.dart';
-import 'package:engine_io_dart/src/server/configuration.dart';
+import 'package:engine_io_dart/src/server/server/configuration.dart';
 import 'package:engine_io_dart/src/transports/polling/heartbeat_manager.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/packet.dart';

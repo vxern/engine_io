@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 
-import 'package:engine_io_dart/src/server/exception.dart';
+import 'package:engine_io_dart/src/server/server/exception.dart';
 import 'package:engine_io_dart/src/socket.dart' as base;
 import 'package:engine_io_dart/src/transport.dart';
 
