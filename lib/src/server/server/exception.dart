@@ -128,6 +128,13 @@ class ConnectionException implements Exception {
         'Attempted to initiate upgrade process when one was already underway.',
   );
 
+  /// The client sent a GET request that wasn't an upgrade when the connection
+  /// was not polling.
+  static const getRequestUnexpected = ConnectionException(
+    statusCode: HttpStatus.badRequest,
+    reasonPhrase: 'Received unexpected GET request.',
+  );
+
   /// The client sent a GET request, even though one was already active at the
   /// time.
   static const duplicateGetRequest = ConnectionException(
@@ -136,18 +143,18 @@ class ConnectionException implements Exception {
         'There may not be more than one GET request active at any given time.',
   );
 
+  /// The client sent a POST request when the connection was not polling.
+  static const postRequestUnexpected = ConnectionException(
+    statusCode: HttpStatus.badRequest,
+    reasonPhrase: 'Received POST request, but the connection is not polling.',
+  );
+
   /// The client sent a POST request, even though one was already active at the
   /// time.
   static const duplicatePostRequest = ConnectionException(
     statusCode: HttpStatus.badRequest,
     reasonPhrase:
         'There may not be more than one POST request active at any given time.',
-  );
-
-  /// The client sent a POST request when the connection was not polling.
-  static const postRequestUnexpected = ConnectionException(
-    statusCode: HttpStatus.badRequest,
-    reasonPhrase: 'Received POST request, but the connection is not polling.',
   );
 
   /// The server failed to read the body of a request.

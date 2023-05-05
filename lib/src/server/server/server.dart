@@ -161,119 +161,57 @@ class Server with EventController {
 
     final isSeekingUpgrade =
         parameters.connectionType != client.transport.connectionType;
+    final isWebsocketUpgradeRequest =
+        WebSocketTransformer.isUpgradeRequest(request);
 
-    if (isSeekingUpgrade &&
-        !client.transport.connectionType.upgradesTo
-            .contains(parameters.connectionType)) {
-      close(clientByIP, request, ConnectionException.upgradeCourseNotAllowed);
+    if (isSeekingUpgrade) {
+      handleUpgradeRequest(
+        request,
+        client,
+        isWebsocketUpgradeRequest: isWebsocketUpgradeRequest,
+        connectionType: parameters.connectionType,
+      );
+      return;
+    }
+
+    if (isWebsocketUpgradeRequest) {
+      close(
+        clientByIP,
+        request,
+        ConnectionException.upgradeRequestUnexpected,
+      );
       return;
     }
 
     switch (request.method) {
       case 'GET':
-        final isWebsocketUpgradeRequest =
-            WebSocketTransformer.isUpgradeRequest(request);
-
-        // TODO(vxern): Verify websocket key.
-
-        if (isSeekingUpgrade) {
-          if (parameters.connectionType == ConnectionType.websocket &&
-              !isWebsocketUpgradeRequest) {
-            close(
-              clientByIP,
-              request,
-              ConnectionException.upgradeRequestInvalid,
-            );
-            return;
-          }
-        } else if (isWebsocketUpgradeRequest) {
-          close(
-            clientByIP,
-            request,
-            ConnectionException.upgradeRequestUnexpected,
-          );
+        if (client.transport is! PollingTransport) {
+          close(clientByIP, request, ConnectionException.getRequestUnexpected);
           return;
         }
 
-        if (isWebsocketUpgradeRequest) {
-          if (client.isUpgrading) {
-            client.isUpgrading = false;
-
-            if (client.probeTransport != null) {
-              client.probeTransport!.dispose();
-            }
-
-            close(
-              clientByIP,
-              request,
-              ConnectionException.upgradeAlreadyInitiated,
-            );
-            return;
-          }
-
-          client.isUpgrading = true;
-
-          // ignore: close_sinks
-          final socket = await WebSocketTransformer.upgrade(request);
-          client.probeTransport = WebSocketTransport(socket: socket);
-
-          // TODO(vxern): Remove once upgrade completion is implemented.
-          await Future<void>.delayed(const Duration(seconds: 2));
-
-          // TODO(vxern): Expect probe `ping` packet.
-          // TODO(vxern): Expect `upgrade` packet.
-
-          if (!client.isUpgrading) {
-            return;
-          } else {
-            client.isUpgrading = false;
-          }
-
-          if (client.transport is PollingTransport) {
-            final oldTransport = client.transport as PollingTransport;
-
-            for (final packet in oldTransport.packetBuffer) {
-              client.probeTransport!.send(packet);
-            }
-          }
-
-          final oldTransport = client.transport;
-          client
-            ..transport = client.probeTransport!
-            ..probeTransport = null;
-          await oldTransport.dispose();
+        final transport = client.transport as PollingTransport;
+        if (transport.get.isLocked) {
+          close(clientByIP, request, ConnectionException.duplicateGetRequest);
           return;
         }
 
-        if (client.transport is PollingTransport) {
-          final transport = client.transport as PollingTransport;
-          if (transport.get.isLocked) {
-            close(clientByIP, request, ConnectionException.duplicateGetRequest);
-            return;
-          }
+        transport.get.lock();
 
-          if (client.isUpgrading) {
-            request.response
-              ..statusCode = HttpStatus.ok
-              ..write(const NoopPacket())
-              ..close().ignore();
-            return;
-          }
+        // NOTE: The code responsible for sending back a `noop` packet to a
+        // pending GET request that would normally be here is not required
+        // because this package does not support deferred responses.
 
-          transport.get.lock();
+        request.response.statusCode = HttpStatus.ok;
+        final packets = await transport.offload(request.response);
+        request.response.close().ignore();
 
-          request.response.statusCode = HttpStatus.ok;
-          final packets = await transport.offload(request.response);
-          request.response.close().ignore();
-
-          for (final packet in packets) {
-            client.transport.onSendController.add(packet);
-          }
-
-          transport.get.unlock();
-          return;
+        for (final packet in packets) {
+          client.transport.onSendController.add(packet);
         }
-        break;
+
+        transport.get.unlock();
+        return;
       case 'POST':
         if (client.transport is! PollingTransport) {
           close(clientByIP, request, ConnectionException.postRequestUnexpected);
@@ -468,6 +406,71 @@ class Server with EventController {
     client.transport.send(openPacket);
 
     return client;
+  }
+
+  Future<void> handleUpgradeRequest(
+    HttpRequest request,
+    Socket client, {
+    required bool isWebsocketUpgradeRequest,
+    required ConnectionType connectionType,
+  }) async {
+    if (!client.transport.connectionType.upgradesTo.contains(connectionType)) {
+      close(client, request, ConnectionException.upgradeCourseNotAllowed);
+      return;
+    }
+
+    if (connectionType != ConnectionType.websocket) {
+      close(client, request, ConnectionException.upgradeCourseNotAllowed);
+      return;
+    }
+
+    if (!isWebsocketUpgradeRequest) {
+      close(client, request, ConnectionException.upgradeRequestInvalid);
+      return;
+    }
+
+    // TODO(vxern): Verify websocket key.
+
+    if (client.isUpgrading) {
+      client.isUpgrading = false;
+      client.probeTransport?.dispose();
+
+      close(client, request, ConnectionException.upgradeAlreadyInitiated);
+      return;
+    }
+
+    client.isUpgrading = true;
+
+    // ignore: close_sinks
+    final socket = await WebSocketTransformer.upgrade(request);
+    client.probeTransport = WebSocketTransport(socket: socket);
+
+    // TODO(vxern): Remove once upgrade completion is implemented.
+    await Future<void>.delayed(const Duration(seconds: 2));
+
+    // TODO(vxern): Expect probe `ping` packet.
+    // TODO(vxern): Expect `upgrade` packet.
+
+    if (!client.isUpgrading) {
+      return;
+    } else {
+      client.isUpgrading = false;
+    }
+
+    if (client.transport is PollingTransport) {
+      final oldTransport = client.transport as PollingTransport;
+
+      for (final packet in oldTransport.packetBuffer) {
+        client.probeTransport!.send(packet);
+      }
+    }
+
+    final oldTransport = client.transport;
+    client
+      ..transport = client.probeTransport!
+      ..probeTransport = null;
+    await oldTransport.dispose();
+    return;
   }
 
   /// Responds to a HTTP request.
