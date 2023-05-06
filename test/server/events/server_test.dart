@@ -24,5 +24,12 @@ void main() {
 
       handshake(client);
     });
+
+    test('an `onConnectException` event.', () async {
+      expectLater(server.onConnectException.first, completes);
+
+      // Deliberately cause a connect exception by sending an invalid request.
+      unsafeGet(client);
+    });
   });
 }
