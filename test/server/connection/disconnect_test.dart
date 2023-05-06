@@ -30,7 +30,7 @@ void main() {
         )!;
 
         expect(
-          socket.onDisconnect.first,
+          socket.onException.first,
           completion(SocketException.requestedClosure),
         );
 

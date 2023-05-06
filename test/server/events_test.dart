@@ -34,9 +34,9 @@ void main() {
       handshake(client);
     });
 
-    test('an `onDisconnect` event.', () async {
+    test('an `onException` event.', () async {
       expectLater(
-        server.onConnect.first.then((socket) => socket.onDisconnect.first),
+        server.onConnect.first.then((socket) => socket.onException.first),
         completes,
       );
 

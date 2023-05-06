@@ -331,7 +331,7 @@ class Server with EventController {
   /// Disconnects a client.
   Future<void> disconnect(Socket client, SocketException exception) async {
     clientManager.remove(client);
-    await client.disconnect(exception);
+    await client.except(exception);
     await client.dispose();
   }
 

@@ -31,11 +31,6 @@ class Socket extends base.Socket with EventController {
     required this.ipAddress,
   });
 
-  /// Indicates that this socket has been disconnected.
-  Future<void> disconnect(SocketException exception) async {
-    _onDisconnectController.add(exception);
-  }
-
   /// Disposes of this socket, closing event streams.
   Future<void> dispose() async {
     if (_isDisposing) {
@@ -52,13 +47,18 @@ class Socket extends base.Socket with EventController {
 
 /// Contains streams for events that can be fired on the socket.
 mixin EventController {
-  final _onDisconnectController = StreamController<SocketException>.broadcast();
+  final _onExceptionController = StreamController<SocketException>.broadcast();
 
-  /// Added to when this socket is disconnected.
-  Stream<SocketException> get onDisconnect => _onDisconnectController.stream;
+  /// Added to when an exception occurs on this socket.
+  Stream<SocketException> get onException => _onExceptionController.stream;
+
+  /// Emits an exception.
+  Future<void> except(SocketException exception) async {
+    _onExceptionController.add(exception);
+  }
 
   /// Closes event streams, disposing of this event controller.
   Future<void> closeEventStreams() async {
-    _onDisconnectController.close().ignore();
+    _onExceptionController.close().ignore();
   }
 }

@@ -66,7 +66,7 @@ void main() {
       'disconnects a client unresponsive to heartbeats.',
       () async {
         expectLater(
-          server.onConnect.first.then((socket) => socket.onDisconnect.first),
+          server.onConnect.first.then((socket) => socket.onException.first),
           completion(SocketException.transportException),
         );
 
