@@ -1,17 +1,24 @@
 import 'package:universal_io/io.dart';
 
 import 'package:engine_io_dart/src/packet.dart';
+import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/transport.dart';
 
 /// Transport used for websocket connections.
-class WebSocketTransport extends Transport {
+class WebSocketTransport extends Transport<dynamic> {
   /// The socket interfacing with the other party.
   final WebSocket socket;
 
   /// Creates an instance of `WebSocketTransport`.
-  WebSocketTransport({required this.socket})
+  WebSocketTransport({required this.socket, required super.configuration})
       : super(connectionType: ConnectionType.websocket) {
     // TODO(vxern): Listen for incoming data.
+  }
+
+  @override
+  Future<TransportException> receive(dynamic data) async {
+    // TODO(vxern): Implement reception of data.
+    throw UnimplementedError();
   }
 
   @override

@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:meta/meta.dart';
 
 import 'package:engine_io_dart/src/packets/message.dart';
+import 'package:engine_io_dart/src/packets/ping.dart';
+import 'package:engine_io_dart/src/server/server/configuration.dart';
+import 'package:engine_io_dart/src/transports/polling/heartbeat_manager.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/packet.dart';
 
@@ -40,21 +43,114 @@ enum ConnectionType {
 /// The method by which packets are encoded or decoded depends on the transport
 /// method used.
 @sealed
-abstract class Transport<E extends TransportException> with EventController<E> {
+abstract class Transport<T> with EventController {
   /// The connection type corresponding to this transport.
   final ConnectionType connectionType;
+
+  /// A reference to the server configuration.
+  final ServerConfiguration configuration;
+
+  /// Instance of `HeartbeatManager` responsible for checking that the
+  /// connection is still active.
+  late final HeartbeatManager heartbeat;
 
   bool _isDisposing = false;
 
   /// Creates an instance of `Transport`.
-  Transport({required this.connectionType});
+  Transport({
+    required this.connectionType,
+    required this.configuration,
+  }) {
+    heartbeat = HeartbeatManager.create(
+      interval: configuration.heartbeatInterval,
+      timeout: configuration.heartbeatTimeout,
+      onTick: () => send(const PingPacket()),
+      onTimeout: () => except(TransportException.heartbeatTimedOut),
+    );
+
+    onReceive.listen((packet) {
+      if (packet.type == PacketType.pong) {
+        heartbeat.reset();
+      }
+    });
+  }
+
+  /// Receives data from the remote party.
+  ///
+  /// If an exception occurred while processing data, this method will return
+  /// `TransportException`. Otherwise `null`.
+  Future<TransportException?> receive(T data);
 
   /// Sends a packet to the remote party.
   void send(Packet packet);
 
+  /// Taking a list of packets, processes them.
+  ///
+  /// If an exception occurred while processing packets, this method will return
+  /// `TransportException`. Otherwise `null`.
+  TransportException? processPackets(List<Packet> packets) {
+    TransportException? exception;
+
+    for (final packet in packets) {
+      switch (packet.type) {
+        case PacketType.open:
+        case PacketType.noop:
+          return except(TransportException.packetIllegal);
+        case PacketType.ping:
+          packet as ProbePacket;
+
+          if (!packet.isProbe) {
+            return except(TransportException.packetIllegal);
+          }
+
+          // TODO(vxern): Reject probe ping packets sent when not upgrading.
+
+          continue;
+        case PacketType.pong:
+          packet as ProbePacket;
+
+          if (packet.isProbe) {
+            return except(TransportException.packetIllegal);
+          }
+
+          if (!heartbeat.isExpectingHeartbeat) {
+            return except(TransportException.heartbeatUnexpected);
+          }
+          continue;
+        case PacketType.close:
+          exception = TransportException.requestedClosure;
+          continue;
+        case PacketType.upgrade:
+          // TODO(vxern): Reject upgrade packets sent when not upgrading.
+          continue;
+        case PacketType.textMessage:
+        case PacketType.binaryMessage:
+          continue;
+      }
+    }
+
+    for (final packet in packets) {
+      onReceiveController.add(packet);
+
+      if (packet is MessagePacket) {
+        onMessageController.add(packet);
+      }
+
+      if (packet is ProbePacket) {
+        onHeartbeatController.add(packet);
+      }
+    }
+
+    if (exception != null) {
+      return except(exception);
+    }
+
+    return null;
+  }
+
   /// Signals an exception occurred on the transport and returns it to be
   /// handled by the server.
-  E except(E exception) {
+  TransportException except(TransportException exception) {
     onExceptionController.add(exception);
     return exception;
   }
@@ -72,7 +168,7 @@ abstract class Transport<E extends TransportException> with EventController<E> {
 }
 
 /// Contains streams for events that can be fired on the transport.
-mixin EventController<E extends TransportException> {
+mixin EventController {
   /// Controller for the `onReceive` event stream.
   @nonVirtual
   @internal
@@ -96,7 +192,8 @@ mixin EventController<E extends TransportException> {
   /// Controller for the `onException` event stream.
   @nonVirtual
   @internal
-  final onExceptionController = StreamController<E>.broadcast();
+  final onExceptionController =
+      StreamController<TransportException>.broadcast();
 
   /// Added to when a packet is received.
   Stream<Packet> get onReceive => onReceiveController.stream;
@@ -111,7 +208,7 @@ mixin EventController<E extends TransportException> {
   Stream<ProbePacket> get onHeartbeat => onHeartbeatController.stream;
 
   /// Added to when an exception occurs.
-  Stream<E> get onException => onExceptionController.stream;
+  Stream<TransportException> get onException => onExceptionController.stream;
 
   /// Closes event streams, disposing of this event controller.
   Future<void> closeEventStreams() async {

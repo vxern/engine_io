@@ -1,22 +1,18 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
-import 'package:engine_io_dart/src/packets/message.dart';
 import 'package:engine_io_dart/src/packets/open.dart';
-import 'package:engine_io_dart/src/packets/ping.dart';
-import 'package:engine_io_dart/src/packets/pong.dart';
 import 'package:engine_io_dart/src/server/server/client_manager.dart';
 import 'package:engine_io_dart/src/server/server/configuration.dart';
 import 'package:engine_io_dart/src/server/server/exception.dart';
 import 'package:engine_io_dart/src/server/server/query.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/polling/polling.dart';
+import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/transports/websocket.dart';
 import 'package:engine_io_dart/src/engine.dart';
-import 'package:engine_io_dart/src/packet.dart';
 import 'package:engine_io_dart/src/transport.dart';
 
 /// The engine.io server.
@@ -31,10 +27,6 @@ class Server with EventController {
   /// HTTP methods concatenated to eliminate the need to concatenate them on
   /// every preflight request.
   static final _allowedMethodsString = allowedMethods.join(', ');
-
-  /// The default content type for when the HTTP `Content-Type` header is not
-  /// specified.
-  static final _implicitContentType = ContentType.text;
 
   /// The configuration settings used to modify the server's behaviour.
   final ServerConfiguration configuration;
@@ -199,151 +191,12 @@ class Server with EventController {
           return;
         }
 
-        final transport = client.transport as PollingTransport;
-        if (transport.post.isLocked) {
-          close(client, request, ServerException.duplicatePostRequest);
-          return;
+        final exception =
+            await (client.transport as PollingTransport).receive(request);
+        if (exception != null) {
+          respond(request, exception);
         }
 
-        transport.post.lock();
-
-        final List<int> bytes;
-        try {
-          bytes = await request
-              .fold(<int>[], (buffer, bytes) => buffer..addAll(bytes));
-        } on Exception catch (_) {
-          close(client, request, ServerException.readingBodyFailed);
-          return;
-        }
-
-        final contentLength =
-            request.contentLength >= 0 ? request.contentLength : bytes.length;
-        if (bytes.length != contentLength) {
-          close(client, request, ServerException.contentLengthDisparity);
-          return;
-        } else if (contentLength > configuration.maximumChunkBytes) {
-          close(
-            client,
-            request,
-            ServerException.contentLengthLimitExceeded,
-          );
-          return;
-        }
-
-        final String body;
-        try {
-          body = utf8.decode(bytes);
-        } on FormatException {
-          close(client, request, ServerException.decodingBodyFailed);
-          return;
-        }
-
-        final List<Packet> packets;
-        try {
-          packets = body
-              .split(PollingTransport.recordSeparator)
-              .map(Packet.decode)
-              .toList();
-        } on FormatException {
-          close(client, request, ServerException.decodingPacketsFailed);
-          return;
-        }
-
-        final specifiedContentType = request.headers.contentType;
-
-        var detectedContentType = _implicitContentType;
-        for (final packet in packets) {
-          if (packet.isBinary && detectedContentType != ContentType.binary) {
-            detectedContentType = ContentType.binary;
-          } else if (packet.isJSON && detectedContentType == ContentType.text) {
-            detectedContentType = ContentType.json;
-          }
-        }
-
-        if (specifiedContentType == null) {
-          if (detectedContentType.mimeType != ContentType.text.mimeType) {
-            close(
-              client,
-              request,
-              ServerException.contentTypeDifferentToImplicit,
-            );
-            return;
-          }
-        } else if (specifiedContentType.mimeType !=
-            detectedContentType.mimeType) {
-          close(
-            client,
-            request,
-            ServerException.contentTypeDifferentToSpecified,
-          );
-          return;
-        }
-
-        var isClosing = false;
-        for (final packet in packets) {
-          switch (packet.type) {
-            case PacketType.open:
-            case PacketType.noop:
-              close(client, request, ServerException.packetIllegal);
-              return;
-            case PacketType.ping:
-              packet as PingPacket;
-
-              if (!packet.isProbe) {
-                close(client, request, ServerException.packetIllegal);
-                return;
-              }
-
-              // TODO(vxern): Reject probe ping packets sent when not upgrading.
-
-              continue;
-            case PacketType.pong:
-              packet as PongPacket;
-
-              if (packet.isProbe) {
-                close(client, request, ServerException.packetIllegal);
-                return;
-              }
-
-              final transport = client.transport as PollingTransport;
-              if (!transport.heartbeat.isExpectingHeartbeat) {
-                close(client, request, ServerException.heartbeatUnexpected);
-                return;
-              }
-              continue;
-            case PacketType.close:
-              isClosing = true;
-              continue;
-            case PacketType.upgrade:
-              // TODO(vxern): Reject upgrade packets sent when not upgrading.
-              continue;
-            case PacketType.textMessage:
-            case PacketType.binaryMessage:
-              continue;
-          }
-        }
-
-        for (final packet in packets) {
-          transport.onReceiveController.add(packet);
-
-          if (packet is MessagePacket) {
-            transport.onMessageController.add(packet);
-          }
-
-          if (packet is ProbePacket) {
-            transport.onHeartbeatController.add(packet);
-          }
-        }
-
-        if (isClosing) {
-          disconnect(client, ServerException.requestedClosure);
-        }
-
-        request.response
-          ..statusCode = HttpStatus.ok
-          ..close().ignore();
-
-        transport.post.unlock();
         return;
     }
   }
@@ -355,14 +208,28 @@ class Server with EventController {
   }) async {
     final sessionIdentifier = configuration.generateId(request);
 
+    final transport = PollingTransport(configuration: configuration);
+
     final client = Socket(
-      transport: PollingTransport(configuration: configuration),
+      transport: transport,
       sessionIdentifier: sessionIdentifier,
       ipAddress: ipAddress,
     );
 
-    client.transport.onException.listen(
-      (_) => disconnect(client, ServerException.transportException),
+    transport.onException.listen(
+      (exception) {
+        if (exception == TransportException.requestedClosure) {
+          // If the current transport is not the same as the original transport,
+          // i.e. the transport has been upgraded, do not do anything.
+          if (transport != client.transport) {
+            return;
+          }
+
+          disconnect(client, ServerException.requestedClosure);
+        }
+
+        disconnect(client, ServerException.transportException);
+      },
     );
 
     clientManager.add(client);
@@ -417,7 +284,10 @@ class Server with EventController {
 
     // ignore: close_sinks
     final socket = await WebSocketTransformer.upgrade(request);
-    client.probeTransport = WebSocketTransport(socket: socket);
+    client.probeTransport = WebSocketTransport(
+      socket: socket,
+      configuration: configuration,
+    );
 
     // TODO(vxern): Remove once upgrade completion is implemented.
     await Future<void>.delayed(const Duration(seconds: 2));
@@ -461,7 +331,7 @@ class Server with EventController {
   /// Disconnects a client.
   Future<void> disconnect(Socket client, ServerException exception) async {
     clientManager.remove(client);
-    client.disconnect(exception);
+    await client.disconnect(exception);
     await client.dispose();
   }
 

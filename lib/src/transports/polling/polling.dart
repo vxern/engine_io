@@ -3,22 +3,13 @@ import 'dart:convert';
 
 import 'package:universal_io/io.dart';
 
-import 'package:engine_io_dart/src/packets/ping.dart';
-import 'package:engine_io_dart/src/server/server/configuration.dart';
 import 'package:engine_io_dart/src/transports/polling/exception.dart';
-import 'package:engine_io_dart/src/transports/polling/heartbeat_manager.dart';
+import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/packet.dart';
 import 'package:engine_io_dart/src/transport.dart';
 
 /// Transport used with long polling connections.
-class PollingTransport extends Transport<PollingTransportException> {
-  /// Instance of `HeartbeatManager` responsible for checking that the
-  /// connection is still active.
-  late final HeartbeatManager heartbeat;
-
-  /// A reference to the server configuration.
-  final ServerConfiguration configuration;
-
+class PollingTransport extends Transport<HttpRequest> {
   /// The character used to separate packets in the body of a long polling HTTP
   /// request.
   ///
@@ -27,6 +18,10 @@ class PollingTransport extends Transport<PollingTransportException> {
   static final recordSeparator = String.fromCharCode(_recordSeparatorCharCode);
   static const _recordSeparatorCharCode = 30;
   static const _concatenationOverhead = 1;
+
+  /// The default content type for when the HTTP `Content-Type` header is not
+  /// specified.
+  static final _implicitContentType = ContentType.text;
 
   /// A queue containing the `Packet`s accumulated to be sent to this socket on
   /// the next HTTP poll cycle.
@@ -39,21 +34,82 @@ class PollingTransport extends Transport<PollingTransportException> {
   final post = Lock();
 
   /// Creates an instance of `PollingTransport`.
-  PollingTransport({required this.configuration})
-      : super(connectionType: ConnectionType.polling) {
-    heartbeat = HeartbeatManager.create(
-      interval: configuration.heartbeatInterval,
-      timeout: configuration.heartbeatTimeout,
-      onTick: () => packetBuffer.add(const PingPacket()),
-      onTimeout: () => onExceptionController
-          .add(PollingTransportException.heartbeatTimedOut),
-    );
+  PollingTransport({required super.configuration})
+      : super(connectionType: ConnectionType.polling);
 
-    onReceive.listen((packet) {
-      if (packet.type == PacketType.pong) {
-        heartbeat.reset();
+  @override
+  // ignore: avoid_renaming_method_parameters
+  Future<TransportException?> receive(HttpRequest request) async {
+    if (post.isLocked) {
+      return except(PollingTransportException.duplicatePostRequest);
+    }
+
+    post.lock();
+
+    final List<int> bytes;
+    try {
+      bytes =
+          await request.fold(<int>[], (buffer, bytes) => buffer..addAll(bytes));
+    } on Exception catch (_) {
+      return except(PollingTransportException.readingBodyFailed);
+    }
+
+    final contentLength =
+        request.contentLength >= 0 ? request.contentLength : bytes.length;
+    if (bytes.length != contentLength) {
+      return except(PollingTransportException.contentLengthDisparity);
+    } else if (contentLength > configuration.maximumChunkBytes) {
+      return except(PollingTransportException.contentLengthLimitExceeded);
+    }
+
+    final String body;
+    try {
+      body = utf8.decode(bytes);
+    } on FormatException {
+      return except(PollingTransportException.decodingBodyFailed);
+    }
+
+    final List<Packet> packets;
+    try {
+      packets = body
+          .split(PollingTransport.recordSeparator)
+          .map(Packet.decode)
+          .toList();
+    } on FormatException {
+      return except(PollingTransportException.decodingPacketsFailed);
+    }
+
+    final specifiedContentType = request.headers.contentType;
+
+    var detectedContentType = _implicitContentType;
+    for (final packet in packets) {
+      if (packet.isBinary && detectedContentType != ContentType.binary) {
+        detectedContentType = ContentType.binary;
+      } else if (packet.isJSON && detectedContentType == ContentType.text) {
+        detectedContentType = ContentType.json;
       }
-    });
+    }
+
+    if (specifiedContentType == null) {
+      if (detectedContentType.mimeType != ContentType.text.mimeType) {
+        return except(PollingTransportException.contentTypeDifferentToImplicit);
+      }
+    } else if (specifiedContentType.mimeType != detectedContentType.mimeType) {
+      return except(PollingTransportException.contentTypeDifferentToSpecified);
+    }
+
+    final exception = processPackets(packets);
+    if (exception != null) {
+      return except(exception);
+    }
+
+    request.response
+      ..statusCode = HttpStatus.ok
+      ..close().ignore();
+
+    post.unlock();
+
+    return null;
   }
 
   @override
@@ -63,7 +119,7 @@ class PollingTransport extends Transport<PollingTransportException> {
   /// concatenating them before closing the response.
   ///
   /// Returns a `PollingTransportException` on failure, otherwise `null`.
-  Future<PollingTransportException?> offload(HttpResponse response) async {
+  Future<TransportException?> offload(HttpResponse response) async {
     if (get.isLocked) {
       return except(PollingTransportException.duplicateGetRequest);
     }
