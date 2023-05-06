@@ -6,7 +6,7 @@ import 'package:engine_io_dart/src/packets/types/pong.dart';
 import 'package:engine_io_dart/src/server/configuration.dart';
 import 'package:engine_io_dart/src/server/server.dart';
 
-import 'shared.dart';
+import '../shared.dart';
 
 void main() {
   late HttpClient client;
@@ -25,26 +25,6 @@ void main() {
   tearDown(() async {
     client.close();
     server.dispose();
-  });
-
-  group('Server fires', () {
-    test('an `onConnect` event.', () async {
-      expectLater(server.onConnect.first, completes);
-
-      handshake(client);
-    });
-
-    test('an `onException` event.', () async {
-      expectLater(
-        server.onConnect.first.then((socket) => socket.onException.first),
-        completes,
-      );
-
-      await handshake(client);
-
-      // Deliberately cause a disconnect by sending an invalid request.
-      expectLater(unsafeGet(client), completes);
-    });
   });
 
   group('Transport fires', () {
