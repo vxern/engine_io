@@ -1,6 +1,6 @@
 import 'package:universal_io/io.dart';
 
-import 'package:engine_io_dart/src/engine.dart';
+import 'package:engine_io_dart/src/exception.dart';
 
 /// An exception that occurred on the server.
 class ServerException extends EngineException {

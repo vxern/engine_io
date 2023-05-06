@@ -3,17 +3,17 @@ import 'dart:async';
 import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
-import 'package:engine_io_dart/src/packets/open.dart';
-import 'package:engine_io_dart/src/server/server/client_manager.dart';
-import 'package:engine_io_dart/src/server/server/configuration.dart';
-import 'package:engine_io_dart/src/server/server/exception.dart';
-import 'package:engine_io_dart/src/server/server/query.dart';
+import 'package:engine_io_dart/src/packets/types/open.dart';
+import 'package:engine_io_dart/src/server/client_manager.dart';
+import 'package:engine_io_dart/src/server/configuration.dart';
+import 'package:engine_io_dart/src/server/exception.dart';
+import 'package:engine_io_dart/src/server/query.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/polling/polling.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
-import 'package:engine_io_dart/src/transports/websocket.dart';
-import 'package:engine_io_dart/src/engine.dart';
-import 'package:engine_io_dart/src/transport.dart';
+import 'package:engine_io_dart/src/transports/websocket/websocket.dart';
+import 'package:engine_io_dart/src/exception.dart';
+import 'package:engine_io_dart/src/transports/transport.dart';
 
 /// The engine.io server.
 @sealed

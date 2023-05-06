@@ -1,6 +1,6 @@
 import 'package:meta/meta.dart';
 
-import 'package:engine_io_dart/src/packet.dart';
+import 'package:engine_io_dart/src/packets/packet.dart';
 
 /// Used in the heartbeat mechanism.
 ///

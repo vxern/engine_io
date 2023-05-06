@@ -1,12 +1,12 @@
 import 'package:meta/meta.dart';
 
-import 'package:engine_io_dart/src/packets/close.dart';
-import 'package:engine_io_dart/src/packets/message.dart';
-import 'package:engine_io_dart/src/packets/noop.dart';
-import 'package:engine_io_dart/src/packets/open.dart';
-import 'package:engine_io_dart/src/packets/ping.dart';
-import 'package:engine_io_dart/src/packets/pong.dart';
-import 'package:engine_io_dart/src/packets/upgrade.dart';
+import 'package:engine_io_dart/src/packets/types/close.dart';
+import 'package:engine_io_dart/src/packets/types/message.dart';
+import 'package:engine_io_dart/src/packets/types/noop.dart';
+import 'package:engine_io_dart/src/packets/types/open.dart';
+import 'package:engine_io_dart/src/packets/types/ping.dart';
+import 'package:engine_io_dart/src/packets/types/pong.dart';
+import 'package:engine_io_dart/src/packets/types/upgrade.dart';
 
 /// Represents the type of a packet transmitted between the two parties, client
 /// and server.

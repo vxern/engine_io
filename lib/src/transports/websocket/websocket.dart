@@ -1,8 +1,8 @@
 import 'package:universal_io/io.dart';
 
-import 'package:engine_io_dart/src/packet.dart';
+import 'package:engine_io_dart/src/packets/packet.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
-import 'package:engine_io_dart/src/transport.dart';
+import 'package:engine_io_dart/src/transports/transport.dart';
 
 /// Transport used for websocket connections.
 class WebSocketTransport extends Transport<dynamic> {

@@ -1,9 +1,9 @@
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
-import 'package:engine_io_dart/src/packets/close.dart';
-import 'package:engine_io_dart/src/server/server/exception.dart';
-import 'package:engine_io_dart/src/server/server/server.dart';
+import 'package:engine_io_dart/src/packets/types/close.dart';
+import 'package:engine_io_dart/src/server/exception.dart';
+import 'package:engine_io_dart/src/server/server.dart';
 
 import '../shared.dart';
 

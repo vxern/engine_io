@@ -1,7 +1,7 @@
 import 'package:universal_io/io.dart' hide Socket;
 import 'package:uuid/uuid.dart';
 
-import 'package:engine_io_dart/src/transport.dart';
+import 'package:engine_io_dart/src/transports/transport.dart';
 
 /// Generator responsible for creating unique identifiers for sockets.
 const _uuid = Uuid();

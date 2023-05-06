@@ -2,12 +2,12 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 
-import 'package:engine_io_dart/src/packets/message.dart';
-import 'package:engine_io_dart/src/packets/ping.dart';
-import 'package:engine_io_dart/src/server/server/configuration.dart';
-import 'package:engine_io_dart/src/transports/polling/heartbeat_manager.dart';
+import 'package:engine_io_dart/src/packets/types/message.dart';
+import 'package:engine_io_dart/src/packets/types/ping.dart';
+import 'package:engine_io_dart/src/server/configuration.dart';
+import 'package:engine_io_dart/src/transports/heartbeat_manager.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
-import 'package:engine_io_dart/src/packet.dart';
+import 'package:engine_io_dart/src/packets/packet.dart';
 
 /// The type of connection used for communication between a client and a server.
 enum ConnectionType {

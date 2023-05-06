@@ -2,12 +2,12 @@ import 'dart:convert';
 
 import 'package:test/test.dart';
 
-import 'package:engine_io_dart/src/packets/message.dart';
-import 'package:engine_io_dart/src/packets/open.dart';
-import 'package:engine_io_dart/src/packets/ping.dart';
-import 'package:engine_io_dart/src/packets/pong.dart';
-import 'package:engine_io_dart/src/packet.dart';
-import 'package:engine_io_dart/src/transport.dart';
+import 'package:engine_io_dart/src/packets/types/message.dart';
+import 'package:engine_io_dart/src/packets/types/open.dart';
+import 'package:engine_io_dart/src/packets/types/ping.dart';
+import 'package:engine_io_dart/src/packets/types/pong.dart';
+import 'package:engine_io_dart/src/packets/packet.dart';
+import 'package:engine_io_dart/src/transports/transport.dart';
 
 void main() {
   group('Decodes the content of', () {

@@ -1,10 +1,10 @@
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
-import 'package:engine_io_dart/src/packets/message.dart';
-import 'package:engine_io_dart/src/packets/pong.dart';
-import 'package:engine_io_dart/src/server/server/configuration.dart';
-import 'package:engine_io_dart/src/server/server/server.dart';
+import 'package:engine_io_dart/src/packets/types/message.dart';
+import 'package:engine_io_dart/src/packets/types/pong.dart';
+import 'package:engine_io_dart/src/server/configuration.dart';
+import 'package:engine_io_dart/src/server/server.dart';
 
 import 'shared.dart';
 

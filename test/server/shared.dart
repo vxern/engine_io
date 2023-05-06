@@ -2,11 +2,11 @@ import 'dart:convert';
 
 import 'package:universal_io/io.dart';
 
-import 'package:engine_io_dart/src/packets/open.dart';
-import 'package:engine_io_dart/src/server/server/server.dart';
+import 'package:engine_io_dart/src/packets/types/open.dart';
+import 'package:engine_io_dart/src/server/server.dart';
 import 'package:engine_io_dart/src/transports/polling/polling.dart';
-import 'package:engine_io_dart/src/transport.dart';
-import 'package:engine_io_dart/src/packet.dart';
+import 'package:engine_io_dart/src/transports/transport.dart';
+import 'package:engine_io_dart/src/packets/packet.dart';
 
 final remoteUrl = Uri.http(InternetAddress.loopbackIPv4.address, '/');
 final serverUrl = remoteUrl.replace(path: '/engine.io/');
