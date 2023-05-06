@@ -2,6 +2,7 @@ import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
 import 'package:engine_io_dart/src/packets/types/message.dart';
+import 'package:engine_io_dart/src/packets/types/ping.dart';
 import 'package:engine_io_dart/src/packets/types/pong.dart';
 import 'package:engine_io_dart/src/server/configuration.dart';
 import 'package:engine_io_dart/src/server/server.dart';
@@ -96,6 +97,22 @@ void main() {
         client,
         sessionIdentifier: open.sessionIdentifier,
         packet: const PongPacket(),
+      );
+    });
+
+    test('an `onException` event.', () async {
+      expectLater(
+        server.onConnect.first
+            .then((socket) => socket.transport.onException.first),
+        completes,
+      );
+
+      final open = await handshake(client).then((result) => result.packet);
+
+      post(
+        client,
+        sessionIdentifier: open.sessionIdentifier,
+        packet: const PingPacket(),
       );
     });
   });
