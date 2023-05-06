@@ -44,32 +44,32 @@ class QueryParameters {
           request.uri.queryParameters[_sessionIdentifier];
 
       if (protocolVersion_ == null || connectionType_ == null) {
-        throw ServerException.missingMandatoryParameters;
+        throw SocketException.missingMandatoryParameters;
       }
 
       try {
         protocolVersion = int.parse(protocolVersion_);
       } on FormatException {
-        throw ServerException.protocolVersionInvalidType;
+        throw SocketException.protocolVersionInvalidType;
       }
 
       if (protocolVersion != Server.protocolVersion) {
         if (protocolVersion <= 0 ||
             protocolVersion > Server.protocolVersion + 1) {
-          throw ServerException.protocolVersionInvalid;
+          throw SocketException.protocolVersionInvalid;
         }
 
-        throw ServerException.protocolVersionUnsupported;
+        throw SocketException.protocolVersionUnsupported;
       }
 
       try {
         connectionType = ConnectionType.byName(connectionType_);
       } on FormatException {
-        throw ServerException.connectionTypeInvalid;
+        throw SocketException.connectionTypeInvalid;
       }
 
       if (!availableConnectionTypes.contains(connectionType)) {
-        throw ServerException.connectionTypeUnavailable;
+        throw SocketException.connectionTypeUnavailable;
       }
 
       sessionIdentifier = sessionIdentifier_;

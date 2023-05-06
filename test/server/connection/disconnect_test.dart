@@ -31,7 +31,7 @@ void main() {
 
         expect(
           socket.onDisconnect.first,
-          completion(ServerException.requestedClosure),
+          completion(SocketException.requestedClosure),
         );
 
         post(

@@ -54,7 +54,7 @@ class ClientManager {
   Future<void> dispose() async {
     final futures = <Future>[];
     for (final client in clients.values) {
-      client.disconnect(ServerException.serverClosing);
+      client.disconnect(SocketException.serverClosing);
       futures.add(client.dispose());
     }
 

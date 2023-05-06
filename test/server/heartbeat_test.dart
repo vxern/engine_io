@@ -67,7 +67,7 @@ void main() {
       () async {
         expectLater(
           server.onConnect.first.then((socket) => socket.onDisconnect.first),
-          completion(ServerException.transportException),
+          completion(SocketException.transportException),
         );
 
         handshake(client);

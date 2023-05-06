@@ -65,14 +65,14 @@ class Server with EventController {
   Future<void> handleHttpRequest(HttpRequest request) async {
     final ipAddress = request.connectionInfo?.remoteAddress.address;
     if (ipAddress == null) {
-      respond(request, ServerException.ipAddressUnobtainable);
+      respond(request, SocketException.ipAddressUnobtainable);
       return;
     }
 
     final clientByIP = clientManager.get(ipAddress: ipAddress);
 
     if (request.uri.path != '/${configuration.path}') {
-      close(clientByIP, request, ServerException.serverPathInvalid);
+      close(clientByIP, request, SocketException.serverPathInvalid);
       return;
     }
 
@@ -93,14 +93,14 @@ class Server with EventController {
     }
 
     if (!allowedMethods.contains(request.method)) {
-      close(clientByIP, request, ServerException.methodNotAllowed);
+      close(clientByIP, request, SocketException.methodNotAllowed);
       return;
     }
 
     final isConnected = clientManager.isConnected(ipAddress);
 
     if (request.method != 'GET' && !isConnected) {
-      close(clientByIP, request, ServerException.getExpected);
+      close(clientByIP, request, SocketException.getExpected);
       return;
     }
 
@@ -110,7 +110,7 @@ class Server with EventController {
         request,
         availableConnectionTypes: configuration.availableConnectionTypes,
       );
-    } on ServerException catch (exception) {
+    } on SocketException catch (exception) {
       close(clientByIP, request, exception);
       return;
     }
@@ -120,7 +120,7 @@ class Server with EventController {
         close(
           clientByIP,
           request,
-          ServerException.sessionIdentifierRequired,
+          SocketException.sessionIdentifierRequired,
         );
         return;
       }
@@ -128,7 +128,7 @@ class Server with EventController {
       close(
         clientByIP,
         request,
-        ServerException.sessionIdentifierUnexpected,
+        SocketException.sessionIdentifierUnexpected,
       );
       return;
     }
@@ -143,7 +143,7 @@ class Server with EventController {
         close(
           clientByIP,
           request,
-          ServerException.sessionIdentifierInvalid,
+          SocketException.sessionIdentifierInvalid,
         );
         return;
       }
@@ -167,14 +167,14 @@ class Server with EventController {
     }
 
     if (isWebsocketUpgradeRequest) {
-      close(client, request, ServerException.upgradeRequestUnexpected);
+      close(client, request, SocketException.upgradeRequestUnexpected);
       return;
     }
 
     switch (request.method) {
       case 'GET':
         if (client.transport is! PollingTransport) {
-          close(client, request, ServerException.getRequestUnexpected);
+          close(client, request, SocketException.getRequestUnexpected);
           return;
         }
 
@@ -187,7 +187,7 @@ class Server with EventController {
         break;
       case 'POST':
         if (client.transport is! PollingTransport) {
-          close(client, request, ServerException.postRequestUnexpected);
+          close(client, request, SocketException.postRequestUnexpected);
           return;
         }
 
@@ -225,10 +225,10 @@ class Server with EventController {
             return;
           }
 
-          disconnect(client, ServerException.requestedClosure);
+          disconnect(client, SocketException.requestedClosure);
         }
 
-        disconnect(client, ServerException.transportException);
+        disconnect(client, SocketException.transportException);
       },
     );
 
@@ -256,17 +256,17 @@ class Server with EventController {
     required ConnectionType connectionType,
   }) async {
     if (!client.transport.connectionType.upgradesTo.contains(connectionType)) {
-      close(client, request, ServerException.upgradeCourseNotAllowed);
+      close(client, request, SocketException.upgradeCourseNotAllowed);
       return;
     }
 
     if (connectionType != ConnectionType.websocket) {
-      close(client, request, ServerException.upgradeCourseNotAllowed);
+      close(client, request, SocketException.upgradeCourseNotAllowed);
       return;
     }
 
     if (!isWebsocketUpgradeRequest) {
-      close(client, request, ServerException.upgradeRequestInvalid);
+      close(client, request, SocketException.upgradeRequestInvalid);
       return;
     }
 
@@ -276,7 +276,7 @@ class Server with EventController {
       client.isUpgrading = false;
       client.probeTransport?.dispose();
 
-      close(client, request, ServerException.upgradeAlreadyInitiated);
+      close(client, request, SocketException.upgradeAlreadyInitiated);
       return;
     }
 
@@ -329,7 +329,7 @@ class Server with EventController {
   }
 
   /// Disconnects a client.
-  Future<void> disconnect(Socket client, ServerException exception) async {
+  Future<void> disconnect(Socket client, SocketException exception) async {
     clientManager.remove(client);
     await client.disconnect(exception);
     await client.dispose();
@@ -340,7 +340,7 @@ class Server with EventController {
   Future<void> close(
     Socket? client,
     HttpRequest request,
-    ServerException exception,
+    SocketException exception,
   ) async {
     if (client == null || exception.statusCode != HttpStatus.ok) {
       _onConnectExceptionController.add(exception);
@@ -371,13 +371,13 @@ mixin EventController {
   final _onConnectController = StreamController<Socket>.broadcast();
 
   final _onConnectExceptionController =
-      StreamController<ServerException>.broadcast();
+      StreamController<SocketException>.broadcast();
 
   /// Added to when a new connection is established.
   Stream<Socket> get onConnect => _onConnectController.stream;
 
   /// Added to when a connection could not be established.
-  Stream<ServerException> get onConnectException =>
+  Stream<SocketException> get onConnectException =>
       _onConnectExceptionController.stream;
 
   /// Closes event streams, disposing of this event controller.

@@ -27,6 +27,8 @@
   - [Work in progress] Define the server/`Socket` class to represent clients
     connected to the server.
 - [Work in progress] Define the `EngineException` class:
-  - [Work in progress] Define the `ServerException` class.
+  - [Work in progress] Define the `SocketException` classes:
+    - [Work in progress] For the server to represent exceptions thrown on the
+      socket, or on the server when establishing a connection.
   - [Work in progress] Define the `TransportException` class:
     - [Work in progress] Define the `PollingTransportException` class.
