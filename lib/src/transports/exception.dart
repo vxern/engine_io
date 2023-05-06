@@ -4,6 +4,9 @@ import 'package:engine_io_dart/src/exception.dart';
 
 /// An exception that occurred on the transport.
 class TransportException extends EngineException {
+  @override
+  bool get isSuccess => statusCode >= 200 && statusCode < 300;
+
   /// Creates an instance of `TransportException`.
   const TransportException({
     required super.statusCode,

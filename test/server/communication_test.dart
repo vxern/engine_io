@@ -65,9 +65,8 @@ void main() {
       final open = await handshake(client).then((result) => result.packet);
       final socket = server.clientManager.get(
         sessionIdentifier: open.sessionIdentifier,
-      )!;
-
-      socket.transport.send(const PingPacket());
+      )!
+        ..send(const PingPacket());
 
       {
         final response =
@@ -80,7 +79,7 @@ void main() {
         );
       }
 
-      socket.transport.send(
+      socket.send(
         const OpenPacket(
           sessionIdentifier: 'sid',
           availableConnectionUpgrades: {},
@@ -101,7 +100,7 @@ void main() {
         );
       }
 
-      socket.transport.send(
+      socket.send(
         BinaryMessagePacket(data: Uint8List.fromList(<int>[])),
       );
 
@@ -126,7 +125,7 @@ void main() {
         )!;
 
         for (var i = 0; i < server.configuration.maximumChunkBytes; i++) {
-          socket.transport.send(const PingPacket());
+          socket.send(const PingPacket());
         }
 
         {

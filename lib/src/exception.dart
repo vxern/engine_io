@@ -6,6 +6,9 @@ abstract class EngineException implements Exception {
   /// A human-readable representation of the exception.
   final String reasonPhrase;
 
+  /// Whether this exception is not a failure.
+  bool get isSuccess;
+
   /// Creates an instance of `EngineException`.
   const EngineException({
     required this.statusCode,

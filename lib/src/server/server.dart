@@ -10,7 +10,6 @@ import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:engine_io_dart/src/server/query.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/polling/polling.dart';
-import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/transports/websocket/websocket.dart';
 import 'package:engine_io_dart/src/exception.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
@@ -197,7 +196,7 @@ class Server with EventController {
           respond(request, exception);
         }
 
-        return;
+        break;
     }
   }
 
@@ -216,19 +215,19 @@ class Server with EventController {
       ipAddress: ipAddress,
     );
 
-    transport.onException.listen(
-      (exception) {
-        if (exception == TransportException.requestedClosure) {
-          // If the current transport is not the same as the original transport,
-          // i.e. the transport has been upgraded, do not do anything.
-          if (transport != client.transport) {
-            return;
-          }
+    client.onTransportException.listen(
+      (exception) => disconnect(client, SocketException.transportException),
+    );
 
-          disconnect(client, SocketException.requestedClosure);
+    client.onTransportClose.listen(
+      (transport) {
+        // If the current transport is not the same as the original transport,
+        // i.e. the transport has been upgraded, do not do anything.
+        if (transport != client.transport) {
+          return;
         }
 
-        disconnect(client, SocketException.transportException);
+        disconnect(client, SocketException.requestedClosure);
       },
     );
 
@@ -243,7 +242,7 @@ class Server with EventController {
       maximumChunkBytes: configuration.maximumChunkBytes,
     );
 
-    client.transport.send(openPacket);
+    client.send(openPacket);
 
     return client;
   }
@@ -342,10 +341,10 @@ class Server with EventController {
     HttpRequest request,
     SocketException exception,
   ) async {
-    if (client == null || exception.statusCode != HttpStatus.ok) {
-      _onConnectExceptionController.add(exception);
-    } else {
+    if (client != null) {
       disconnect(client, exception);
+    } else {
+      _onConnectExceptionController.add(exception);
     }
 
     respond(request, exception);

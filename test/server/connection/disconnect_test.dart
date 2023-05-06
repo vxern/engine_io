@@ -2,7 +2,6 @@ import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
 import 'package:engine_io_dart/src/packets/types/close.dart';
-import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:engine_io_dart/src/server/server.dart';
 
 import '../shared.dart';
@@ -29,10 +28,7 @@ void main() {
           sessionIdentifier: open.sessionIdentifier,
         )!;
 
-        expect(
-          socket.onException.first,
-          completion(SocketException.requestedClosure),
-        );
+        expect(socket.onClose.first, completion(socket));
 
         post(
           client,

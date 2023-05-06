@@ -1,3 +1,4 @@
+import 'package:engine_io_dart/src/packets/types/close.dart';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
@@ -29,25 +30,9 @@ void main() {
   });
 
   group('Transport fires', () {
-    test('an `onSend` event.', () async {
-      final socket_ = server.onConnect.first;
-
-      final open = await handshake(client).then((result) => result.packet);
-      final socket = await socket_;
-
-      expectLater(socket.transport.onSend.first, completes);
-
-      socket.transport.send(const TextMessagePacket(data: ''));
-
-      // Since this is a long polling connection, the sent packets have to be
-      // fetched manually for them to be received.
-      get(client, sessionIdentifier: open.sessionIdentifier);
-    });
-
     test('an `onReceive` event.', () async {
       expectLater(
-        server.onConnect.first
-            .then((socket) => socket.transport.onReceive.first),
+        server.onConnect.first.then((socket) => socket.onReceive.first),
         completes,
       );
 
@@ -60,13 +45,27 @@ void main() {
       );
     });
 
+    test('an `onSend` event.', () async {
+      final socket_ = server.onConnect.first;
+
+      final open = await handshake(client).then((result) => result.packet);
+      final socket = await socket_;
+
+      expectLater(socket.onSend.first, completes);
+
+      socket.send(const TextMessagePacket(data: ''));
+
+      // Since this is a long polling connection, the sent packets have to be
+      // fetched manually for them to be received.
+      get(client, sessionIdentifier: open.sessionIdentifier);
+    });
+
     // TODO(vxern): Add test for websocket transport sending data.
     // TODO(vxern): Add test for websocket transport receiving data.
 
     test('an `onMessage` event.', () async {
       expectLater(
-        server.onConnect.first
-            .then((socket) => socket.transport.onMessage.first),
+        server.onConnect.first.then((socket) => socket.onMessage.first),
         completes,
       );
 
@@ -81,8 +80,7 @@ void main() {
 
     test('an `onHeartbeat` event.', () async {
       expectLater(
-        server.onConnect.first
-            .then((socket) => socket.transport.onHeartbeat.first),
+        server.onConnect.first.then((socket) => socket.onHeartbeat.first),
         completes,
       );
 
@@ -103,7 +101,7 @@ void main() {
     test('an `onException` event.', () async {
       expectLater(
         server.onConnect.first
-            .then((socket) => socket.transport.onException.first),
+            .then((socket) => socket.onTransportException.first),
         completes,
       );
 
@@ -113,6 +111,21 @@ void main() {
         client,
         sessionIdentifier: open.sessionIdentifier,
         packet: const PingPacket(),
+      );
+    });
+
+    test('an `onClose` event.', () async {
+      expectLater(
+        server.onConnect.first.then((socket) => socket.onTransportClose.first),
+        completes,
+      );
+
+      final open = await handshake(client).then((result) => result.packet);
+
+      post(
+        client,
+        sessionIdentifier: open.sessionIdentifier,
+        packet: const ClosePacket(),
       );
     });
   });

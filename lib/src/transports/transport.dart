@@ -67,12 +67,6 @@ abstract class Transport<T> with EventController {
       onTick: () => send(const PingPacket()),
       onTimeout: () => except(TransportException.heartbeatTimedOut),
     );
-
-    onReceive.listen((packet) {
-      if (packet.type == PacketType.pong) {
-        heartbeat.reset();
-      }
-    });
   }
 
   /// Receives data from the remote party.
@@ -116,6 +110,8 @@ abstract class Transport<T> with EventController {
           if (!heartbeat.isExpectingHeartbeat) {
             return except(TransportException.heartbeatUnexpected);
           }
+
+          heartbeat.reset();
           continue;
         case PacketType.close:
           exception = TransportException.requestedClosure;
@@ -151,7 +147,11 @@ abstract class Transport<T> with EventController {
   /// Signals an exception occurred on the transport and returns it to be
   /// handled by the server.
   TransportException except(TransportException exception) {
-    onExceptionController.add(exception);
+    if (!exception.isSuccess) {
+      onExceptionController.add(exception);
+    } else {
+      onCloseController.add(this);
+    }
     return exception;
   }
 
@@ -172,28 +172,32 @@ mixin EventController {
   /// Controller for the `onReceive` event stream.
   @nonVirtual
   @internal
-  final onReceiveController = StreamController<Packet>.broadcast();
+  final onReceiveController = StreamController<Packet>();
 
   /// Controller for the `onSend` event stream.
   @nonVirtual
   @internal
-  final onSendController = StreamController<Packet>.broadcast();
+  final onSendController = StreamController<Packet>();
 
   /// Controller for the `onMessage` event stream.
   @nonVirtual
   @internal
-  final onMessageController = StreamController<MessagePacket>.broadcast();
+  final onMessageController = StreamController<MessagePacket>();
 
   /// Controller for the `onHeartbeat` event stream.
   @nonVirtual
   @internal
-  final onHeartbeatController = StreamController<ProbePacket>.broadcast();
+  final onHeartbeatController = StreamController<ProbePacket>();
 
   /// Controller for the `onException` event stream.
   @nonVirtual
   @internal
-  final onExceptionController =
-      StreamController<TransportException>.broadcast();
+  final onExceptionController = StreamController<TransportException>();
+
+  /// Controller for the `onClose` event stream.
+  @nonVirtual
+  @internal
+  final onCloseController = StreamController<Transport>();
 
   /// Added to when a packet is received.
   Stream<Packet> get onReceive => onReceiveController.stream;
@@ -210,6 +214,9 @@ mixin EventController {
   /// Added to when an exception occurs.
   Stream<TransportException> get onException => onExceptionController.stream;
 
+  /// Added to when the transport is designated to close.
+  Stream<Transport> get onClose => onCloseController.stream;
+
   /// Closes event streams, disposing of this event controller.
   Future<void> closeEventStreams() async {
     onReceiveController.close().ignore();
@@ -217,5 +224,6 @@ mixin EventController {
     onMessageController.close().ignore();
     onHeartbeatController.close().ignore();
     onExceptionController.close().ignore();
+    onCloseController.close().ignore();
   }
 }
