@@ -18,14 +18,26 @@ class Socket extends base.Socket with EventController {
   /// messages from this client.
   Transport get transport => _transport;
 
-  set transport(Transport transport) {
-    transport.onReceive.listen(_onReceiveController.add);
-    transport.onSend.listen(_onSendController.add);
-    transport.onMessage.listen(_onMessageController.add);
-    transport.onHeartbeat.listen(_onHeartbeatController.add);
-    transport.onInitiateUpgrade.listen(_onInitiateUpgradeController.add);
-    transport.onException.listen(_onTransportExceptionController.add);
-    transport.onClose.listen(_onTransportCloseController.add);
+  final List<StreamSubscription> _transportSubscriptions = [];
+
+  /// Sets a new transport, piping all of its events into this socket.
+  Future<void> setTransport(Transport transport) async {
+    await Future.wait(
+      _transportSubscriptions.map((subscription) => subscription.cancel()),
+    );
+
+    _transportSubscriptions
+      ..clear()
+      ..addAll([
+        transport.onReceive.listen(_onReceiveController.add),
+        transport.onSend.listen(_onSendController.add),
+        transport.onMessage.listen(_onMessageController.add),
+        transport.onHeartbeat.listen(_onHeartbeatController.add),
+        transport.onInitiateUpgrade.listen(_onInitiateUpgradeController.add),
+        transport.onException.listen(_onTransportExceptionController.add),
+        transport.onClose.listen(_onTransportCloseController.add),
+      ]);
+
     _transport = transport;
   }
 
@@ -41,12 +53,23 @@ class Socket extends base.Socket with EventController {
   bool _isDisposing = false;
 
   /// Creates an instance of `Socket`.
-  Socket({
-    required Transport transport,
+  Socket._({
     required this.sessionIdentifier,
     required this.ipAddress,
-  }) {
-    this.transport = transport;
+  });
+
+  /// Creates an instance of `Socket`, setting its transport to [transport].
+  static Future<Socket> create({
+    required Transport transport,
+    required String sessionIdentifier,
+    required String ipAddress,
+  }) async {
+    final socket = Socket._(
+      sessionIdentifier: sessionIdentifier,
+      ipAddress: ipAddress,
+    );
+    await socket.setTransport(transport);
+    return socket;
   }
 
   /// Sends a packet to this client.
@@ -140,9 +163,9 @@ mixin EventController {
     _onSendController.close().ignore();
     _onMessageController.close().ignore();
     _onHeartbeatController.close().ignore();
+    _onInitiateUpgradeController.close().ignore();
     _onTransportExceptionController.close().ignore();
     _onTransportCloseController.close().ignore();
-    _onInitiateUpgradeController.close().ignore();
     _onExceptionController.close().ignore();
     _onCloseController.close().ignore();
   }

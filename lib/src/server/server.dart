@@ -224,7 +224,7 @@ class Server with EventController {
 
     final transport = PollingTransport(configuration: configuration);
 
-    final client = Socket(
+    final client = await Socket.create(
       transport: transport,
       sessionIdentifier: sessionIdentifier,
       ipAddress: ipAddress,

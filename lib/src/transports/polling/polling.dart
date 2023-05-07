@@ -232,7 +232,7 @@ class PollingTransport extends Transport<HttpRequest> {
 
     final oldTransport = client.transport;
     client
-      ..transport = transport
+      ..setTransport(transport)
       ..probeTransport = null;
     oldTransport.dispose();
     return null;
