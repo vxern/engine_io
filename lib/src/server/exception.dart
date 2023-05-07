@@ -2,7 +2,7 @@ import 'package:universal_io/io.dart';
 
 import 'package:engine_io_dart/src/exception.dart';
 
-/// An socket exception that occurred either on the server when a client was
+/// An exception that occurred either on the server when a client was
 /// establishing a connection, or on the socket itself during communication.
 class SocketException extends EngineException {
   @override

@@ -290,7 +290,9 @@ class Server with EventController {
     if (client != null) {
       disconnect(client, exception);
     } else {
-      _onConnectExceptionController.add(exception);
+      _onConnectExceptionController.add(
+        ConnectException.fromSocketException(exception, request: request),
+      );
     }
 
     respond(request, exception);
@@ -316,13 +318,13 @@ mixin EventController {
   final _onConnectController = StreamController<Socket>.broadcast();
 
   final _onConnectExceptionController =
-      StreamController<SocketException>.broadcast();
+      StreamController<ConnectException>.broadcast();
 
   /// Added to when a new connection is established.
   Stream<Socket> get onConnect => _onConnectController.stream;
 
   /// Added to when a connection could not be established.
-  Stream<SocketException> get onConnectException =>
+  Stream<ConnectException> get onConnectException =>
       _onConnectExceptionController.stream;
 
   /// Closes event streams, disposing of this event controller.
@@ -330,4 +332,28 @@ mixin EventController {
     _onConnectController.close().ignore();
     _onConnectExceptionController.close().ignore();
   }
+}
+
+/// An exception that occurred whilst establishing a connection.
+class ConnectException extends SocketException {
+  /// The request made that triggered an exception.
+  final HttpRequest request;
+
+  /// Creates an instance of `ConnectException`.
+  const ConnectException._({
+    required this.request,
+    required super.statusCode,
+    required super.reasonPhrase,
+  });
+
+  /// Creates an instance of `ConnectException` from a `SocketException`.
+  factory ConnectException.fromSocketException(
+    SocketException exception, {
+    required HttpRequest request,
+  }) =>
+      ConnectException._(
+        request: request,
+        statusCode: exception.statusCode,
+        reasonPhrase: exception.reasonPhrase,
+      );
 }
