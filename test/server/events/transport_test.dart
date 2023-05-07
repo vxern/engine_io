@@ -106,9 +106,9 @@ void main() {
       expectLater(socket.onInitiateUpgrade.first, completes);
 
       await upgrade(client, sessionIdentifier: open.sessionIdentifier);
-
-      socket.probeTransport?.dispose();
     });
+
+    // TODO(vxern): Add a test for `onUpgrade` being emitted.
 
     test('an `onException` event.', () async {
       expectLater(

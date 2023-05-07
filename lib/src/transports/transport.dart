@@ -5,8 +5,10 @@ import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_dart/src/packets/types/message.dart';
 import 'package:engine_io_dart/src/packets/types/ping.dart';
+import 'package:engine_io_dart/src/packets/types/pong.dart';
 import 'package:engine_io_dart/src/server/configuration.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
+import 'package:engine_io_dart/src/transports/polling/polling.dart';
 import 'package:engine_io_dart/src/transports/heartbeat_manager.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/packets/packet.dart';
@@ -56,6 +58,12 @@ abstract class Transport<T> with EventController {
   /// connection is still active.
   late final HeartbeatManager heartbeat;
 
+  /// The state of the upgrade process of this transport to a different one.
+  final TransportUpgrade upgrade = TransportUpgrade();
+
+  /// Whether the transport is being upgraded.
+  bool get isUpgrading => upgrade.state != UpgradeState.none;
+
   bool _isDisposing = false;
 
   /// Creates an instance of `Transport`.
@@ -80,11 +88,18 @@ abstract class Transport<T> with EventController {
   /// Sends a packet to the remote party.
   void send(Packet packet);
 
+  /// Taking a list of packets, sends them all to the remote party.
+  void sendAll(Iterable<Packet> packets) {
+    for (final packet in packets) {
+      send(packet);
+    }
+  }
+
   /// Taking a list of packets, processes them.
   ///
   /// If an exception occurred while processing packets, this method will return
   /// `TransportException`. Otherwise `null`.
-  TransportException? processPackets(List<Packet> packets) {
+  Future<TransportException?> processPackets(List<Packet> packets) async {
     TransportException? exception;
 
     for (final packet in packets) {
@@ -99,7 +114,18 @@ abstract class Transport<T> with EventController {
             return except(TransportException.packetIllegal);
           }
 
-          // TODO(vxern): Reject probe ping packets sent when not upgrading.
+          if (!isUpgrading) {
+            return except(TransportException.transportAlreadyProbed);
+          }
+
+          if (upgrade.isOrigin) {
+            return except(TransportException.transportIsOrigin);
+          }
+
+          upgrade.state = UpgradeState.probed;
+          upgrade.origin.upgrade.state = UpgradeState.probed;
+
+          send(const PongPacket());
 
           continue;
         case PacketType.pong:
@@ -119,7 +145,29 @@ abstract class Transport<T> with EventController {
           exception = TransportException.requestedClosure;
           continue;
         case PacketType.upgrade:
-          // TODO(vxern): Reject upgrade packets sent when not upgrading.
+          if (!isUpgrading) {
+            return except(TransportException.transportAlreadyUpgraded);
+          }
+
+          if (upgrade.state != UpgradeState.probed) {
+            return except(TransportException.transportNotProbed);
+          }
+
+          if (upgrade.isOrigin) {
+            return except(TransportException.transportIsOrigin);
+          }
+
+          upgrade.state = UpgradeState.none;
+          upgrade.origin.upgrade.state = UpgradeState.none;
+
+          final origin = upgrade.origin;
+
+          if (origin is PollingTransport) {
+            sendAll(origin.packetBuffer);
+          }
+
+          onUpgradeController.add(this);
+
           continue;
         case PacketType.textMessage:
         case PacketType.binaryMessage:
@@ -156,10 +204,10 @@ abstract class Transport<T> with EventController {
       return except(TransportException.upgradeCourseNotAllowed);
     }
 
-    if (client.isUpgrading) {
-      client.isUpgrading = false;
-      client.probeTransport?.dispose();
-
+    if (isUpgrading) {
+      upgrade.state = UpgradeState.none;
+      upgrade.transport.upgrade.state = UpgradeState.none;
+      await upgrade.transport.dispose();
       return except(TransportException.upgradeAlreadyInitiated);
     }
 
@@ -184,6 +232,10 @@ abstract class Transport<T> with EventController {
     }
 
     _isDisposing = true;
+
+    if (isUpgrading && upgrade.isOrigin) {
+      await upgrade.transport.dispose();
+    }
 
     await closeEventStreams();
   }
@@ -216,6 +268,11 @@ mixin EventController {
   @internal
   final onInitiateUpgradeController = StreamController<Transport>();
 
+  /// Controller for the `onUpgrade` event stream.
+  @nonVirtual
+  @internal
+  final onUpgradeController = StreamController<Transport>();
+
   /// Controller for the `onException` event stream.
   @nonVirtual
   @internal
@@ -241,6 +298,9 @@ mixin EventController {
   /// Added to when a transport upgrade is initiated.
   Stream<Transport> get onInitiateUpgrade => onInitiateUpgradeController.stream;
 
+  /// Added to when a transport upgrade is complete.
+  Stream<Transport> get onUpgrade => onUpgradeController.stream;
+
   /// Added to when an exception occurs.
   Stream<TransportException> get onException => onExceptionController.stream;
 
@@ -254,7 +314,36 @@ mixin EventController {
     onMessageController.close().ignore();
     onHeartbeatController.close().ignore();
     onInitiateUpgradeController.close().ignore();
+    onUpgradeController.close().ignore();
     onExceptionController.close().ignore();
     onCloseController.close().ignore();
   }
+}
+
+/// Represents the state of a transport upgrade.
+enum UpgradeState {
+  /// The transport is not being upgraded.
+  none,
+
+  /// A transport upgrade has been initiated.
+  initiated,
+
+  /// The new transport has been probed, and the upgrade is nearly ready.
+  probed,
+}
+
+/// Represents a transport upgrade.
+class TransportUpgrade {
+  /// Whether this upgrade belongs to the transport being upgraded, or the new
+  /// transport.
+  bool isOrigin = false;
+
+  /// The current state of the upgrade.
+  UpgradeState state = UpgradeState.none;
+
+  /// The transport that is getting upgraded.
+  late Transport origin;
+
+  /// The transport being upgraded to.
+  late Transport transport;
 }

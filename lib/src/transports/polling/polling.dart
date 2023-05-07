@@ -100,7 +100,7 @@ class PollingTransport extends Transport<HttpRequest> {
       return except(PollingTransportException.contentTypeDifferentToSpecified);
     }
 
-    final exception = processPackets(packets);
+    final exception = await processPackets(packets);
     if (exception != null) {
       return except(exception);
     }
@@ -198,7 +198,6 @@ class PollingTransport extends Transport<HttpRequest> {
     }
 
     // TODO(vxern): Verify websocket key.
-    client.isUpgrading = true;
 
     // ignore: close_sinks
     final socket = await WebSocketTransformer.upgrade(request);
@@ -206,35 +205,18 @@ class PollingTransport extends Transport<HttpRequest> {
       socket: socket,
       configuration: configuration,
     );
-    client.probeTransport = transport;
+
+    upgrade
+      ..isOrigin = true
+      ..state = UpgradeState.initiated
+      ..transport = transport;
+
+    transport.upgrade
+      ..state = UpgradeState.initiated
+      ..origin = this;
 
     onInitiateUpgradeController.add(transport);
 
-    // TODO(vxern): Remove once upgrade completion is implemented.
-    await Future<void>.delayed(const Duration(seconds: 2));
-
-    // TODO(vxern): Expect probe `ping` packet.
-    // TODO(vxern): Expect `upgrade` packet.
-
-    if (!client.isUpgrading) {
-      return null;
-    } else {
-      client.isUpgrading = false;
-    }
-
-    if (client.transport is PollingTransport) {
-      final oldTransport = client.transport as PollingTransport;
-
-      for (final packet in oldTransport.packetBuffer) {
-        transport.send(packet);
-      }
-    }
-
-    final oldTransport = client.transport;
-    client
-      ..setTransport(transport)
-      ..probeTransport = null;
-    oldTransport.dispose();
     return null;
   }
 

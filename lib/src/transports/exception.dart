@@ -59,6 +59,33 @@ class TransportException extends EngineException {
         'Attempted to initiate upgrade process when one was already underway.',
   );
 
+  /// The client sent a duplicate probe `ping` packet.
+  static const transportAlreadyProbed = TransportException(
+    statusCode: HttpStatus.badRequest,
+    reasonPhrase: 'Attempted to probe transport that has already been probed.',
+  );
+
+  /// The client sent an `upgrade` packet without having sent a probe `ping`
+  /// packet.
+  static const transportNotProbed = TransportException(
+    statusCode: HttpStatus.badRequest,
+    reasonPhrase: 'Attempted to upgrade passport without probing first.',
+  );
+
+  /// The client sent a duplicate `upgrade` packet.
+  static const transportAlreadyUpgraded = TransportException(
+    statusCode: HttpStatus.badRequest,
+    reasonPhrase:
+        'Attempted to upgrade transport that has already been upgraded.',
+  );
+
+  /// The client sent a probe `ping` packet to the old transport, rather than
+  /// the new one.
+  static const transportIsOrigin = TransportException(
+    statusCode: HttpStatus.badRequest,
+    reasonPhrase: 'Attempted to probe the transport that is being upgraded.',
+  );
+
   /// The client requested the transport to be closed.
   static const requestedClosure = TransportException(
     statusCode: HttpStatus.ok,

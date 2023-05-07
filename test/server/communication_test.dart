@@ -36,12 +36,13 @@ void main() {
         sessionIdentifier: open.sessionIdentifier,
       )!;
 
-      socket.transport
-        ..send(const TextMessagePacket(data: 'first'))
-        ..send(const TextMessagePacket(data: 'second'))
-        ..send(const PingPacket())
-        ..send(const TextMessagePacket(data: 'third'))
-        ..send(const UpgradePacket());
+      socket.transport.sendAll([
+        const TextMessagePacket(data: 'first'),
+        const TextMessagePacket(data: 'second'),
+        const PingPacket(),
+        const TextMessagePacket(data: 'third'),
+        const UpgradePacket(),
+      ]);
 
       {
         final packets =

@@ -12,11 +12,11 @@ import 'package:engine_io_dart/src/socket.dart' as base;
 /// An interface for a client connected to the engine.io server.
 @sealed
 class Socket extends base.Socket with EventController {
-  late Transport _transport;
+  Transport? _transport;
 
   /// The transport currently in use for sending messages to and receiving
   /// messages from this client.
-  Transport get transport => _transport;
+  Transport get transport => _transport!;
 
   final List<StreamSubscription> _transportSubscriptions = [];
 
@@ -34,15 +34,23 @@ class Socket extends base.Socket with EventController {
         transport.onMessage.listen(_onMessageController.add),
         transport.onHeartbeat.listen(_onHeartbeatController.add),
         transport.onInitiateUpgrade.listen(_onInitiateUpgradeController.add),
+        transport.onUpgrade.listen((transport) async {
+          await setTransport(transport);
+          _onUpgradeController.add(transport);
+        }),
         transport.onException.listen(_onTransportExceptionController.add),
         transport.onClose.listen(_onTransportCloseController.add),
       ]);
 
-    _transport = transport;
-  }
+    if (_transport == null) {
+      _transport = transport;
+      return;
+    }
 
-  /// The transport the connection is being upgraded to, if any.
-  Transport? probeTransport;
+    final origin = _transport;
+    _transport = transport;
+    await origin!.dispose();
+  }
 
   /// The session ID of this client.
   final String sessionIdentifier;
@@ -115,6 +123,9 @@ mixin EventController {
   /// Controller for the `onInitiateUpgrade` event stream.
   final _onInitiateUpgradeController = StreamController<Transport>.broadcast();
 
+  /// Controller for the `onUpgrade` event stream.
+  final _onUpgradeController = StreamController<Transport>.broadcast();
+
   /// Controller for the `onException` event stream.
   final _onExceptionController = StreamController<SocketException>.broadcast();
 
@@ -136,6 +147,9 @@ mixin EventController {
   /// Added to when a transport upgrade is initiated.
   Stream<Transport> get onInitiateUpgrade =>
       _onInitiateUpgradeController.stream;
+
+  /// Added to when a transport upgrade is complete.
+  Stream<Transport> get onUpgrade => _onUpgradeController.stream;
 
   /// Added to when an exception occurs on this socket's transport.
   Stream<TransportException> get onTransportException =>
@@ -164,6 +178,7 @@ mixin EventController {
     _onMessageController.close().ignore();
     _onHeartbeatController.close().ignore();
     _onInitiateUpgradeController.close().ignore();
+    _onUpgradeController.close().ignore();
     _onTransportExceptionController.close().ignore();
     _onTransportCloseController.close().ignore();
     _onExceptionController.close().ignore();
