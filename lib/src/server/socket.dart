@@ -23,6 +23,7 @@ class Socket extends base.Socket with EventController {
     transport.onSend.listen(_onSendController.add);
     transport.onMessage.listen(_onMessageController.add);
     transport.onHeartbeat.listen(_onHeartbeatController.add);
+    transport.onInitiateUpgrade.listen(_onInitiateUpgradeController.add);
     transport.onException.listen(_onTransportExceptionController.add);
     transport.onClose.listen(_onTransportCloseController.add);
     _transport = transport;
@@ -88,6 +89,9 @@ mixin EventController {
   /// Controller for the `onTransportClose` event stream.
   final _onTransportCloseController = StreamController<Transport>.broadcast();
 
+  /// Controller for the `onInitiateUpgrade` event stream.
+  final _onInitiateUpgradeController = StreamController<Transport>.broadcast();
+
   /// Controller for the `onException` event stream.
   final _onExceptionController = StreamController<SocketException>.broadcast();
 
@@ -105,6 +109,10 @@ mixin EventController {
 
   /// Added to when a heartbeat (ping / pong) packet is received.
   Stream<ProbePacket> get onHeartbeat => _onHeartbeatController.stream;
+
+  /// Added to when a transport upgrade is initiated.
+  Stream<Transport> get onInitiateUpgrade =>
+      _onInitiateUpgradeController.stream;
 
   /// Added to when an exception occurs on this socket's transport.
   Stream<TransportException> get onTransportException =>
@@ -134,6 +142,7 @@ mixin EventController {
     _onHeartbeatController.close().ignore();
     _onTransportExceptionController.close().ignore();
     _onTransportCloseController.close().ignore();
+    _onInitiateUpgradeController.close().ignore();
     _onExceptionController.close().ignore();
     _onCloseController.close().ignore();
   }

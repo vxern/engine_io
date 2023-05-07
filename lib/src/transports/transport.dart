@@ -211,6 +211,11 @@ mixin EventController {
   @internal
   final onHeartbeatController = StreamController<ProbePacket>();
 
+  /// Controller for the `onInitiateUpgrade` event stream.
+  @nonVirtual
+  @internal
+  final onInitiateUpgradeController = StreamController<Transport>();
+
   /// Controller for the `onException` event stream.
   @nonVirtual
   @internal
@@ -233,6 +238,9 @@ mixin EventController {
   /// Added to when a heartbeat (ping / pong) packet is received.
   Stream<ProbePacket> get onHeartbeat => onHeartbeatController.stream;
 
+  /// Added to when a transport upgrade is initiated.
+  Stream<Transport> get onInitiateUpgrade => onInitiateUpgradeController.stream;
+
   /// Added to when an exception occurs.
   Stream<TransportException> get onException => onExceptionController.stream;
 
@@ -245,6 +253,7 @@ mixin EventController {
     onSendController.close().ignore();
     onMessageController.close().ignore();
     onHeartbeatController.close().ignore();
+    onInitiateUpgradeController.close().ignore();
     onExceptionController.close().ignore();
     onCloseController.close().ignore();
   }

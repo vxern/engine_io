@@ -98,6 +98,18 @@ void main() {
       );
     });
 
+    test('an `onInitiateUpgrade` event.', () async {
+      final socket_ = server.onConnect.first;
+      final open = await handshake(client).then((result) => result.packet);
+      final socket = await socket_;
+
+      expectLater(socket.onInitiateUpgrade.first, completes);
+
+      await upgrade(client, sessionIdentifier: open.sessionIdentifier);
+
+      socket.probeTransport?.dispose();
+    });
+
     test('an `onException` event.', () async {
       expectLater(
         server.onConnect.first

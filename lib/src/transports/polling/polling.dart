@@ -198,15 +198,17 @@ class PollingTransport extends Transport<HttpRequest> {
     }
 
     // TODO(vxern): Verify websocket key.
-
     client.isUpgrading = true;
 
     // ignore: close_sinks
     final socket = await WebSocketTransformer.upgrade(request);
-    client.probeTransport = WebSocketTransport(
+    final transport = WebSocketTransport(
       socket: socket,
       configuration: configuration,
     );
+    client.probeTransport = transport;
+
+    onInitiateUpgradeController.add(transport);
 
     // TODO(vxern): Remove once upgrade completion is implemented.
     await Future<void>.delayed(const Duration(seconds: 2));
@@ -224,13 +226,13 @@ class PollingTransport extends Transport<HttpRequest> {
       final oldTransport = client.transport as PollingTransport;
 
       for (final packet in oldTransport.packetBuffer) {
-        client.probeTransport!.send(packet);
+        transport.send(packet);
       }
     }
 
     final oldTransport = client.transport;
     client
-      ..transport = client.probeTransport!
+      ..transport = transport
       ..probeTransport = null;
     oldTransport.dispose();
     return null;
