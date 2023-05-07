@@ -10,9 +10,7 @@ import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:engine_io_dart/src/server/query.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/polling/polling.dart';
-import 'package:engine_io_dart/src/transports/websocket/websocket.dart';
 import 'package:engine_io_dart/src/exception.dart';
-import 'package:engine_io_dart/src/transports/transport.dart';
 
 /// The engine.io server.
 @sealed
@@ -156,12 +154,21 @@ class Server with EventController {
         WebSocketTransformer.isUpgradeRequest(request);
 
     if (isSeekingUpgrade) {
-      handleUpgradeRequest(
+      final exception = await client.transport.handleUpgradeRequest(
         request,
         client,
-        isWebsocketUpgradeRequest: isWebsocketUpgradeRequest,
         connectionType: parameters.connectionType,
       );
+      if (exception != null) {
+        respond(request, exception);
+        return;
+      }
+
+      if (!isWebsocketUpgradeRequest) {
+        request.response
+          ..statusCode = HttpStatus.ok
+          ..close().ignore();
+      }
       return;
     }
 
@@ -181,7 +188,10 @@ class Server with EventController {
             .offload(request.response);
         if (exception != null) {
           respond(request, exception);
+          break;
         }
+
+        request.response.close().ignore();
 
         break;
       case 'POST':
@@ -194,7 +204,12 @@ class Server with EventController {
             await (client.transport as PollingTransport).receive(request);
         if (exception != null) {
           respond(request, exception);
+          break;
         }
+
+        request.response
+          ..statusCode = HttpStatus.ok
+          ..close().ignore();
 
         break;
     }
@@ -245,75 +260,6 @@ class Server with EventController {
     client.send(openPacket);
 
     return client;
-  }
-
-  /// Handles a request to upgrade the connection.
-  Future<void> handleUpgradeRequest(
-    HttpRequest request,
-    Socket client, {
-    required bool isWebsocketUpgradeRequest,
-    required ConnectionType connectionType,
-  }) async {
-    if (!client.transport.connectionType.upgradesTo.contains(connectionType)) {
-      close(client, request, SocketException.upgradeCourseNotAllowed);
-      return;
-    }
-
-    if (connectionType != ConnectionType.websocket) {
-      close(client, request, SocketException.upgradeCourseNotAllowed);
-      return;
-    }
-
-    if (!isWebsocketUpgradeRequest) {
-      close(client, request, SocketException.upgradeRequestInvalid);
-      return;
-    }
-
-    // TODO(vxern): Verify websocket key.
-
-    if (client.isUpgrading) {
-      client.isUpgrading = false;
-      client.probeTransport?.dispose();
-
-      close(client, request, SocketException.upgradeAlreadyInitiated);
-      return;
-    }
-
-    client.isUpgrading = true;
-
-    // ignore: close_sinks
-    final socket = await WebSocketTransformer.upgrade(request);
-    client.probeTransport = WebSocketTransport(
-      socket: socket,
-      configuration: configuration,
-    );
-
-    // TODO(vxern): Remove once upgrade completion is implemented.
-    await Future<void>.delayed(const Duration(seconds: 2));
-
-    // TODO(vxern): Expect probe `ping` packet.
-    // TODO(vxern): Expect `upgrade` packet.
-
-    if (!client.isUpgrading) {
-      return;
-    } else {
-      client.isUpgrading = false;
-    }
-
-    if (client.transport is PollingTransport) {
-      final oldTransport = client.transport as PollingTransport;
-
-      for (final packet in oldTransport.packetBuffer) {
-        client.probeTransport!.send(packet);
-      }
-    }
-
-    final oldTransport = client.transport;
-    client
-      ..transport = client.probeTransport!
-      ..probeTransport = null;
-    await oldTransport.dispose();
-    return;
   }
 
   /// Responds to a HTTP request.

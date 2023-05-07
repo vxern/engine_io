@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:meta/meta.dart';
+import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_dart/src/packets/types/message.dart';
 import 'package:engine_io_dart/src/packets/types/ping.dart';
 import 'package:engine_io_dart/src/server/configuration.dart';
+import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/heartbeat_manager.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/packets/packet.dart';
@@ -139,6 +141,26 @@ abstract class Transport<T> with EventController {
 
     if (exception != null) {
       return except(exception);
+    }
+
+    return null;
+  }
+
+  /// Handles a request to upgrade the connection.
+  Future<TransportException?> handleUpgradeRequest(
+    HttpRequest request,
+    Socket client, {
+    required ConnectionType connectionType,
+  }) async {
+    if (!this.connectionType.upgradesTo.contains(connectionType)) {
+      return except(TransportException.upgradeCourseNotAllowed);
+    }
+
+    if (client.isUpgrading) {
+      client.isUpgrading = false;
+      client.probeTransport?.dispose();
+
+      return except(TransportException.upgradeAlreadyInitiated);
     }
 
     return null;

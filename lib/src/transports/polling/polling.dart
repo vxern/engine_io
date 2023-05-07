@@ -1,11 +1,13 @@
 import 'dart:collection';
 import 'dart:convert';
 
-import 'package:universal_io/io.dart';
+import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_dart/src/transports/polling/exception.dart';
+import 'package:engine_io_dart/src/transports/websocket/websocket.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/packets/packet.dart';
+import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
 
 /// Transport used with long polling connections.
@@ -103,10 +105,6 @@ class PollingTransport extends Transport<HttpRequest> {
       return except(exception);
     }
 
-    request.response
-      ..statusCode = HttpStatus.ok
-      ..close().ignore();
-
     post.unlock();
 
     return null;
@@ -176,8 +174,65 @@ class PollingTransport extends Transport<HttpRequest> {
 
     get.unlock();
 
-    response.close().ignore();
+    return null;
+  }
 
+  @override
+  Future<TransportException?> handleUpgradeRequest(
+    HttpRequest request,
+    Socket client, {
+    required ConnectionType connectionType,
+  }) async {
+    final exception = await super
+        .handleUpgradeRequest(request, client, connectionType: connectionType);
+    if (exception != null) {
+      return exception;
+    }
+
+    if (connectionType != ConnectionType.websocket) {
+      return except(TransportException.upgradeCourseNotAllowed);
+    }
+
+    if (!WebSocketTransformer.isUpgradeRequest(request)) {
+      return except(TransportException.upgradeRequestInvalid);
+    }
+
+    // TODO(vxern): Verify websocket key.
+
+    client.isUpgrading = true;
+
+    // ignore: close_sinks
+    final socket = await WebSocketTransformer.upgrade(request);
+    client.probeTransport = WebSocketTransport(
+      socket: socket,
+      configuration: configuration,
+    );
+
+    // TODO(vxern): Remove once upgrade completion is implemented.
+    await Future<void>.delayed(const Duration(seconds: 2));
+
+    // TODO(vxern): Expect probe `ping` packet.
+    // TODO(vxern): Expect `upgrade` packet.
+
+    if (!client.isUpgrading) {
+      return null;
+    } else {
+      client.isUpgrading = false;
+    }
+
+    if (client.transport is PollingTransport) {
+      final oldTransport = client.transport as PollingTransport;
+
+      for (final packet in oldTransport.packetBuffer) {
+        client.probeTransport!.send(packet);
+      }
+    }
+
+    final oldTransport = client.transport;
+    client
+      ..transport = client.probeTransport!
+      ..probeTransport = null;
+    oldTransport.dispose();
     return null;
   }
 

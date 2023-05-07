@@ -98,34 +98,12 @@ class SocketException extends EngineException {
     reasonPhrase: 'Invalid session identifier.',
   );
 
-  /// The upgrade the client solicited is not valid. For example, the client
-  /// could have requested an downgrade from websocket to polling.
-  static const upgradeCourseNotAllowed = SocketException(
-    statusCode: HttpStatus.badRequest,
-    reasonPhrase:
-        '''Upgrades from the current connection method to the desired one are not allowed.''',
-  );
-
-  /// The upgrade request the client sent is not valid.
-  static const upgradeRequestInvalid = SocketException(
-    statusCode: HttpStatus.badRequest,
-    reasonPhrase:
-        'The HTTP request received is not a valid websocket upgrade request.',
-  );
-
   /// The client sent a HTTP websocket upgrade request without specifying the
   /// new connection type as 'websocket'.
   static const upgradeRequestUnexpected = SocketException(
     statusCode: HttpStatus.badRequest,
     reasonPhrase:
         'Sent a HTTP websocket upgrade request when not seeking upgrade.',
-  );
-
-  /// The client sent a duplicate upgrade request.
-  static const upgradeAlreadyInitiated = SocketException(
-    statusCode: HttpStatus.badRequest,
-    reasonPhrase:
-        'Attempted to initiate upgrade process when one was already underway.',
   );
 
   /// The client sent a GET request that wasn't an upgrade when the connection

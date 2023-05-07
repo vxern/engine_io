@@ -19,6 +19,14 @@ class TransportException extends EngineException {
     reasonPhrase: 'Did not respond to a heartbeat in time.',
   );
 
+  /// The client sent a hearbeat (a `pong` request) that the server did not
+  /// expect to receive.
+  static const heartbeatUnexpected = TransportException(
+    statusCode: HttpStatus.badRequest,
+    reasonPhrase:
+        'The server did not expect to receive a heartbeat at this time.',
+  );
+
   /// The client sent a packet it should not have sent.
   ///
   /// Packets that are illegal for the client to send include `open`, `close`,
@@ -29,12 +37,26 @@ class TransportException extends EngineException {
         'Received a packet that is not legal to be sent by the client.',
   );
 
-  /// The client sent a hearbeat (a `pong` request) that the server did not
-  /// expect to receive.
-  static const heartbeatUnexpected = TransportException(
+  /// The upgrade the client solicited is not valid. For example, the client
+  /// could have requested an downgrade from websocket to polling.
+  static const upgradeCourseNotAllowed = TransportException(
     statusCode: HttpStatus.badRequest,
     reasonPhrase:
-        'The server did not expect to receive a heartbeat at this time.',
+        '''Upgrades from the current connection method to the desired one are not allowed.''',
+  );
+
+  /// The upgrade request the client sent is not valid.
+  static const upgradeRequestInvalid = TransportException(
+    statusCode: HttpStatus.badRequest,
+    reasonPhrase:
+        'The HTTP request received is not a valid websocket upgrade request.',
+  );
+
+  /// The client sent a duplicate upgrade request.
+  static const upgradeAlreadyInitiated = TransportException(
+    statusCode: HttpStatus.badRequest,
+    reasonPhrase:
+        'Attempted to initiate upgrade process when one was already underway.',
   );
 
   /// The client requested the transport to be closed.
