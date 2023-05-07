@@ -95,100 +95,120 @@ abstract class Transport<T> with EventController {
     }
   }
 
+  /// Processes a packet.
+  ///
+  /// If an exception occurred while processing a packet, this method will
+  /// return `TransportException`. Otherwise `null`.
+  Future<TransportException?> processPacket(Packet packet) async {
+    TransportException? exception;
+
+    switch (packet.type) {
+      case PacketType.open:
+      case PacketType.noop:
+        exception = TransportException.packetIllegal;
+        break;
+      case PacketType.ping:
+        packet as ProbePacket;
+
+        if (!packet.isProbe) {
+          exception = TransportException.packetIllegal;
+          break;
+        }
+
+        if (!isUpgrading) {
+          exception = TransportException.transportAlreadyProbed;
+          break;
+        }
+
+        if (upgrade.isOrigin) {
+          exception = TransportException.transportIsOrigin;
+          break;
+        }
+
+        upgrade.state = UpgradeState.probed;
+        upgrade.origin.upgrade.state = UpgradeState.probed;
+
+        send(const PongPacket());
+
+        break;
+      case PacketType.pong:
+        packet as ProbePacket;
+
+        if (packet.isProbe) {
+          exception = TransportException.packetIllegal;
+          break;
+        }
+
+        if (!heartbeat.isExpectingHeartbeat) {
+          exception = TransportException.heartbeatUnexpected;
+          break;
+        }
+
+        heartbeat.reset();
+        break;
+      case PacketType.close:
+        exception = TransportException.requestedClosure;
+        break;
+      case PacketType.upgrade:
+        if (!isUpgrading) {
+          exception = TransportException.transportAlreadyUpgraded;
+          break;
+        }
+
+        if (upgrade.state != UpgradeState.probed) {
+          exception = TransportException.transportNotProbed;
+          break;
+        }
+
+        if (upgrade.isOrigin) {
+          exception = TransportException.transportIsOrigin;
+          break;
+        }
+
+        upgrade.state = UpgradeState.none;
+        upgrade.origin.upgrade.state = UpgradeState.none;
+
+        final origin = upgrade.origin;
+
+        if (origin is PollingTransport) {
+          sendAll(origin.packetBuffer);
+        }
+
+        onUpgradeController.add(this);
+
+        break;
+      case PacketType.textMessage:
+      case PacketType.binaryMessage:
+        break;
+    }
+
+    if (exception != null) {
+      return exception;
+    }
+
+    onReceiveController.add(packet);
+
+    if (packet is MessagePacket) {
+      onMessageController.add(packet);
+    }
+
+    if (packet is ProbePacket) {
+      onHeartbeatController.add(packet);
+    }
+
+    return null;
+  }
+
   /// Taking a list of packets, processes them.
   ///
   /// If an exception occurred while processing packets, this method will return
   /// `TransportException`. Otherwise `null`.
   Future<TransportException?> processPackets(List<Packet> packets) async {
-    TransportException? exception;
-
     for (final packet in packets) {
-      switch (packet.type) {
-        case PacketType.open:
-        case PacketType.noop:
-          return except(TransportException.packetIllegal);
-        case PacketType.ping:
-          packet as ProbePacket;
-
-          if (!packet.isProbe) {
-            return except(TransportException.packetIllegal);
-          }
-
-          if (!isUpgrading) {
-            return except(TransportException.transportAlreadyProbed);
-          }
-
-          if (upgrade.isOrigin) {
-            return except(TransportException.transportIsOrigin);
-          }
-
-          upgrade.state = UpgradeState.probed;
-          upgrade.origin.upgrade.state = UpgradeState.probed;
-
-          send(const PongPacket());
-
-          continue;
-        case PacketType.pong:
-          packet as ProbePacket;
-
-          if (packet.isProbe) {
-            return except(TransportException.packetIllegal);
-          }
-
-          if (!heartbeat.isExpectingHeartbeat) {
-            return except(TransportException.heartbeatUnexpected);
-          }
-
-          heartbeat.reset();
-          continue;
-        case PacketType.close:
-          exception = TransportException.requestedClosure;
-          continue;
-        case PacketType.upgrade:
-          if (!isUpgrading) {
-            return except(TransportException.transportAlreadyUpgraded);
-          }
-
-          if (upgrade.state != UpgradeState.probed) {
-            return except(TransportException.transportNotProbed);
-          }
-
-          if (upgrade.isOrigin) {
-            return except(TransportException.transportIsOrigin);
-          }
-
-          upgrade.state = UpgradeState.none;
-          upgrade.origin.upgrade.state = UpgradeState.none;
-
-          final origin = upgrade.origin;
-
-          if (origin is PollingTransport) {
-            sendAll(origin.packetBuffer);
-          }
-
-          onUpgradeController.add(this);
-
-          continue;
-        case PacketType.textMessage:
-        case PacketType.binaryMessage:
-          continue;
+      final exception = await processPacket(packet);
+      if (exception != null) {
+        return except(exception);
       }
-    }
-
-    for (final packet in packets) {
-      onReceiveController.add(packet);
-
-      if (packet is MessagePacket) {
-        onMessageController.add(packet);
-      }
-
-      if (packet is ProbePacket) {
-        onHeartbeatController.add(packet);
-      }
-    }
-
-    if (exception != null) {
-      return except(exception);
     }
 
     return null;
