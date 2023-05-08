@@ -142,7 +142,7 @@ class WebSocketUpgradeResult {
 
 Future<WebSocketUpgradeResult> upgrade(
   HttpClient client, {
-  required String sessionIdentifier,
+  String? sessionIdentifier,
 }) async {
   final response = await upgradeRequest(
     client,
