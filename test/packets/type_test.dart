@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
 
-import 'package:engine_io_dart/src/packets/packet.dart';
+import 'package:engine_io_dart/src/packets/type.dart';
 
 void main() {
   group('The package guarantees packet IDs', () {
