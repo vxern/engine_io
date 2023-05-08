@@ -6,10 +6,11 @@ import 'package:meta/meta.dart';
 import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
 
-/// Class responsible for maintaining references to and handling sockets of
-/// clients connected to the server.
-@sealed
+/// Object responsible for maintaining references to and handling `Socket`s of
+/// clients connected to the `Server`.
 @immutable
+@sealed
+@internal
 class ClientManager {
   /// Clients identified by their session IDs.
   final HashMap<String, Socket> clients = HashMap();
@@ -24,11 +25,11 @@ class ClientManager {
       sessionIdentifiers.containsKey(ipAddress);
 
   /// Taking either an [ipAddress] or a [sessionIdentifier], matches the
-  /// parameter to a client socket.
+  /// parameter to a client `Socket`.
   Socket? get({String? ipAddress, String? sessionIdentifier}) {
     assert(
       ipAddress != null || sessionIdentifier != null,
-      'At least one parameter must be supplied.',
+      '''At least one parameter, either `ipAddress` or `sessionIdentifier` must be supplied.''',
     );
 
     final sessionIdentifier_ =
@@ -38,19 +39,20 @@ class ClientManager {
     return socket;
   }
 
-  /// Taking a [client], starts managing it by adding it to the client lists.
+  /// Taking a [client], adds it to the client lists.
   void add(Socket client) {
     clients[client.sessionIdentifier] = client;
     sessionIdentifiers[client.ipAddress] = client.sessionIdentifier;
   }
 
-  /// Taking a [client], stops managing it by removing it from the client lists.
+  /// Taking a [client], removes it from the client lists.
   void remove(Socket client) {
     clients.remove(client.sessionIdentifier);
     sessionIdentifiers.remove(client.ipAddress);
   }
 
-  /// Removes all registered clients.
+  /// Disposes of this `ClientManager` by removing and disposing of all managed
+  /// clients.
   Future<void> dispose() async {
     final futures = <Future>[];
     for (final client in clients.values) {

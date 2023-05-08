@@ -1,14 +1,20 @@
+import 'package:meta/meta.dart';
+
 import 'package:universal_io/io.dart' hide Socket;
 import 'package:uuid/uuid.dart';
 
 import 'package:engine_io_dart/src/transports/transport.dart';
 
-/// Generator responsible for creating unique identifiers for sockets.
+/// Object responsible for creating unique identifiers for `Socket`s.
 const _uuid = Uuid();
 
-/// Settings used to configure the engine.io server.
+/// Models a function that takes a HTTP [request] and returns a unique ID.
+typedef UUIDGenerator = String Function(HttpRequest request);
+
+/// Settings used in configuring the engine.io `Server`.
+@sealed
 class ServerConfiguration {
-  /// The path the server should listen on for requests.
+  /// The path the `Server` should listen on for requests.
   final String path;
 
   /// The available types of connection.
@@ -26,7 +32,9 @@ class ServerConfiguration {
   final int maximumChunkBytes;
 
   /// Function used to generate session identifiers.
-  final String Function(HttpRequest request) generateId;
+  final UUIDGenerator generateId;
+
+  // TODO(vxern): `generateId` -> `UUID.generate`, `UUID.validate`.
 
   /// Creates an instance of `ServerConfiguration`.
   ServerConfiguration({
@@ -38,20 +46,28 @@ class ServerConfiguration {
     this.heartbeatInterval = const Duration(seconds: 15),
     this.heartbeatTimeout = const Duration(seconds: 10),
     this.maximumChunkBytes = 1024 * 128, // 128 KiB (Kibibytes)
-    String Function(HttpRequest request)? idGenerator,
+    UUIDGenerator? idGenerator,
   })  : generateId = idGenerator ?? ((_) => _uuid.v4()),
-        assert(!path.startsWith('/'), 'The path must not start with a slash.'),
-        assert(path.endsWith('/'), 'The path must end with a slash.'),
+        assert(
+          !path.startsWith('/'),
+          'The server path must not start with a slash.',
+        ),
+        assert(
+          path.endsWith('/'),
+          'The server path must end with a slash.',
+        ),
         assert(
           availableConnectionTypes.isNotEmpty,
           'There must be at least one connection type enabled.',
         ),
         assert(
           heartbeatTimeout < heartbeatInterval,
-          "'pingTimeout' must be shorter than 'pingInterval'.",
+          "'heartbeatTimeout' must be shorter than 'heartbeatInterval'.",
         ),
         assert(
-          maximumChunkBytes <= 1000 * 1000 * 1000 * 2, // 2 GB (Gigabytes)
+          // 2 GB (Gigabytes), the payload limit generally agreed on by major
+          // browsers.
+          maximumChunkBytes <= 1000 * 1000 * 1000 * 2,
           "'maximumChunkBytes' must be smaller than or equal 2 GB.",
         );
 

@@ -1,22 +1,28 @@
 import 'dart:async';
 
+import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:engine_io_dart/src/server/server.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
 
-/// Contains the parameters extracted from a HTTP query.
+/// Contains the parameters extracted from HTTP queries.
+@immutable
+@sealed
+@internal
 class QueryParameters {
   /// The version of the engine.io protocol in use.
   final int protocolVersion;
   static const _protocolVersion = 'EIO';
 
-  /// The type of connection used or desired.
+  /// The type of connection the client wishes to use or to upgrade to.
   final ConnectionType connectionType;
   static const _connectionType = 'transport';
 
-  /// The session identifier of a client.
+  /// The client's session identifier.
+  ///
+  /// This value can only be `null` when initiating a connection.
   final String? sessionIdentifier;
   static const _sessionIdentifier = 'sid';
 
@@ -28,7 +34,10 @@ class QueryParameters {
 
   /// Taking a HTTP request, reads the parameters from the query.
   ///
-  /// If any of the parameters are invalid, a `ServerException` will be thrown.
+  /// Returns an instance of `QueryParameters`.
+  ///
+  /// ⚠️ Throws a `SocketException` if any of the parameters are invalid.
+  @factory
   static Future<QueryParameters> read(
     HttpRequest request, {
     required Set<ConnectionType> availableConnectionTypes,

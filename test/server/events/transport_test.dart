@@ -31,7 +31,7 @@ void main() {
     server.dispose();
   });
 
-  group('Transport fires', () {
+  group('Transport emits', () {
     test('an `onMessage` event.', () async {
       expectLater(
         server.onConnect.first.then((socket) => socket.onMessage.first),
@@ -134,7 +134,7 @@ void main() {
     });
   });
 
-  group('Polling transport fires', () {
+  group('Polling transport emits', () {
     test('an `onReceive` event.', () async {
       expectLater(
         server.onConnect.first.then((socket) => socket.onReceive.first),
@@ -166,7 +166,7 @@ void main() {
     });
   });
 
-  group('Websocket transport fires', () {
+  group('Websocket transport emits', () {
     test('an `onReceive` event.', () async {
       final socket_ = server.onConnect.first;
       final websocket = await upgrade(client).then((result) => result.socket);

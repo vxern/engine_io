@@ -18,7 +18,7 @@ void main() {
     server.dispose();
   });
 
-  group('Server fires', () {
+  group('Server emits', () {
     test('an `onConnect` event.', () async {
       expectLater(server.onConnect.first, completes);
 

@@ -19,7 +19,7 @@ void main() {
     server.dispose();
   });
 
-  group('Socket fires', () {
+  group('Socket emits', () {
     test('an `onException` event.', () async {
       expectLater(
         server.onConnect.first.then((socket) => socket.onException.first),

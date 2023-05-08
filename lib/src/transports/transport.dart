@@ -284,7 +284,7 @@ abstract class Transport<T> with EventController {
   }
 }
 
-/// Contains streams for events that can be fired on the transport.
+/// Contains streams for events that can be emitted on the transport.
 mixin EventController {
   /// Controller for the `onReceive` event stream.
   @nonVirtual

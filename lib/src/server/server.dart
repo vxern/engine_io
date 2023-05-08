@@ -15,25 +15,26 @@ import 'package:engine_io_dart/src/exception.dart';
 
 /// The engine.io server.
 @sealed
-class Server with EventController {
+class Server with Events {
   /// The version of the engine.io protocol this server operates on.
   static const protocolVersion = 4;
 
   /// The HTTP methods allowed for an engine.io server.
-  static const allowedMethods = {'GET', 'POST'};
+  static const _allowedMethods = {'GET', 'POST'};
 
-  /// HTTP methods concatenated to eliminate the need to concatenate them on
-  /// every preflight request.
-  static final _allowedMethodsString = allowedMethods.join(', ');
+  /// HTTP methods concatenated beforehand to prevent having to do so on every
+  /// preflight request received.
+  static final _allowedMethodsString = _allowedMethods.join(', ');
 
-  /// The configuration settings used to modify the server's behaviour.
+  /// The settings in use.
   final ServerConfiguration configuration;
 
   /// The underlying HTTP server used to receive requests from connected
   /// clients.
   final HttpServer httpServer;
 
-  /// Manager responsible for handling clients connected to the server.
+  /// Object responsible for managing clients connected to the server.
+  @visibleForTesting
   final ClientManager clientManager = ClientManager();
 
   bool _isDisposing = false;
@@ -44,33 +45,35 @@ class Server with EventController {
   }) : configuration =
             configuration ?? ServerConfiguration.defaultConfiguration;
 
-  /// Creates an instance of `Server` bound to a given [uri], which immediately
-  /// begins to listen for incoming requests.
+  /// Creates an instance of `Server` that immediately begins to listen for
+  /// incoming requests.
   static Future<Server> bind(
     Uri uri, {
     ServerConfiguration? configuration,
   }) async {
     final httpServer = await HttpServer.bind(uri.host, uri.port);
-    final server =
-        Server._(httpServer: httpServer, configuration: configuration);
+    final server = Server._(
+      httpServer: httpServer,
+      configuration: configuration,
+    );
 
-    httpServer.listen(server.handleHttpRequest);
+    httpServer.listen(server._handleHttpRequest);
 
     return server;
   }
 
   /// Handles an incoming HTTP request.
-  Future<void> handleHttpRequest(HttpRequest request) async {
+  Future<void> _handleHttpRequest(HttpRequest request) async {
     final ipAddress = request.connectionInfo?.remoteAddress.address;
     if (ipAddress == null) {
-      respond(request, SocketException.ipAddressUnobtainable);
+      _respond(request, SocketException.ipAddressUnobtainable);
       return;
     }
 
     final clientByIP = clientManager.get(ipAddress: ipAddress);
 
     if (request.uri.path != '/${configuration.path}') {
-      close(clientByIP, request, SocketException.serverPathInvalid);
+      _close(clientByIP, request, SocketException.serverPathInvalid);
       return;
     }
 
@@ -90,8 +93,8 @@ class Server with EventController {
       return;
     }
 
-    if (!allowedMethods.contains(request.method)) {
-      close(clientByIP, request, SocketException.methodNotAllowed);
+    if (!_allowedMethods.contains(request.method)) {
+      _close(clientByIP, request, SocketException.methodNotAllowed);
       return;
     }
 
@@ -99,7 +102,7 @@ class Server with EventController {
     final isEstablishingConnection = !isConnected;
 
     if (request.method != 'GET' && isEstablishingConnection) {
-      close(clientByIP, request, SocketException.getExpected);
+      _close(clientByIP, request, SocketException.getExpected);
       return;
     }
 
@@ -110,13 +113,13 @@ class Server with EventController {
         availableConnectionTypes: configuration.availableConnectionTypes,
       );
     } on SocketException catch (exception) {
-      close(clientByIP, request, exception);
+      _close(clientByIP, request, exception);
       return;
     }
 
     if (!isEstablishingConnection) {
       if (parameters.sessionIdentifier == null) {
-        close(
+        _close(
           clientByIP,
           request,
           SocketException.sessionIdentifierRequired,
@@ -124,7 +127,7 @@ class Server with EventController {
         return;
       }
     } else if (parameters.sessionIdentifier != null) {
-      close(
+      _close(
         clientByIP,
         request,
         SocketException.sessionIdentifierUnexpected,
@@ -134,7 +137,7 @@ class Server with EventController {
 
     final Socket client;
     if (isEstablishingConnection) {
-      client = await handshake(
+      client = await _handshake(
         request,
         ipAddress: ipAddress,
         connectionType: parameters.connectionType,
@@ -143,7 +146,7 @@ class Server with EventController {
       final client_ =
           clientManager.get(sessionIdentifier: parameters.sessionIdentifier);
       if (client_ == null) {
-        close(
+        _close(
           clientByIP,
           request,
           SocketException.sessionIdentifierInvalid,
@@ -167,7 +170,7 @@ class Server with EventController {
         skipUpgradeProcess: isEstablishingConnection,
       );
       if (exception != null) {
-        respond(request, exception);
+        _respond(request, exception);
         return;
       }
 
@@ -180,21 +183,21 @@ class Server with EventController {
     }
 
     if (isWebsocketUpgradeRequest) {
-      close(client, request, SocketException.upgradeRequestUnexpected);
+      _close(client, request, SocketException.upgradeRequestUnexpected);
       return;
     }
 
     switch (request.method) {
       case 'GET':
         if (client.transport is! PollingTransport) {
-          close(client, request, SocketException.getRequestUnexpected);
+          _close(client, request, SocketException.getRequestUnexpected);
           return;
         }
 
         final exception = await (client.transport as PollingTransport)
             .offload(request.response);
         if (exception != null) {
-          respond(request, exception);
+          _respond(request, exception);
           break;
         }
 
@@ -203,14 +206,14 @@ class Server with EventController {
         break;
       case 'POST':
         if (client.transport is! PollingTransport) {
-          close(client, request, SocketException.postRequestUnexpected);
+          _close(client, request, SocketException.postRequestUnexpected);
           return;
         }
 
         final exception =
             await (client.transport as PollingTransport).receive(request);
         if (exception != null) {
-          respond(request, exception);
+          _respond(request, exception);
           break;
         }
 
@@ -222,8 +225,12 @@ class Server with EventController {
     }
   }
 
-  /// Opens a connection with a client.
-  Future<Socket> handshake(
+  /// Opens a polling connection with a client.
+  ///
+  /// All connections begin as polling before being upgraded to a better
+  /// transport. If a connection is websocket-only, the transport will be
+  /// upgraded immediately after the handshake.
+  Future<Socket> _handshake(
     HttpRequest request, {
     required String ipAddress,
     required ConnectionType connectionType,
@@ -237,12 +244,12 @@ class Server with EventController {
       ipAddress: ipAddress,
     );
 
-    client.onException.listen((_) => disconnect(client));
+    client.onException.listen((_) => _disconnect(client));
     client.onTransportClose.listen((transport) {
       // The only closure that could occur on the transport currently in use is
       // an abnormal one. Disconnect.
       if (transport == client.transport) {
-        disconnect(client);
+        _disconnect(client);
       }
     });
 
@@ -263,7 +270,7 @@ class Server with EventController {
   }
 
   /// Responds to a HTTP request.
-  Future<void> respond(
+  Future<void> _respond(
     HttpRequest request,
     EngineException exception,
   ) async {
@@ -274,7 +281,7 @@ class Server with EventController {
   }
 
   /// Disconnects a client.
-  Future<void> disconnect(Socket client, [SocketException? exception]) async {
+  Future<void> _disconnect(Socket client, [SocketException? exception]) async {
     clientManager.remove(client);
     if (exception != null) {
       await client.except(exception);
@@ -284,20 +291,20 @@ class Server with EventController {
 
   /// Closes a connection with a client, responding to their request and
   /// disconnecting them.
-  Future<void> close(
+  Future<void> _close(
     Socket? client,
     HttpRequest request,
     SocketException exception,
   ) async {
     if (client != null) {
-      disconnect(client, exception);
+      _disconnect(client, exception);
     } else {
       _onConnectExceptionController.add(
         ConnectException.fromSocketException(exception, request: request),
       );
     }
 
-    respond(request, exception);
+    _respond(request, exception);
   }
 
   /// Closes the underlying HTTP server, awaiting remaining requests to be
@@ -315,10 +322,12 @@ class Server with EventController {
   }
 }
 
-/// Contains streams for events that can be fired on the server.
-mixin EventController {
+/// Contains streams for events that can be emitted on the server.
+mixin Events {
+  /// Controller for the `onConnect` event stream.
   final _onConnectController = StreamController<Socket>.broadcast();
 
+  /// Controller for the `onConnectException` event stream.
   final _onConnectExceptionController =
       StreamController<ConnectException>.broadcast();
 
@@ -330,6 +339,7 @@ mixin EventController {
       _onConnectExceptionController.stream;
 
   /// Closes event streams, disposing of this event controller.
+  @internal
   Future<void> closeEventStreams() async {
     _onConnectController.close().ignore();
     _onConnectExceptionController.close().ignore();
@@ -337,11 +347,14 @@ mixin EventController {
 }
 
 /// An exception that occurred whilst establishing a connection.
+@immutable
+@sealed
 class ConnectException extends SocketException {
   /// The request made that triggered an exception.
   final HttpRequest request;
 
   /// Creates an instance of `ConnectException`.
+  @literal
   const ConnectException._({
     required this.request,
     required super.statusCode,

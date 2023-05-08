@@ -9,51 +9,14 @@ import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
 import 'package:engine_io_dart/src/socket.dart' as base;
 
-/// An interface for a client connected to the engine.io server.
+/// An interface to a client connected to the engine.io server.
 @sealed
 class Socket extends base.Socket with EventController {
-  Transport? _transport;
+  late Transport _transport;
 
-  /// The transport currently in use for sending messages to and receiving
-  /// messages from this client.
-  Transport get transport => _transport!;
-
-  final List<StreamSubscription> _transportSubscriptions = [];
-
-  /// Sets a new transport, piping all of its events into this socket.
-  Future<void> setTransport(Transport transport) async {
-    await Future.wait(
-      _transportSubscriptions.map((subscription) => subscription.cancel()),
-    );
-
-    _transportSubscriptions
-      ..clear()
-      ..addAll([
-        transport.onReceive.listen(_onReceiveController.add),
-        transport.onSend.listen(_onSendController.add),
-        transport.onMessage.listen(_onMessageController.add),
-        transport.onHeartbeat.listen(_onHeartbeatController.add),
-        transport.onInitiateUpgrade.listen(_onInitiateUpgradeController.add),
-        transport.onUpgrade.listen((transport) async {
-          await setTransport(transport);
-          _onUpgradeController.add(transport);
-        }),
-        transport.onException.listen((exception) async {
-          _onTransportExceptionController.add(exception);
-          _onExceptionController.add(SocketException.transportException);
-        }),
-        transport.onClose.listen(_onTransportCloseController.add),
-      ]);
-
-    if (_transport == null) {
-      _transport = transport;
-      return;
-    }
-
-    final origin = _transport;
-    _transport = transport;
-    await origin!.dispose();
-  }
+  /// The transport currently in use for communication.
+  @internal
+  Transport get transport => _transport;
 
   /// The session ID of this client.
   final String sessionIdentifier;
@@ -79,14 +42,61 @@ class Socket extends base.Socket with EventController {
       sessionIdentifier: sessionIdentifier,
       ipAddress: ipAddress,
     );
-    await socket.setTransport(transport);
+    await socket.setTransport(transport, isInitial: true);
     return socket;
+  }
+
+  /// List of subscriptions to events being piped from the transport to this
+  /// socket.
+  final List<StreamSubscription> _transportSubscriptions = [];
+
+  /// Sets a new transport, piping all of its events into this socket.
+  @internal
+  Future<void> setTransport(
+    Transport transport, {
+    bool isInitial = false,
+  }) async {
+    await Future.wait(
+      _transportSubscriptions.map((subscription) => subscription.cancel()),
+    );
+
+    _transportSubscriptions
+      ..clear()
+      ..addAll([
+        transport.onReceive.listen(_onReceiveController.add),
+        transport.onSend.listen(_onSendController.add),
+        transport.onMessage.listen(_onMessageController.add),
+        transport.onHeartbeat.listen(_onHeartbeatController.add),
+        transport.onInitiateUpgrade.listen(_onInitiateUpgradeController.add),
+        transport.onUpgrade.listen((transport) async {
+          await setTransport(transport);
+          _onUpgradeController.add(transport);
+        }),
+        transport.onException.listen((exception) async {
+          _onTransportExceptionController.add(exception);
+          _onExceptionController.add(SocketException.transportException);
+        }),
+        transport.onClose.listen(_onTransportCloseController.add),
+      ]);
+
+    if (isInitial) {
+      _transport = transport;
+      return;
+    }
+
+    final origin = _transport;
+    _transport = transport;
+    await origin.dispose();
   }
 
   /// Sends a packet to this client.
   void send(Packet packet) => transport.send(packet);
 
+  /// Sends a list of packets to this client.
+  void sendAll(List<Packet> packet) => transport.sendAll(packet);
+
   /// Disposes of this socket, closing event streams.
+  @internal
   Future<void> dispose() async {
     if (_isDisposing) {
       return;
@@ -102,7 +112,7 @@ class Socket extends base.Socket with EventController {
   }
 }
 
-/// Contains streams for events that can be fired on the socket.
+/// Contains streams for events that can be emitted on the socket.
 mixin EventController {
   /// Controller for the `onReceive` event stream.
   final _onReceiveController = StreamController<Packet>.broadcast();
@@ -168,6 +178,7 @@ mixin EventController {
   Stream<Socket> get onClose => _onCloseController.stream;
 
   /// Emits an exception.
+  @internal
   Future<void> except(SocketException exception) async {
     if (!exception.isSuccess) {
       _onExceptionController.add(exception);
@@ -175,6 +186,7 @@ mixin EventController {
   }
 
   /// Closes event streams, disposing of this event controller.
+  @internal
   Future<void> closeEventStreams() async {
     _onReceiveController.close().ignore();
     _onSendController.close().ignore();
