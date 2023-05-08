@@ -8,8 +8,37 @@ import 'package:engine_io_dart/src/transports/transport.dart';
 /// Object responsible for creating unique identifiers for `Socket`s.
 const _uuid = Uuid();
 
-/// Models a function that takes a HTTP [request] and returns a unique ID.
-typedef UUIDGenerator = String Function(HttpRequest request);
+/// Contains functions used in generating and validating session identifiers.
+@immutable
+@sealed
+class SessionIdentifierConfiguration {
+  /// Function that takes a HTTP request and returns a unique session
+  /// identifier.
+  final String Function(HttpRequest request) generate;
+
+  /// Function that takes a session identifier and validates it.
+  final bool Function(String id) validate;
+
+  /// Creates an instance of `UUID`.
+  @literal
+  const SessionIdentifierConfiguration({
+    required this.generate,
+    required this.validate,
+  });
+
+  /// The default method to generate a session identifier. (UUID v4)
+  static String _generateSessionIdentifier(HttpRequest request) => _uuid.v4();
+
+  /// The default method to validate a session identifier. (UUID v4)
+  static bool _validateSessionIdentifier(String id) =>
+      Uuid.isValidUUID(fromString: id);
+
+  /// The default session identifier configuration.
+  static const defaultConfiguration = SessionIdentifierConfiguration(
+    generate: _generateSessionIdentifier,
+    validate: _validateSessionIdentifier,
+  );
+}
 
 /// Settings used in configuring the engine.io `Server`.
 @sealed
@@ -31,10 +60,8 @@ class ServerConfiguration {
   /// The maximum number of bytes per packet chunk.
   final int maximumChunkBytes;
 
-  /// Function used to generate session identifiers.
-  final UUIDGenerator generateId;
-
-  // TODO(vxern): `generateId` -> `UUID.generate`, `UUID.validate`.
+  /// The configuration for how session identifiers are generated and validated.
+  final SessionIdentifierConfiguration sessionIdentifiers;
 
   /// Creates an instance of `ServerConfiguration`.
   ServerConfiguration({
@@ -46,9 +73,9 @@ class ServerConfiguration {
     this.heartbeatInterval = const Duration(seconds: 15),
     this.heartbeatTimeout = const Duration(seconds: 10),
     this.maximumChunkBytes = 1024 * 128, // 128 KiB (Kibibytes)
-    UUIDGenerator? idGenerator,
-  })  : generateId = idGenerator ?? ((_) => _uuid.v4()),
-        assert(
+    this.sessionIdentifiers =
+        SessionIdentifierConfiguration.defaultConfiguration,
+  })  : assert(
           !path.startsWith('/'),
           'The server path must not start with a slash.',
         ),

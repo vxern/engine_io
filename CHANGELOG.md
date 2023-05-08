@@ -18,7 +18,9 @@
     - `websocket`: `WebSocketTransport`
 - [Work in progress] Define the `Server` class:
   - [Work in progress] Define the `ServerConfiguration` class to contain the
-    available configuration options for the server.
+    available configuration options for the server:
+    - [Work in progress] Define the `SessionIdentifierConfiguration` class to
+      contain the session identifier generator and validator functions.
   - [Work in progress] Define the `ClientManager` class to manage references to
     connected clients.
 - [Work in progress] Define the `Socket` class as the super-type of sockets:

@@ -135,6 +135,18 @@ class Server with Events {
       return;
     }
 
+    if (parameters.sessionIdentifier != null) {
+      if (!configuration.sessionIdentifiers
+          .validate(parameters.sessionIdentifier!)) {
+        _close(
+          clientByIP,
+          request,
+          SocketException.sessionIdentifierInvalid,
+        );
+        return;
+      }
+    }
+
     final Socket client;
     if (isEstablishingConnection) {
       client = await _handshake(
@@ -235,7 +247,8 @@ class Server with Events {
     required String ipAddress,
     required ConnectionType connectionType,
   }) async {
-    final sessionIdentifier = configuration.generateId(request);
+    final sessionIdentifier =
+        configuration.sessionIdentifiers.generate(request);
 
     final transport = PollingTransport(configuration: configuration);
     final client = await Socket.create(

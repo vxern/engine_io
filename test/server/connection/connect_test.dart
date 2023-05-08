@@ -5,6 +5,7 @@ import 'package:engine_io_dart/src/server/configuration.dart';
 import 'package:engine_io_dart/src/server/server.dart';
 import 'package:engine_io_dart/src/transports/websocket/websocket.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
+import 'package:uuid/uuid.dart';
 
 import '../shared.dart';
 
@@ -218,6 +219,19 @@ void main() {
       await handshake(client);
 
       final response = await get(client, sessionIdentifier: 'invalid_sid')
+          .then((result) => result.response);
+
+      expect(response.statusCode, equals(HttpStatus.badRequest));
+      expect(
+        response.reasonPhrase,
+        equals('Invalid session identifier.'),
+      );
+    });
+
+    test('rejects session identifiers that do not exist.', () async {
+      await handshake(client);
+
+      final response = await get(client, sessionIdentifier: const Uuid().v4())
           .then((result) => result.response);
 
       expect(response.statusCode, equals(HttpStatus.badRequest));

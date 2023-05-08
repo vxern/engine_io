@@ -98,7 +98,11 @@ class SocketException extends EngineException {
         'Provided session identifier when connection not established.',
   );
 
-  /// The session identifier the client provided does not exist.
+  /// The session identifier the client provided does not exist or is not of the
+  /// valid format.
+  ///
+  /// For security reasons, the distinction between a session identifier not
+  /// existing and it being invalid is not made.
   static const sessionIdentifierInvalid = SocketException(
     statusCode: HttpStatus.badRequest,
     reasonPhrase: 'Invalid session identifier.',
