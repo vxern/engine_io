@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:universal_io/io.dart';
 
 import 'package:engine_io_dart/src/packets/types/message.dart';
@@ -7,9 +9,12 @@ import 'package:engine_io_dart/src/packets/packet.dart';
 import 'package:engine_io_dart/src/transports/websocket/exception.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
+import 'package:engine_io_dart/src/server/configuration.dart';
 
 /// Transport used for websocket connections.
 class WebSocketTransport extends Transport<dynamic> {
+  static const _websocketSalt = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
+
   /// The socket interfacing with the other party.
   final WebSocket socket;
 
@@ -19,6 +24,59 @@ class WebSocketTransport extends Transport<dynamic> {
     socket.listen(receive);
 
     // TODO(vxern): Handle forceful disconnections.
+  }
+
+  /// Taking a HTTP request, upgrades it to a websocket transport.
+  ///
+  /// If an error occurred while processing the request, a `TransportException`
+  /// will be thrown.
+  static Future<WebSocketTransport> fromRequest(
+    HttpRequest request, {
+    required ServerConfiguration configuration,
+  }) async {
+    if (!WebSocketTransformer.isUpgradeRequest(request)) {
+      throw TransportException.upgradeRequestInvalid;
+    }
+
+    final key = request.headers.value('Sec-Websocket-Key')!;
+    final token = transformKey(key);
+    request.response.headers.set('Sec-Websocket-Accept', token);
+
+    // ignore: close_sinks
+    final socket = await WebSocketTransformer.upgrade(request);
+    final transport = WebSocketTransport(
+      socket: socket,
+      configuration: configuration,
+    );
+
+    return transport;
+  }
+
+  /// Taking a client-provided websocket key, transforms it by concatenating it
+  /// with the websocket magic string, hashing it using sha1, and encoding it as
+  /// base64 before returning it.
+  ///
+  /// If the passed key is not a valid 16-byte base64-encoded string, a
+  /// `TransportException` will be thrown.
+  static String transformKey(String key) {
+    {
+      final List<int> bytes;
+      try {
+        bytes = base64.decode(key);
+      } on FormatException {
+        throw TransportException.upgradeRequestInvalid;
+      }
+
+      if (bytes.length != 16) {
+        throw TransportException.upgradeRequestInvalid;
+      }
+    }
+
+    final utf8Bytes = utf8.encode('$key$_websocketSalt');
+    final sha1Bytes = sha1.convert(utf8Bytes);
+    final encoded = base64.encode(sha1Bytes.bytes);
+
+    return encoded;
   }
 
   @override

@@ -182,9 +182,14 @@ class PollingTransport extends Transport<HttpRequest> {
     HttpRequest request,
     Socket client, {
     required ConnectionType connectionType,
+    required bool skipUpgradeProcess,
   }) async {
-    final exception = await super
-        .handleUpgradeRequest(request, client, connectionType: connectionType);
+    final exception = await super.handleUpgradeRequest(
+      request,
+      client,
+      connectionType: connectionType,
+      skipUpgradeProcess: skipUpgradeProcess,
+    );
     if (exception != null) {
       return exception;
     }
@@ -193,18 +198,21 @@ class PollingTransport extends Transport<HttpRequest> {
       return except(TransportException.upgradeCourseNotAllowed);
     }
 
-    if (!WebSocketTransformer.isUpgradeRequest(request)) {
-      return except(TransportException.upgradeRequestInvalid);
+    final WebSocketTransport transport;
+    try {
+      transport = await WebSocketTransport.fromRequest(
+        request,
+        configuration: configuration,
+      );
+    } on TransportException catch (exception) {
+      return except(exception);
     }
 
-    // TODO(vxern): Verify websocket key.
-
-    // ignore: close_sinks
-    final socket = await WebSocketTransformer.upgrade(request);
-    final transport = WebSocketTransport(
-      socket: socket,
-      configuration: configuration,
-    );
+    if (skipUpgradeProcess) {
+      client.transport.onUpgradeController.add(transport);
+      client.setTransport(transport);
+      return null;
+    }
 
     upgrade
       ..isOrigin = true

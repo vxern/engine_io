@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:universal_io/io.dart';
 
@@ -122,16 +123,19 @@ Future<HttpClientResponse> upgradeRequest(
   );
 
   return client.getUrl(url).then((request) {
-    // TODO(vxern): Generate valid websocket key.
-
     request.headers
       ..set(HttpHeaders.connectionHeader, 'upgrade')
       ..set(HttpHeaders.upgradeHeader, 'websocket')
       ..set('Sec-Websocket-Version', '13')
-      ..set('Sec-Websocket-Key', 'key');
+      ..set('Sec-Websocket-Key', generateWebsocketKey());
     return request;
   }).then((request) => request.close());
 }
+
+final _random = Random();
+
+String generateWebsocketKey() =>
+    base64.encode(List<int>.generate(16, (_) => _random.nextInt(256)));
 
 class WebSocketUpgradeResult {
   final HttpClientResponse response;

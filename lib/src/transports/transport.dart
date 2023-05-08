@@ -224,15 +224,16 @@ abstract class Transport<T> with EventController {
     HttpRequest request,
     Socket client, {
     required ConnectionType connectionType,
+    required bool skipUpgradeProcess,
   }) async {
     if (!this.connectionType.upgradesTo.contains(connectionType)) {
       return except(TransportException.upgradeCourseNotAllowed);
     }
 
     if (isUpgrading) {
-      upgrade.state = UpgradeState.none;
-      upgrade.destination.upgrade.state = UpgradeState.none;
+      upgrade.destination.upgrade = TransportUpgrade();
       await upgrade.destination.dispose();
+      upgrade = TransportUpgrade();
       return except(TransportException.upgradeAlreadyInitiated);
     }
 

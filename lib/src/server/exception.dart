@@ -106,14 +106,6 @@ class SocketException extends EngineException {
         'Sent a HTTP websocket upgrade request when not seeking upgrade.',
   );
 
-  /// The client attempted to establish a websocket-only connection without
-  /// sending an upgrade request.
-  static const websocketWithoutUpgradeRequest = SocketException(
-    statusCode: HttpStatus.badRequest,
-    reasonPhrase:
-        '''Attempted to establish websocket-only connection without providing a HTTP websocket upgrade request.''',
-  );
-
   /// The client sent a GET request that wasn't an upgrade when the connection
   /// was not polling.
   static const getRequestUnexpected = SocketException(

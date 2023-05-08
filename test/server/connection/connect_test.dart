@@ -1,9 +1,9 @@
-import 'package:engine_io_dart/src/transports/websocket/websocket.dart';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
 import 'package:engine_io_dart/src/server/configuration.dart';
 import 'package:engine_io_dart/src/server/server.dart';
+import 'package:engine_io_dart/src/transports/websocket/websocket.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
 
 import '../shared.dart';
@@ -238,7 +238,7 @@ void main() {
       expect(
         response.reasonPhrase,
         equals(
-          '''Attempted to establish websocket-only connection without providing a HTTP websocket upgrade request.''',
+          'The HTTP request received is not a valid websocket upgrade request.',
         ),
       );
     });

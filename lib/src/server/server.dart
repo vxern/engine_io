@@ -10,7 +10,6 @@ import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:engine_io_dart/src/server/query.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/polling/polling.dart';
-import 'package:engine_io_dart/src/transports/websocket/websocket.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
 import 'package:engine_io_dart/src/exception.dart';
 
@@ -97,8 +96,9 @@ class Server with EventController {
     }
 
     final isConnected = clientManager.isConnected(ipAddress);
+    final isEstablishingConnection = !isConnected;
 
-    if (request.method != 'GET' && !isConnected) {
+    if (request.method != 'GET' && isEstablishingConnection) {
       close(clientByIP, request, SocketException.getExpected);
       return;
     }
@@ -114,7 +114,7 @@ class Server with EventController {
       return;
     }
 
-    if (isConnected) {
+    if (!isEstablishingConnection) {
       if (parameters.sessionIdentifier == null) {
         close(
           clientByIP,
@@ -133,21 +133,12 @@ class Server with EventController {
     }
 
     final Socket client;
-    if (!isConnected) {
-      try {
-        client = await handshake(
-          request,
-          ipAddress: ipAddress,
-          connectionType: parameters.connectionType,
-        );
-      } on SocketException catch (exception) {
-        close(clientByIP, request, exception);
-        return;
-      }
-
-      if (client.transport is! PollingTransport) {
-        return;
-      }
+    if (isEstablishingConnection) {
+      client = await handshake(
+        request,
+        ipAddress: ipAddress,
+        connectionType: parameters.connectionType,
+      );
     } else {
       final client_ =
           clientManager.get(sessionIdentifier: parameters.sessionIdentifier);
@@ -173,6 +164,7 @@ class Server with EventController {
         request,
         client,
         connectionType: parameters.connectionType,
+        skipUpgradeProcess: isEstablishingConnection,
       );
       if (exception != null) {
         respond(request, exception);
@@ -238,27 +230,7 @@ class Server with EventController {
   }) async {
     final sessionIdentifier = configuration.generateId(request);
 
-    final Transport transport;
-    switch (connectionType) {
-      case ConnectionType.polling:
-        transport = PollingTransport(configuration: configuration);
-        break;
-      case ConnectionType.websocket:
-        if (!WebSocketTransformer.isUpgradeRequest(request)) {
-          throw SocketException.websocketWithoutUpgradeRequest;
-        }
-
-        // TODO(vxern): Verify websocket key.
-
-        // ignore: close_sinks
-        final socket = await WebSocketTransformer.upgrade(request);
-        transport = WebSocketTransport(
-          socket: socket,
-          configuration: configuration,
-        );
-        break;
-    }
-
+    final transport = PollingTransport(configuration: configuration);
     final client = await Socket.create(
       transport: transport,
       sessionIdentifier: sessionIdentifier,
