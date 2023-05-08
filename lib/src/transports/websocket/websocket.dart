@@ -20,11 +20,7 @@ class WebSocketTransport extends Transport<dynamic> {
 
   /// Creates an instance of `WebSocketTransport`.
   WebSocketTransport({required this.socket, required super.configuration})
-      : super(connectionType: ConnectionType.websocket) {
-    socket.listen(receive);
-
-    // TODO(vxern): Handle forceful disconnections.
-  }
+      : super(connectionType: ConnectionType.websocket);
 
   /// Taking a HTTP request, upgrades it to a websocket transport.
   ///
@@ -48,6 +44,13 @@ class WebSocketTransport extends Transport<dynamic> {
       socket: socket,
       configuration: configuration,
     );
+    socket.listen(transport.receive);
+    socket.done.then((dynamic _) {
+      if (!transport.isClosed) {
+        transport.onExceptionController
+            .add(TransportException.closedForcefully);
+      }
+    });
 
     return transport;
   }

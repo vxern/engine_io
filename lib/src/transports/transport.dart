@@ -64,6 +64,10 @@ abstract class Transport<T> with EventController {
   /// Whether the transport is being upgraded.
   bool get isUpgrading => upgrade.state != UpgradeState.none;
 
+  /// Whether the transport is closed. Used to determine if a connection was
+  /// closed forcefully.
+  bool isClosed = false;
+
   bool _isDisposing = false;
 
   /// Creates an instance of `Transport`.
@@ -266,6 +270,7 @@ abstract class Transport<T> with EventController {
     }
 
     _isDisposing = true;
+    isClosed = true;
 
     heartbeat.dispose();
 
