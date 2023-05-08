@@ -59,6 +59,13 @@ class TransportException extends EngineException {
         'Attempted to initiate upgrade process when one was already underway.',
   );
 
+  /// The client sent a packet that is part of the upgrade process when the
+  /// transport was not being upgraded.
+  static const upgradeNotUnderway = TransportException(
+    statusCode: HttpStatus.badRequest,
+    reasonPhrase: 'The transport is not being upgraded.',
+  );
+
   /// The client sent a duplicate probe `ping` packet.
   static const transportAlreadyProbed = TransportException(
     statusCode: HttpStatus.badRequest,
@@ -69,7 +76,7 @@ class TransportException extends EngineException {
   /// packet.
   static const transportNotProbed = TransportException(
     statusCode: HttpStatus.badRequest,
-    reasonPhrase: 'Attempted to upgrade passport without probing first.',
+    reasonPhrase: 'Attempted to upgrade transport without probing first.',
   );
 
   /// The client sent a duplicate `upgrade` packet.
@@ -84,6 +91,13 @@ class TransportException extends EngineException {
   static const transportIsOrigin = TransportException(
     statusCode: HttpStatus.badRequest,
     reasonPhrase: 'Attempted to probe the transport that is being upgraded.',
+  );
+
+  /// The client closed a connection forcefully, without indicating to the
+  /// server that a closure will occur.
+  static const closedForcefully = TransportException(
+    statusCode: HttpStatus.badRequest,
+    reasonPhrase: 'Connection closed forcefully.',
   );
 
   /// The client requested the transport to be closed.

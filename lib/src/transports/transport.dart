@@ -59,7 +59,7 @@ abstract class Transport<T> with EventController {
   late final HeartbeatManager heartbeat;
 
   /// The state of the upgrade process of this transport to a different one.
-  final TransportUpgrade upgrade = TransportUpgrade();
+  TransportUpgrade upgrade = TransportUpgrade();
 
   /// Whether the transport is being upgraded.
   bool get isUpgrading => upgrade.state != UpgradeState.none;
@@ -116,6 +116,11 @@ abstract class Transport<T> with EventController {
         }
 
         if (!isUpgrading) {
+          exception = TransportException.upgradeNotUnderway;
+          break;
+        }
+
+        if (upgrade.state == UpgradeState.probed) {
           exception = TransportException.transportAlreadyProbed;
           break;
         }
@@ -165,16 +170,16 @@ abstract class Transport<T> with EventController {
           break;
         }
 
-        upgrade.state = UpgradeState.none;
-        upgrade.origin.upgrade.state = UpgradeState.none;
-
         final origin = upgrade.origin;
+
+        upgrade.origin.upgrade = TransportUpgrade();
+        upgrade = TransportUpgrade();
 
         if (origin is PollingTransport) {
           sendAll(origin.packetBuffer);
         }
 
-        onUpgradeController.add(this);
+        origin.onUpgradeController.add(this);
 
         break;
       case PacketType.textMessage:
@@ -226,8 +231,8 @@ abstract class Transport<T> with EventController {
 
     if (isUpgrading) {
       upgrade.state = UpgradeState.none;
-      upgrade.transport.upgrade.state = UpgradeState.none;
-      await upgrade.transport.dispose();
+      upgrade.destination.upgrade.state = UpgradeState.none;
+      await upgrade.destination.dispose();
       return except(TransportException.upgradeAlreadyInitiated);
     }
 
@@ -237,10 +242,18 @@ abstract class Transport<T> with EventController {
   /// Signals an exception occurred on the transport and returns it to be
   /// handled by the server.
   TransportException except(TransportException exception) {
-    if (!exception.isSuccess) {
-      onExceptionController.add(exception);
+    final Transport transport;
+    if (isUpgrading && !upgrade.isOrigin) {
+      transport = upgrade.origin;
     } else {
-      onCloseController.add(this);
+      transport = this;
+    }
+
+    if (!exception.isSuccess) {
+      transport.onExceptionController.add(exception);
+      transport.onCloseController.add(exception);
+    } else {
+      transport.onCloseController.add(exception);
     }
     return exception;
   }
@@ -253,8 +266,10 @@ abstract class Transport<T> with EventController {
 
     _isDisposing = true;
 
+    heartbeat.dispose();
+
     if (isUpgrading && upgrade.isOrigin) {
-      await upgrade.transport.dispose();
+      await upgrade.destination.dispose();
     }
 
     await closeEventStreams();
@@ -301,7 +316,7 @@ mixin EventController {
   /// Controller for the `onClose` event stream.
   @nonVirtual
   @internal
-  final onCloseController = StreamController<Transport>();
+  final onCloseController = StreamController<TransportException>();
 
   /// Added to when a packet is received.
   Stream<Packet> get onReceive => onReceiveController.stream;
@@ -325,7 +340,7 @@ mixin EventController {
   Stream<TransportException> get onException => onExceptionController.stream;
 
   /// Added to when the transport is designated to close.
-  Stream<Transport> get onClose => onCloseController.stream;
+  Stream<TransportException> get onClose => onCloseController.stream;
 
   /// Closes event streams, disposing of this event controller.
   Future<void> closeEventStreams() async {
@@ -365,5 +380,5 @@ class TransportUpgrade {
   late Transport origin;
 
   /// The transport being upgraded to.
-  late Transport transport;
+  late Transport destination;
 }

@@ -230,21 +230,7 @@ class Server with EventController {
       ipAddress: ipAddress,
     );
 
-    client.onTransportException.listen(
-      (exception) => disconnect(client, SocketException.transportException),
-    );
-
-    client.onTransportClose.listen(
-      (transport) {
-        // If the current transport is not the same as the original transport,
-        // i.e. the transport has been upgraded, do not do anything.
-        if (transport != client.transport) {
-          return;
-        }
-
-        disconnect(client, SocketException.requestedClosure);
-      },
-    );
+    client.onException.listen((_) => disconnect(client));
 
     clientManager.add(client);
     _onConnectController.add(client);
@@ -274,9 +260,11 @@ class Server with EventController {
   }
 
   /// Disconnects a client.
-  Future<void> disconnect(Socket client, SocketException exception) async {
+  Future<void> disconnect(Socket client, [SocketException? exception]) async {
     clientManager.remove(client);
-    await client.except(exception);
+    if (exception != null) {
+      await client.except(exception);
+    }
     await client.dispose();
   }
 
@@ -308,8 +296,8 @@ class Server with EventController {
     _isDisposing = true;
 
     await httpServer.close().catchError((dynamic _) {});
-    await closeEventStreams();
     await clientManager.dispose();
+    await closeEventStreams();
   }
 }
 

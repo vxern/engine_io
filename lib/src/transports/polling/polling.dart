@@ -209,7 +209,7 @@ class PollingTransport extends Transport<HttpRequest> {
     upgrade
       ..isOrigin = true
       ..state = UpgradeState.initiated
-      ..transport = transport;
+      ..destination = transport;
 
     transport.upgrade
       ..state = UpgradeState.initiated

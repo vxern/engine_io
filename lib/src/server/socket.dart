@@ -38,7 +38,10 @@ class Socket extends base.Socket with EventController {
           await setTransport(transport);
           _onUpgradeController.add(transport);
         }),
-        transport.onException.listen(_onTransportExceptionController.add),
+        transport.onException.listen((exception) async {
+          _onTransportExceptionController.add(exception);
+          _onExceptionController.add(SocketException.transportException);
+        }),
         transport.onClose.listen(_onTransportCloseController.add),
       ]);
 
@@ -118,7 +121,8 @@ mixin EventController {
       StreamController<TransportException>.broadcast();
 
   /// Controller for the `onTransportClose` event stream.
-  final _onTransportCloseController = StreamController<Transport>.broadcast();
+  final _onTransportCloseController =
+      StreamController<TransportException>.broadcast();
 
   /// Controller for the `onInitiateUpgrade` event stream.
   final _onInitiateUpgradeController = StreamController<Transport>.broadcast();
@@ -156,7 +160,8 @@ mixin EventController {
       _onTransportExceptionController.stream;
 
   /// Added to when this socket's transport is designated to close.
-  Stream<Transport> get onTransportClose => _onTransportCloseController.stream;
+  Stream<TransportException> get onTransportClose =>
+      _onTransportCloseController.stream;
 
   /// Added to when an exception occurs on this socket.
   Stream<SocketException> get onException => _onExceptionController.stream;
