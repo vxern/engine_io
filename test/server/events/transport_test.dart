@@ -5,6 +5,7 @@ import 'package:engine_io_dart/src/packets/types/close.dart';
 import 'package:engine_io_dart/src/packets/types/message.dart';
 import 'package:engine_io_dart/src/packets/types/ping.dart';
 import 'package:engine_io_dart/src/packets/types/pong.dart';
+import 'package:engine_io_dart/src/packets/types/upgrade.dart';
 import 'package:engine_io_dart/src/packets/packet.dart';
 import 'package:engine_io_dart/src/server/configuration.dart';
 import 'package:engine_io_dart/src/server/server.dart';
@@ -76,7 +77,30 @@ void main() {
       await upgrade(client, sessionIdentifier: open.sessionIdentifier);
     });
 
-    // TODO(vxern): Add a test for `onUpgrade` being emitted.
+    test('an `onInitiateUpgrade` event.', () async {
+      final socket_ = server.onConnect.first;
+      final open = await handshake(client).then((result) => result.packet);
+      final socket = await socket_;
+
+      final initiateUpgrade_ = socket.onInitiateUpgrade.first;
+
+      final websocket =
+          await upgrade(client, sessionIdentifier: open.sessionIdentifier)
+              .then((result) => result.socket);
+
+      await initiateUpgrade_;
+
+      final packet_ = websocket.first;
+      websocket.add(Packet.encode(const PingPacket(isProbe: true)));
+      await packet_;
+
+      final upgrade_ = socket.onUpgrade.first;
+      websocket.add(Packet.encode(const UpgradePacket()));
+
+      await expectLater(upgrade_, completes);
+
+      websocket.close();
+    });
 
     test('an `onException` event.', () async {
       expectLater(
