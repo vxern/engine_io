@@ -5,7 +5,7 @@ import 'package:meta/meta.dart';
 import 'package:engine_io_dart/src/packets/packet.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
 
-/// Used in establishing a connection.
+/// Used in establishing a connection between an engine.io client and server.
 ///
 /// The server signals to the client that a connection between the two
 /// parties, client and server, has been established, and is ready to be used.
@@ -13,27 +13,33 @@ import 'package:engine_io_dart/src/transports/transport.dart';
 @sealed
 class OpenPacket extends Packet {
   /// The session identifier of the newly opened socket.
+  @nonVirtual
   final String sessionIdentifier;
   static const _sessionIdentifier = 'sid';
 
   /// The available connection upgrades for the newly opened socket.
+  @nonVirtual
   final Set<ConnectionType> availableConnectionUpgrades;
   static const _availableConnectionUpgrades = 'upgrades';
 
   /// The time interval for the ping cycle to repeat.
+  @nonVirtual
   final Duration heartbeatInterval;
   static const _heartbeatInterval = 'pingInterval';
 
-  /// The time interval for the ping cycle to be broken, and subsequently for
+  /// The period of time for the ping cycle to be broken, and subsequently for
   /// the connection to be closed.
+  @nonVirtual
   final Duration heartbeatTimeout;
   static const _heartbeatTimeout = 'pingTimeout';
 
   /// The maximum number of bytes per packet chunk.
+  @nonVirtual
   final int maximumChunkBytes;
   static const _maximumChunkBytes = 'maxPayload';
 
   /// Creates an instance of `OpenPacket`.
+  @literal
   const OpenPacket({
     required this.sessionIdentifier,
     required this.availableConnectionUpgrades,
@@ -54,12 +60,16 @@ class OpenPacket extends Packet {
         },
       );
 
-  /// Decodes `content`, creating an instance of `OpenPacket`.
+  /// Decodes [content], which should be a valid JSON-encoded object with the
+  /// expected properties `sid`, `upgrades`, `pingInterval`, `pingTimeout` and
+  /// `maxPayload`.
   ///
-  /// Throws a `FormatException` if:
-  /// - The content is not a valid JSON object.
-  /// - The content is not a map object.
+  /// Returns an instance of `OpenPacket`.
+  ///
+  /// ⚠️ Throws a `FormatException` if:
+  /// - [content] is not a valid JSON-encoded object.
   /// - A connection type is not supported.
+  /// - A property of the decoded JSON object is not valid.
   factory OpenPacket.decode(String content) {
     final dynamic data = json.decode(content);
     if (data is! Map) {

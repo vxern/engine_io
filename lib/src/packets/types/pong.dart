@@ -2,28 +2,35 @@ import 'package:meta/meta.dart';
 
 import 'package:engine_io_dart/src/packets/packet.dart';
 
-/// Used in the heartbeat mechanism.
+/// Used in the heartbeat mechanism (non-probe) and in the upgrade process
+/// (probe).
 ///
 /// This packet is used in two cases:
 /// - The client, upon having received a packet of type `PacketType.ping`,
-/// uses this packet to inform the server that the connection is still
+/// uses this packet to inform the server that the transport is still open and
 /// operational.
 ///
-///   ❗ In this case, the body of the packet is blank.
-/// - The server, upon having received a packet of type `PacketType.ping`,
-/// uses this packet to inform the client that the connection is still
-/// operational.
+///   In this case, the packet payload is blank.
 ///
-///   ❗ In this case, the body of the packet is 'probe'.
+/// - The server --, during the upgrade process, -- upon having received a
+/// packet of type `PacketType.ping` on the new transport, uses this packet to
+/// inform the client that the new transport is operational and is processing
+/// packets.
+///
+///   In this case, the packet payload is equal to 'probe' (in plaintext).
 @immutable
 @sealed
 class PongPacket extends ProbePacket {
   /// Creates an instance of `PongPacket`.
+  @literal
   const PongPacket({super.isProbe = false}) : super(type: PacketType.pong);
 
-  /// Decodes `content`, creating an instance of `PongPacket`.
+  /// Decodes [content], which should be either empty or 'probe' (in plaintext).
   ///
-  /// Throws a `FormatException` if the content is invalid.
+  /// Returns an instance of `PongPacket`.
+  ///
+  /// ⚠️ Throws a `FormatException` if [content] is neither empty nor equal to
+  /// 'probe' (in plaintext).
   factory PongPacket.decode(String content) {
     if (content.isEmpty) {
       return const PongPacket();

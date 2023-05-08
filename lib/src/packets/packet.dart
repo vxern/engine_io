@@ -8,74 +8,80 @@ import 'package:engine_io_dart/src/packets/types/ping.dart';
 import 'package:engine_io_dart/src/packets/types/pong.dart';
 import 'package:engine_io_dart/src/packets/types/upgrade.dart';
 
-/// Represents the type of a packet transmitted between the two parties, client
-/// and server.
+/// Represents the type of a packet transmitted between parties.
 enum PacketType {
-  /// Used in establishing a connection.
+  /// Used in establishing a connection between an engine.io client and server.
   ///
   /// The server signals to the client that a connection between the two
   /// parties, client and server, has been established, and is ready to be used.
   open(id: '0'),
 
-  /// Used in closing a connection.
+  /// Used to close a `Transport`.
   ///
-  /// Either party, server or client, signals that the connection has been or
-  /// is to be abolished.
+  /// Either party, server or client, signals that a `Transport` can be closed.
   close(id: '1'),
 
-  /// Used in the heartbeat mechanism.
+  /// Used in the heartbeat mechanism (non-probe) and in the upgrade process
+  /// (probe).
   ///
   /// This packet is used in two cases:
-  /// - The server attempts to verify that the connection is still operational
-  /// through asking the client to respond with a packet of type
-  /// `PacketType.pong`.
+  /// - The server ensures that a `Transport` is still open and operational
+  /// by asking the client to respond with a packet of type `PacketType.pong` on
+  /// it.
   ///
-  ///   ❗ In this case, the body of the packet is blank.
-  /// - The client attempts to verify that the connection is still operational
-  /// before asking to upgrade the connection to a different protocol.
+  ///   In this case, the packet payload is empty.
   ///
-  ///   ❗ In this case, the body of the packet is 'probe'.
+  /// - The client --, during the upgrade process, -- ensures that the new
+  /// transport is operational and is processing packets, asking the server to
+  /// respond with a packet of type `PacketType.pong` on it.
+  ///
+  ///   In this case, the packet payload is equal to 'probe' (in plaintext).
   ping(id: '2'),
 
-  /// Used in the heartbeat mechanism.
+  /// Used in the heartbeat mechanism (non-probe) and in the upgrade process
+  /// (probe).
   ///
   /// This packet is used in two cases:
   /// - The client, upon having received a packet of type `PacketType.ping`,
-  /// uses this packet to inform the server that the connection is still
+  /// uses this packet to inform the server that the transport is still open and
   /// operational.
   ///
-  ///   ❗ In this case, the body of the packet is blank.
-  /// - The server, upon having received a packet of type `PacketType.ping`,
-  /// uses this packet to inform the client that the connection is still
-  /// operational.
+  ///   In this case, the packet payload is blank.
   ///
-  ///   ❗ In this case, the body of the packet is 'probe'.
+  /// - The server --, during the upgrade process, -- upon having received a
+  /// packet of type `PacketType.ping` on the new transport, uses this packet to
+  /// inform the client that the new transport is operational and is processing
+  /// packets.
+  ///
+  ///   In this case, the packet payload is equal to 'probe' (in plaintext).
   pong(id: '3'),
 
-  /// Used in transferring data or messages.
+  /// Used to transfer plaintext data.
   ///
-  /// Either party, server or client, sends a text message to the other.
+  /// Either party, server or client, sends a plaintext message to the other.
   textMessage(id: '4'),
 
-  /// Used in transferring data or messages.
+  /// Used to transfer binary data.
   ///
-  /// Either party, server or client, sends a base64-encoded binary message to
-  /// the other.
+  /// Either party, server or client, sends a binary message to the other.
   binaryMessage(id: 'b'),
 
   /// Used in the upgrade process.
   ///
-  /// The client solicits a connection upgrade from the server.
+  /// The client, upon having probed the new transport during an upgrade, and
+  /// upon having received a reply from the server, indicates to the server that
+  /// the transport is now upgraded to the new one.
   upgrade(id: '5'),
 
   /// Used in the upgrade process.
   ///
-  /// During an upgrade to a new connection, the server responds to any
-  /// remaining, pending requests on the old connection with a packet of type
-  /// `PacketType.noop`.
+  /// During an upgrade to a new `Transport`, the server responds to any
+  /// remaining, pending GET request on the old `Transport` with a `Packet` of
+  /// type `PacketType.noop`.
   noop(id: '6');
 
-  /// The ID of a given packet type.
+  /// The ID of a given packet type, used to identify the packet when it is sent
+  /// to the other party, client or server.
   final String id;
 
   /// Creates an instance of `PacketType`.
@@ -83,9 +89,9 @@ enum PacketType {
 
   /// Matches [id] to a `PacketType`.
   ///
-  /// If [id] does not match to any supported `PacketType`, a
-  /// `FormatException` will be thrown.
-  static PacketType byId(String id) {
+  /// ⚠️ Throws a `FormatException` if [id] does not match the ID of any
+  /// supported `PacketType`.
+  factory PacketType.byId(String id) {
     for (final type in PacketType.values) {
       if (type.id == id) {
         return type;
@@ -98,17 +104,18 @@ enum PacketType {
 
 /// Contains well-defined packet contents.
 @sealed
+@internal
 class PacketContents {
-  /// Represents no content.
+  /// An empty packet content.
   static const empty = '';
 
   /// Applies to packets of type `PacketType.ping` and `PacketType.pong` when
-  /// used by the client to ensure the connection is still alive before
-  /// attempting to upgrade it.
+  /// used to 'probe' a new `Transport`, i.e. ensuring that it is operational
+  /// and is processing packets.
   static const probe = 'probe';
 }
 
-/// Represents a unit of data passed between parties.
+/// Represents a unit of data passed between parties, client and server.
 @immutable
 @sealed
 abstract class Packet {
@@ -118,22 +125,27 @@ abstract class Packet {
   /// Defines packets that contain JSON data.
   static const _jsonPackets = {PacketType.open};
 
-  /// Models a valid encoded packet.
+  /// Matches to a valid engine.io packet.
   static final _packetExpression = RegExp(r'^([0-6b])(.*?)$');
 
   /// The type of this packet.
+  @nonVirtual
   final PacketType type;
 
-  /// Creates an instance of `Packet`.
+  /// Creates an instance of `Packet` with the given [type].
+  @literal
   const Packet({required this.type});
 
   /// Indicates whether or not this packet has a binary payload.
+  @nonVirtual
   bool get isBinary => _binaryPackets.contains(type);
 
   /// Indicates whether or not this packet has a binary payload.
+  @nonVirtual
   bool get isJSON => _jsonPackets.contains(type);
 
   /// Gets the packet content in its encoded format.
+  @internal
   String get encoded => PacketContents.empty;
 
   /// Encodes a packet ready to be sent to the other party in the connection.
@@ -185,20 +197,25 @@ abstract class Packet {
   }
 }
 
-/// Represents a packet that serves as a probe to verify that a connection is
-/// still alive before attempting to upgrade.
+/// A packet used in the upgrade process to ensure that a new `Transport` is
+/// operational and is processing packets before upgrading.
 @immutable
 @sealed
 abstract class ProbePacket extends Packet {
   /// Determines whether or not this is a probe packet.
   final bool isProbe;
 
+  /// The content of this packet, either empty or equal to 'probe'.
+  ///
+  /// This value is known beforehand and determined by the value of [isProbe].
+  final String _content;
+
   /// Creates an instance of `ProbePacket`.
+  @literal
   const ProbePacket({required super.type, required this.isProbe})
       : _content = isProbe ? PacketContents.probe : PacketContents.empty;
 
-  final String _content;
-
   @override
+  @nonVirtual
   String get encoded => _content;
 }
