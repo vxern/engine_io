@@ -10,6 +10,8 @@ import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:engine_io_dart/src/server/query.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/polling/polling.dart';
+import 'package:engine_io_dart/src/transports/websocket/websocket.dart';
+import 'package:engine_io_dart/src/transports/transport.dart';
 import 'package:engine_io_dart/src/exception.dart';
 
 /// The engine.io server.
@@ -132,7 +134,20 @@ class Server with EventController {
 
     final Socket client;
     if (!isConnected) {
-      client = await handshake(request, ipAddress: ipAddress);
+      try {
+        client = await handshake(
+          request,
+          ipAddress: ipAddress,
+          connectionType: parameters.connectionType,
+        );
+      } on SocketException catch (exception) {
+        close(clientByIP, request, exception);
+        return;
+      }
+
+      if (client.transport is! PollingTransport) {
+        return;
+      }
     } else {
       final client_ =
           clientManager.get(sessionIdentifier: parameters.sessionIdentifier);
@@ -219,10 +234,30 @@ class Server with EventController {
   Future<Socket> handshake(
     HttpRequest request, {
     required String ipAddress,
+    required ConnectionType connectionType,
   }) async {
     final sessionIdentifier = configuration.generateId(request);
 
-    final transport = PollingTransport(configuration: configuration);
+    final Transport transport;
+    switch (connectionType) {
+      case ConnectionType.polling:
+        transport = PollingTransport(configuration: configuration);
+        break;
+      case ConnectionType.websocket:
+        if (!WebSocketTransformer.isUpgradeRequest(request)) {
+          throw SocketException.websocketWithoutUpgradeRequest;
+        }
+
+        // TODO(vxern): Verify websocket key.
+
+        // ignore: close_sinks
+        final socket = await WebSocketTransformer.upgrade(request);
+        transport = WebSocketTransport(
+          socket: socket,
+          configuration: configuration,
+        );
+        break;
+    }
 
     final client = await Socket.create(
       transport: transport,
@@ -231,6 +266,7 @@ class Server with EventController {
     );
 
     client.onException.listen((_) => disconnect(client));
+    // TODO(vxern): Handle transport closure.
 
     clientManager.add(client);
     _onConnectController.add(client);

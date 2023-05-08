@@ -1,3 +1,4 @@
+import 'package:engine_io_dart/src/transports/websocket/websocket.dart';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
@@ -8,24 +9,27 @@ import 'package:engine_io_dart/src/transports/transport.dart';
 import '../shared.dart';
 
 void main() {
-  late HttpClient client;
-  late Server server;
-
-  setUp(() async {
-    client = HttpClient();
-    server = await Server.bind(
-      remoteUrl,
-      configuration: ServerConfiguration(
-        availableConnectionTypes: {ConnectionType.polling},
-      ),
-    );
-  });
-  tearDown(() async {
-    client.close();
-    server.dispose();
-  });
-
   group('Server', () {
+    late HttpClient client;
+    late Server server;
+
+    setUp(() async {
+      client = HttpClient();
+      server = await Server.bind(
+        remoteUrl,
+        configuration: ServerConfiguration(
+          availableConnectionTypes: {
+            ConnectionType.polling,
+            ConnectionType.websocket
+          },
+        ),
+      );
+    });
+    tearDown(() async {
+      client.close();
+      server.dispose();
+    });
+
     test('rejects requests made to an invalid path.', () async {
       final urlWithInvalidPath =
           Uri.http(InternetAddress.loopbackIPv4.address, '/invalid-path/');
@@ -143,22 +147,6 @@ void main() {
     );
 
     test(
-      'rejects requests with a connection type that is not enabled.',
-      () async {
-        final response = await get(
-          client,
-          connectionType: ConnectionType.websocket.name,
-        ).then((result) => result.response);
-
-        expect(response.statusCode, equals(HttpStatus.forbidden));
-        expect(
-          response.reasonPhrase,
-          equals('Connection type not accepted by this server.'),
-        );
-      },
-    );
-
-    test(
       'rejects requests with an invalid protocol version.',
       () async {
         final response = await get(client, protocolVersion: '-1')
@@ -238,7 +226,72 @@ void main() {
         equals('Invalid session identifier.'),
       );
     });
+
+    test('rejects invalid websocket handshake requests.', () async {
+      final response = await unsafeGet(
+        client,
+        protocolVersion: Server.protocolVersion.toString(),
+        connectionType: ConnectionType.websocket.name,
+      ).then((result) => result.response);
+
+      expect(response.statusCode, equals(HttpStatus.badRequest));
+      expect(
+        response.reasonPhrase,
+        equals(
+          '''Attempted to establish websocket-only connection without providing a HTTP websocket upgrade request.''',
+        ),
+      );
+    });
+
+    test('accepts valid websocket handshake requests.', () async {
+      final socket_ = server.onConnect.first;
+
+      final response = await upgradeRequest(
+        client,
+        connectionType: ConnectionType.websocket.name,
+      );
+
+      expect(response.statusCode, equals(HttpStatus.switchingProtocols));
+      expect(response.reasonPhrase, equals('Switching Protocols'));
+
+      final socket = await socket_;
+
+      expect(socket.transport, equals(isA<WebSocketTransport>()));
+    });
   });
 
-  // TODO(vxern): Opens a connection only over websockets.
+  group('Server', () {
+    late HttpClient client;
+    late Server server;
+
+    setUp(() async {
+      client = HttpClient();
+      server = await Server.bind(
+        remoteUrl,
+        configuration: ServerConfiguration(
+          availableConnectionTypes: {ConnectionType.polling},
+        ),
+      );
+    });
+    tearDown(() async {
+      client.close();
+      server.dispose();
+    });
+
+    test(
+      'rejects requests with a connection type that is not enabled.',
+      () async {
+        final response = await get(
+          client,
+          connectionType: ConnectionType.websocket.name,
+        ).then((result) => result.response);
+
+        expect(response.statusCode, equals(HttpStatus.forbidden));
+        expect(
+          response.reasonPhrase,
+          equals('Connection type not accepted by this server.'),
+        );
+      },
+    );
+  });
 }

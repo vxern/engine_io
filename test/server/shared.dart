@@ -110,14 +110,14 @@ Future<HttpClientResponse> post(
 
 Future<HttpClientResponse> upgradeRequest(
   HttpClient client, {
-  required String sessionIdentifier,
+  String? sessionIdentifier,
   String? connectionType,
 }) async {
   final url = serverUrl.replace(
     queryParameters: <String, String>{
       'EIO': Server.protocolVersion.toString(),
       'transport': connectionType ?? ConnectionType.websocket.name,
-      'sid': sessionIdentifier,
+      if (sessionIdentifier != null) 'sid': sessionIdentifier,
     },
   );
 
