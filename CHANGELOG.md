@@ -32,3 +32,4 @@
       socket, or on the server when establishing a connection.
   - [Work in progress] Define the `TransportException` class:
     - [Work in progress] Define the `PollingTransportException` class.
+    - [Work in progress] Define the `WebSocketTransportException` class.

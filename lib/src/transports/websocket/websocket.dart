@@ -1,6 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:universal_io/io.dart';
 
+import 'package:engine_io_dart/src/packets/types/message.dart';
 import 'package:engine_io_dart/src/packets/packet.dart';
+import 'package:engine_io_dart/src/transports/websocket/exception.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
 
@@ -12,20 +16,42 @@ class WebSocketTransport extends Transport<dynamic> {
   /// Creates an instance of `WebSocketTransport`.
   WebSocketTransport({required this.socket, required super.configuration})
       : super(connectionType: ConnectionType.websocket) {
-    // TODO(vxern): Listen for incoming data.
+    socket.listen(receive);
+
+    // TODO(vxern): Handle forceful disconnections.
   }
 
   @override
-  Future<TransportException> receive(dynamic data) async {
-    // TODO(vxern): Implement reception of data.
-    throw UnimplementedError();
+  Future<TransportException?> receive(dynamic data) async {
+    final Packet packet;
+    if (data is String) {
+      try {
+        packet = Packet.decode(data);
+      } on FormatException {
+        return except(WebSocketTransportException.decodingPacketFailed);
+      }
+    } else if (data is List<int>) {
+      packet = BinaryMessagePacket(data: Uint8List.fromList(data));
+    } else {
+      return except(WebSocketTransportException.unknownDataType);
+    }
+
+    final exception = await processPacket(packet);
+    if (exception != null) {
+      return except(exception);
+    }
+
+    return null;
   }
 
   @override
   void send(Packet packet) {
-    // TODO(vxern): Do not encode binary message packets as base64.
+    if (packet is BinaryMessagePacket) {
+      socket.add(packet.data);
+    } else {
+      socket.add(Packet.encode(packet));
+    }
 
-    socket.add(Packet.encode(packet));
     onSendController.add(packet);
   }
 
