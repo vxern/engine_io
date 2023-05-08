@@ -238,7 +238,13 @@ class Server with EventController {
     );
 
     client.onException.listen((_) => disconnect(client));
-    // TODO(vxern): Handle transport closure.
+    client.onTransportClose.listen((transport) {
+      // The only closure that could occur on the transport currently in use is
+      // an abnormal one. Disconnect.
+      if (transport == client.transport) {
+        disconnect(client);
+      }
+    });
 
     clientManager.add(client);
     _onConnectController.add(client);

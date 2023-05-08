@@ -256,10 +256,11 @@ abstract class Transport<T> with EventController {
 
     if (!exception.isSuccess) {
       transport.onExceptionController.add(exception);
-      transport.onCloseController.add(exception);
+      transport.onCloseController.add(this);
     } else {
-      transport.onCloseController.add(exception);
+      transport.onCloseController.add(this);
     }
+
     return exception;
   }
 
@@ -322,7 +323,7 @@ mixin EventController {
   /// Controller for the `onClose` event stream.
   @nonVirtual
   @internal
-  final onCloseController = StreamController<TransportException>();
+  final onCloseController = StreamController<Transport>();
 
   /// Added to when a packet is received.
   Stream<Packet> get onReceive => onReceiveController.stream;
@@ -346,7 +347,7 @@ mixin EventController {
   Stream<TransportException> get onException => onExceptionController.stream;
 
   /// Added to when the transport is designated to close.
-  Stream<TransportException> get onClose => onCloseController.stream;
+  Stream<Transport> get onClose => onCloseController.stream;
 
   /// Closes event streams, disposing of this event controller.
   Future<void> closeEventStreams() async {

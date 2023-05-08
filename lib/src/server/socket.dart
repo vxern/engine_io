@@ -121,8 +121,7 @@ mixin EventController {
       StreamController<TransportException>.broadcast();
 
   /// Controller for the `onTransportClose` event stream.
-  final _onTransportCloseController =
-      StreamController<TransportException>.broadcast();
+  final _onTransportCloseController = StreamController<Transport>.broadcast();
 
   /// Controller for the `onInitiateUpgrade` event stream.
   final _onInitiateUpgradeController = StreamController<Transport>.broadcast();
@@ -155,13 +154,12 @@ mixin EventController {
   /// Added to when a transport upgrade is complete.
   Stream<Transport> get onUpgrade => _onUpgradeController.stream;
 
-  /// Added to when an exception occurs on this socket's transport.
+  /// Added to when an exception occurs on a transport.
   Stream<TransportException> get onTransportException =>
       _onTransportExceptionController.stream;
 
-  /// Added to when this socket's transport is designated to close.
-  Stream<TransportException> get onTransportClose =>
-      _onTransportCloseController.stream;
+  /// Added to when a transport is designated to close.
+  Stream<Transport> get onTransportClose => _onTransportCloseController.stream;
 
   /// Added to when an exception occurs on this socket.
   Stream<SocketException> get onException => _onExceptionController.stream;
