@@ -2,10 +2,15 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 
+// TODO(vxern): The heartbeat manager could work as just a single timer with
+//  a queue of events. The current implementation, whilst functional, is
+//  slightly convoluted.
+
 /// The `HeartbeatManager` is responsible for checking that connections are
 /// still active by ticking at intervals and flagging up when it has not been
 /// reset before the timeout had elapsed.
 @sealed
+@internal
 class HeartbeatManager {
   /// The timer responsible for indicating when the next heartbeat should be.
   Timer _intervalTimer;
@@ -14,10 +19,11 @@ class HeartbeatManager {
   /// reset within a certain time interval.
   Timer _timeoutTimer;
 
-  /// Whether the server is expecting this socket to send a `pong` packet.
+  /// Whether the server is expecting the socket this manager oversees to send
+  /// a packet of type `PacketType.pong`.
   bool isExpectingHeartbeat = false;
 
-  /// Resets the timers.
+  /// Function used to reset the timers.
   final void Function() reset;
 
   HeartbeatManager._({
@@ -63,7 +69,7 @@ class HeartbeatManager {
     );
   }
 
-  /// Disposes of this `HeartbeatTimer`.
+  /// Disposes of this `HeartbeatManager`.
   void dispose() {
     _intervalTimer.cancel();
     _timeoutTimer.cancel();

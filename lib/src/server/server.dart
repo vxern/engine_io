@@ -336,6 +336,7 @@ class Server with Events {
 }
 
 /// Contains streams for events that can be emitted on the server.
+@internal
 mixin Events {
   /// Controller for the `onConnect` event stream.
   final _onConnectController = StreamController<Socket>.broadcast();
@@ -351,8 +352,7 @@ mixin Events {
   Stream<ConnectException> get onConnectException =>
       _onConnectExceptionController.stream;
 
-  /// Closes event streams, disposing of this event controller.
-  @internal
+  /// Closes event streams.
   Future<void> closeEventStreams() async {
     _onConnectController.close().ignore();
     _onConnectExceptionController.close().ignore();

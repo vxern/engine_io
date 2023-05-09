@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart';
 
 import 'package:engine_io_dart/src/packets/types/message.dart';
@@ -12,20 +13,26 @@ import 'package:engine_io_dart/src/transports/transport.dart';
 import 'package:engine_io_dart/src/server/configuration.dart';
 
 /// Transport used for websocket connections.
+@sealed
+@internal
 class WebSocketTransport extends Transport<dynamic> {
+  /// The salt used to transform a websocket key to a token during a websocket
+  /// upgrade.
   static const _websocketSalt = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 
   /// The socket interfacing with the other party.
-  final WebSocket socket;
+  final WebSocket _socket;
 
   /// Creates an instance of `WebSocketTransport`.
-  WebSocketTransport({required this.socket, required super.configuration})
-      : super(connectionType: ConnectionType.websocket);
+  WebSocketTransport({required WebSocket socket, required super.configuration})
+      : _socket = socket,
+        super(connectionType: ConnectionType.websocket);
 
   /// Taking a HTTP request, upgrades it to a websocket transport.
   ///
-  /// If an error occurred while processing the request, a `TransportException`
-  /// will be thrown.
+  /// ⚠️ Throws a `TransportException` if:
+  /// - The request was not a valid websocket upgrade request.
+  /// - The websocket key was not valid.
   static Future<WebSocketTransport> fromRequest(
     HttpRequest request, {
     required ServerConfiguration configuration,
@@ -38,12 +45,14 @@ class WebSocketTransport extends Transport<dynamic> {
     final token = transformKey(key);
     request.response.headers.set('Sec-Websocket-Accept', token);
 
+    // Sink is closed during disposal.
     // ignore: close_sinks
     final socket = await WebSocketTransformer.upgrade(request);
     final transport = WebSocketTransport(
       socket: socket,
       configuration: configuration,
     );
+
     socket.listen(transport.receive);
     socket.done.then((dynamic _) {
       if (!transport.isClosed) {
@@ -59,8 +68,8 @@ class WebSocketTransport extends Transport<dynamic> {
   /// with the websocket magic string, hashing it using sha1, and encoding it as
   /// base64 before returning it.
   ///
-  /// If the passed key is not a valid 16-byte base64-encoded string, a
-  /// `TransportException` will be thrown.
+  /// ⚠️ Throws a `TransportException` if the passed key is not a valid 16-byte
+  /// base64-encoded UTF-8 string.
   static String transformKey(String key) {
     {
       final List<int> bytes;
@@ -92,6 +101,8 @@ class WebSocketTransport extends Transport<dynamic> {
         return except(WebSocketTransportException.decodingPacketFailed);
       }
     } else if (data is List<int>) {
+      // Over websockets, binary message packets are sent as a raw stream of
+      // raw bytes. No need to decode.
       packet = BinaryMessagePacket(data: Uint8List.fromList(data));
     } else {
       return except(WebSocketTransportException.unknownDataType);
@@ -107,10 +118,11 @@ class WebSocketTransport extends Transport<dynamic> {
 
   @override
   void send(Packet packet) {
+    // Do not encode binary message packets over websockets.
     if (packet is BinaryMessagePacket) {
-      socket.add(packet.data);
+      _socket.add(packet.data);
     } else {
-      socket.add(Packet.encode(packet));
+      _socket.add(Packet.encode(packet));
     }
 
     onSendController.add(packet);
@@ -120,6 +132,6 @@ class WebSocketTransport extends Transport<dynamic> {
   Future<void> dispose() async {
     await super.dispose();
     // TODO(vxern): Add status code and reason.
-    await socket.close();
+    await _socket.close();
   }
 }

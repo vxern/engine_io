@@ -1,6 +1,7 @@
 import 'dart:collection';
 import 'dart:convert';
 
+import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_dart/src/transports/polling/exception.dart';
@@ -11,6 +12,8 @@ import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
 
 /// Transport used with long polling connections.
+@sealed
+@internal
 class PollingTransport extends Transport<HttpRequest> {
   /// The character used to separate packets in the body of a long polling HTTP
   /// request.
@@ -116,7 +119,7 @@ class PollingTransport extends Transport<HttpRequest> {
   /// Taking a HTTP response object, attempts to offload packets onto it,
   /// concatenating them before closing the response.
   ///
-  /// Returns a `PollingTransportException` on failure, otherwise `null`.
+  /// On failure returns a `TransportException`, otherwise `null`.
   Future<TransportException?> offload(HttpResponse response) async {
     if (get.isLocked) {
       return except(PollingTransportException.duplicateGetRequest);
@@ -235,7 +238,8 @@ class PollingTransport extends Transport<HttpRequest> {
   }
 }
 
-/// Used for keeping track and managing the lock state of requests.
+/// Used for keeping track of and managing the lock state of requests.
+@internal
 class Lock {
   bool _isLocked = false;
 

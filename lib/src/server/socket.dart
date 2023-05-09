@@ -11,7 +11,7 @@ import 'package:engine_io_dart/src/socket.dart' as base;
 
 /// An interface to a client connected to the engine.io server.
 @sealed
-class Socket extends base.Socket with EventController {
+class Socket extends base.Socket with Events {
   late Transport _transport;
 
   /// The transport currently in use for communication.
@@ -113,7 +113,8 @@ class Socket extends base.Socket with EventController {
 }
 
 /// Contains streams for events that can be emitted on the socket.
-mixin EventController {
+@internal
+mixin Events {
   /// Controller for the `onReceive` event stream.
   final _onReceiveController = StreamController<Packet>.broadcast();
 
@@ -178,15 +179,13 @@ mixin EventController {
   Stream<Socket> get onClose => _onCloseController.stream;
 
   /// Emits an exception.
-  @internal
   Future<void> except(SocketException exception) async {
     if (!exception.isSuccess) {
       _onExceptionController.add(exception);
     }
   }
 
-  /// Closes event streams, disposing of this event controller.
-  @internal
+  /// Closes event streams.
   Future<void> closeEventStreams() async {
     _onReceiveController.close().ignore();
     _onSendController.close().ignore();

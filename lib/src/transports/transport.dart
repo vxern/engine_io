@@ -16,10 +16,10 @@ import 'package:engine_io_dart/src/packets/packet.dart';
 
 /// The type of connection used for communication between a client and a server.
 enum ConnectionType {
-  /// A websocket connection leveraging the use of websockets.
+  /// A connection leveraging the use of websockets.
   websocket(upgradesTo: null),
 
-  /// A polling connection over HTTP imitating a real-time connection.
+  /// A polling connection over HTTP merely imitating a real-time connection.
   polling(upgradesTo: {ConnectionType.websocket});
 
   /// Defines the `ConnectionType`s this `ConnectionType` can be upgraded to.
@@ -31,9 +31,9 @@ enum ConnectionType {
 
   /// Matches [name] to a `ConnectionType`.
   ///
-  /// If [name] does not match to any supported `ConnectionType`, a
-  /// `FormatException` will be thrown.
-  static ConnectionType byName(String name) {
+  /// ⚠️ Throws a `FormatException` If [name] does not match the name of any
+  /// supported `ConnectionType`.
+  factory ConnectionType.byName(String name) {
     for (final type in ConnectionType.values) {
       if (type.name == name) {
         return type;
@@ -44,29 +44,30 @@ enum ConnectionType {
   }
 }
 
-/// Represents a medium by which to connected parties are able to communicate.
+/// Represents a medium by which the connected parties are able to communicate.
+///
 /// The method by which packets are encoded or decoded depends on the transport
-/// method used.
+/// used.
 @sealed
-abstract class Transport<T> with EventController {
+@internal
+abstract class Transport<T> with Events {
   /// The connection type corresponding to this transport.
   final ConnectionType connectionType;
 
   /// A reference to the server configuration.
   final ServerConfiguration configuration;
 
-  /// Instance of `HeartbeatManager` responsible for checking that the
+  /// Instance of `HeartbeatManager` responsible for ensuring that the
   /// connection is still active.
   late final HeartbeatManager heartbeat;
 
-  /// The state of the upgrade process of this transport to a different one.
+  /// Keeps track of information regarding upgrades to a different transport.
   TransportUpgrade upgrade = TransportUpgrade();
 
-  /// Whether the transport is being upgraded.
+  /// Whether the transport is in the process of being upgraded.
   bool get isUpgrading => upgrade.state != UpgradeState.none;
 
-  /// Whether the transport is closed. Used to determine if a connection was
-  /// closed forcefully.
+  /// Whether the transport is closed.
   bool isClosed = false;
 
   bool _isDisposing = false;
@@ -90,17 +91,17 @@ abstract class Transport<T> with EventController {
   /// `TransportException`. Otherwise `null`.
   Future<TransportException?> receive(T data);
 
-  /// Sends a packet to the remote party.
+  /// Sends a `Packet` to the remote party.
   void send(Packet packet);
 
-  /// Taking a list of packets, sends them all to the remote party.
+  /// Taking a list of `Packet`s, sends them all to the remote party.
   void sendAll(Iterable<Packet> packets) {
     for (final packet in packets) {
       send(packet);
     }
   }
 
-  /// Processes a packet.
+  /// Processes a `Packet`.
   ///
   /// If an exception occurred while processing a packet, this method will
   /// return `TransportException`. Otherwise `null`.
@@ -209,7 +210,7 @@ abstract class Transport<T> with EventController {
     return null;
   }
 
-  /// Taking a list of packets, processes them.
+  /// Taking a list of `Packet`s, processes them.
   ///
   /// If an exception occurred while processing packets, this method will return
   /// `TransportException`. Otherwise `null`.
@@ -245,7 +246,7 @@ abstract class Transport<T> with EventController {
     return null;
   }
 
-  /// Signals an exception occurred on the transport and returns it to be
+  /// Signals that an exception occurred on the transport, and returns it to be
   /// handled by the server.
   TransportException except(TransportException exception) {
     final Transport transport;
@@ -285,45 +286,30 @@ abstract class Transport<T> with EventController {
 }
 
 /// Contains streams for events that can be emitted on the transport.
-mixin EventController {
+@internal
+mixin Events {
   /// Controller for the `onReceive` event stream.
-  @nonVirtual
-  @internal
   final onReceiveController = StreamController<Packet>();
 
   /// Controller for the `onSend` event stream.
-  @nonVirtual
-  @internal
   final onSendController = StreamController<Packet>();
 
   /// Controller for the `onMessage` event stream.
-  @nonVirtual
-  @internal
   final onMessageController = StreamController<MessagePacket>();
 
   /// Controller for the `onHeartbeat` event stream.
-  @nonVirtual
-  @internal
   final onHeartbeatController = StreamController<ProbePacket>();
 
   /// Controller for the `onInitiateUpgrade` event stream.
-  @nonVirtual
-  @internal
   final onInitiateUpgradeController = StreamController<Transport>();
 
   /// Controller for the `onUpgrade` event stream.
-  @nonVirtual
-  @internal
   final onUpgradeController = StreamController<Transport>();
 
   /// Controller for the `onException` event stream.
-  @nonVirtual
-  @internal
   final onExceptionController = StreamController<TransportException>();
 
   /// Controller for the `onClose` event stream.
-  @nonVirtual
-  @internal
   final onCloseController = StreamController<Transport>();
 
   /// Added to when a packet is received.
@@ -350,7 +336,7 @@ mixin EventController {
   /// Added to when the transport is designated to close.
   Stream<Transport> get onClose => onCloseController.stream;
 
-  /// Closes event streams, disposing of this event controller.
+  /// Closes event streams.
   Future<void> closeEventStreams() async {
     onReceiveController.close().ignore();
     onSendController.close().ignore();

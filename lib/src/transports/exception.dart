@@ -1,13 +1,18 @@
+import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart';
 
 import 'package:engine_io_dart/src/exception.dart';
 
 /// An exception that occurred on the transport.
+@immutable
+@sealed
 class TransportException extends EngineException {
   @override
+  @mustBeOverridden
   bool get isSuccess => statusCode >= 200 && statusCode < 300;
 
   /// Creates an instance of `TransportException`.
+  @literal
   const TransportException({
     required super.statusCode,
     required super.reasonPhrase,
