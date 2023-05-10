@@ -85,15 +85,7 @@ class PollingTransport extends Transport<HttpRequest> {
     }
 
     final specifiedContentType = request.headers.contentType;
-
-    var detectedContentType = _implicitContentType;
-    for (final packet in packets) {
-      if (packet.isBinary && detectedContentType != ContentType.binary) {
-        detectedContentType = ContentType.binary;
-      } else if (packet.isJSON && detectedContentType == ContentType.text) {
-        detectedContentType = ContentType.json;
-      }
-    }
+    final detectedContentType = _getContentType(packets);
 
     if (specifiedContentType == null) {
       if (detectedContentType.mimeType != ContentType.text.mimeType) {
@@ -138,46 +130,92 @@ class PollingTransport extends Transport<HttpRequest> {
         HttpHeaders.contentTypeHeader,
         ContentType.text.mimeType,
       );
-    } else {
-      var contentType = ContentType.text;
-      final packets = <Packet>[];
-      final bytes = <int>[];
-      while (packetBuffer.isNotEmpty) {
-        final packet = packetBuffer.first;
 
-        if (packet.isBinary && contentType != ContentType.binary) {
-          contentType = ContentType.binary;
-        } else if (packet.isJSON && contentType == ContentType.text) {
-          contentType = ContentType.json;
-        }
+      get.unlock();
 
-        final encoded = utf8.encode(Packet.encode(packet));
-        if (bytes.length + encoded.length + _concatenationOverhead >
-            configuration.maximumChunkBytes) {
-          break;
-        }
+      return null;
+    }
 
-        if (bytes.isNotEmpty) {
-          bytes.add(_recordSeparatorCharCode);
-        }
+    Iterable<List<int>> encodePackets(Iterable<Packet> packets) sync* {
+      for (final packet in List.of(packets)) {
+        final bytes = utf8.encode(Packet.encode(packet));
+        yield bytes;
+      }
+    }
 
-        bytes.addAll(encoded);
-        packets.add(packetBuffer.removeFirst());
+    var totalByteCount = 0;
+
+    int getNewByteCount(int byteCount) {
+      final newByteCount = totalByteCount + byteCount;
+      final withOverhead = newByteCount + _concatenationOverhead;
+      return withOverhead;
+    }
+
+    final chunks = <List<int>>[];
+
+    final byteChunks = encodePackets(packetBuffer).iterator;
+    while (byteChunks.moveNext()) {
+      final bytes = byteChunks.current;
+      final newByteCount = getNewByteCount(bytes.length);
+
+      if (newByteCount > configuration.maximumChunkBytes) {
+        break;
       }
 
-      response
-        ..headers.set(HttpHeaders.contentTypeHeader, contentType.mimeType)
-        ..contentLength = bytes.length
-        ..add(bytes);
+      chunks.add(bytes);
+      totalByteCount = newByteCount;
+    }
 
-      for (final packet in packets) {
-        onSendController.add(packet);
-      }
+    final packets = <Packet>[];
+    for (var i = 0; i < chunks.length; i++) {
+      packets.add(packetBuffer.removeFirst());
+    }
+
+    final contentType = _getContentType(packets);
+    final buffer = [
+      ...chunks.first,
+      for (final chunk in chunks.skip(1)) ...[
+        _recordSeparatorCharCode,
+        ...chunk
+      ]
+    ];
+
+    response
+      ..headers.set(HttpHeaders.contentTypeHeader, contentType.mimeType)
+      ..contentLength = buffer.length
+      ..add(buffer);
+
+    for (final packet in packets) {
+      onSendController.add(packet);
     }
 
     get.unlock();
 
     return null;
+  }
+
+  /// Taking a list of [packets], gets the content type that will represent the
+  /// type of payload in HTTP responses.
+  ///
+  /// The order of priority is as follows:
+  /// 1. Binary (application/octet-stream)
+  /// 2. JSON (application/json)
+  /// 3. Plaintext (text/plain)
+  static ContentType _getContentType(List<Packet> packets) {
+    var contentType = _implicitContentType;
+
+    for (final packet in packets) {
+      if (packet.isBinary && contentType != ContentType.binary) {
+        contentType = ContentType.binary;
+        break;
+      }
+
+      if (packet.isJSON && contentType == ContentType.text) {
+        contentType = ContentType.json;
+      }
+    }
+
+    return contentType;
   }
 
   @override
