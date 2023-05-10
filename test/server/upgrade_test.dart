@@ -280,7 +280,6 @@ void main() {
     });
 
     // TODO(vxern): Add test for upgrade timeout.
-    // TODO(vxern): Add test for forcible websocket closure.
     // TODO(vxern): Add test for duplicate websocket connection.
     // TODO(vxern): Add test for probing transport that is being upgraded.
     // TODO(vxern): Add test for downgrading to polling from websockets.

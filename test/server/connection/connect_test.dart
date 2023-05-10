@@ -1,3 +1,4 @@
+import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
@@ -271,6 +272,19 @@ void main() {
       final socket = await socket_;
 
       expect(socket.transport, equals(isA<WebSocketTransport>()));
+    });
+
+    test('handles forced websocket closures.', () async {
+      expectLater(
+        server.onConnect.first.then(
+          (socket) => socket.onTransportException.first,
+        ),
+        completion(TransportException.closedForcefully),
+      );
+
+      final websocket = await upgrade(client).then((result) => result.socket);
+
+      websocket.close();
     });
   });
 

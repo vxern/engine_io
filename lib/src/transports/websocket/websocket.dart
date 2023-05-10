@@ -53,13 +53,15 @@ class WebSocketTransport extends Transport<dynamic> {
       configuration: configuration,
     );
 
-    socket.listen(transport.receive);
-    socket.done.then((dynamic _) {
-      if (!transport.isClosed) {
-        transport.onExceptionController
-            .add(TransportException.closedForcefully);
-      }
-    });
+    socket.listen(
+      transport.receive,
+      onDone: () {
+        if (!transport.isClosed) {
+          transport.onExceptionController
+              .add(TransportException.closedForcefully);
+        }
+      },
+    );
 
     return transport;
   }
