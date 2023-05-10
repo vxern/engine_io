@@ -77,7 +77,9 @@ class Server with Events {
       return;
     }
 
-    if (request.method == 'OPTIONS') {
+    final requestMethod = request.method.toUpperCase();
+
+    if (requestMethod == 'OPTIONS') {
       request.response
         ..statusCode = HttpStatus.noContent
         ..headers.add(HttpHeaders.accessControlAllowOriginHeader, '*')
@@ -93,7 +95,7 @@ class Server with Events {
       return;
     }
 
-    if (!_allowedMethods.contains(request.method)) {
+    if (!_allowedMethods.contains(requestMethod)) {
       _close(clientByIP, request, SocketException.methodNotAllowed);
       return;
     }
@@ -101,7 +103,7 @@ class Server with Events {
     final isConnected = clientManager.isConnected(ipAddress);
     final isEstablishingConnection = !isConnected;
 
-    if (request.method != 'GET' && isEstablishingConnection) {
+    if (requestMethod != 'GET' && isEstablishingConnection) {
       _close(clientByIP, request, SocketException.getExpected);
       return;
     }
@@ -199,7 +201,7 @@ class Server with Events {
       return;
     }
 
-    switch (request.method) {
+    switch (requestMethod) {
       case 'GET':
         if (client.transport is! PollingTransport) {
           _close(client, request, SocketException.getRequestUnexpected);
