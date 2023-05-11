@@ -137,10 +137,10 @@ void main() {
     late WebSocket websocket;
 
     setUp(() async {
-      final socket_ = server.onConnect.first;
+      final socketLater = server.onConnect.first;
       final (_, websocket_) = await upgrade(client);
       websocket = websocket_;
-      socket = await socket_;
+      socket = await socketLater;
     });
 
     tearDown(() async => websocket.close());

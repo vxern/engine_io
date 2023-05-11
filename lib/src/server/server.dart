@@ -252,6 +252,7 @@ class Server with Events {
         configuration.sessionIdentifiers.generate(request);
 
     final client = Socket(
+      configuration: configuration,
       sessionIdentifier: sessionIdentifier,
       ipAddress: ipAddress,
     );

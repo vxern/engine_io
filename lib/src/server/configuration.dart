@@ -57,6 +57,10 @@ class ServerConfiguration {
   /// heartbeat before closing the connection.
   final Duration heartbeatTimeout;
 
+  /// The amount of time the server should wait for a transport upgrade to be
+  /// finalised before cancelling it.
+  final Duration upgradeTimeout;
+
   /// The maximum number of bytes per packet chunk.
   final int maximumChunkBytes;
 
@@ -72,6 +76,7 @@ class ServerConfiguration {
     },
     this.heartbeatInterval = const Duration(seconds: 15),
     this.heartbeatTimeout = const Duration(seconds: 10),
+    this.upgradeTimeout = const Duration(seconds: 15),
     this.maximumChunkBytes = 1024 * 128, // 128 KiB (Kibibytes)
     this.sessionIdentifiers =
         SessionIdentifierConfiguration.defaultConfiguration,

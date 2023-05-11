@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:meta/meta.dart';
+
 import 'package:engine_io_dart/src/transports/transport.dart';
 
 /// Represents the status of a transport upgrade.
@@ -13,10 +17,13 @@ enum UpgradeStatus {
 }
 
 /// Represents the state of a transport upgrade.
+@sealed
 class UpgradeState {
+  static const _defaultUpgradeState = UpgradeStatus.none;
+
   /// The current state of the upgrade.
   UpgradeStatus get status => _status;
-  UpgradeStatus _status = UpgradeStatus.none;
+  UpgradeStatus _status = _defaultUpgradeState;
 
   /// The current transport.
   Transport get origin => _origin!;
@@ -25,6 +32,20 @@ class UpgradeState {
   /// The potential new transport.
   Transport get destination => _destination!;
   Transport? _destination;
+
+  /// Keeps track of the upgrade timing out.
+  late Timer timer;
+
+  late final Timer Function() _getTimer;
+
+  /// Creates an instance of `UpgradeState`.
+  UpgradeState({required Duration upgradeTimeout}) {
+    _getTimer = () => Timer(upgradeTimeout, () async {
+          _destination?.dispose();
+          reset();
+        });
+    timer = _getTimer();
+  }
 
   /// Marks the upgrade process as initiated.
   void markInitiated({
@@ -44,6 +65,8 @@ class UpgradeState {
     _status = UpgradeStatus.none;
     _origin = null;
     _destination = null;
+    timer.cancel();
+    timer = _getTimer();
   }
 
   /// Alias for `reset()`;

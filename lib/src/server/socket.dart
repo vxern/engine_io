@@ -4,6 +4,7 @@ import 'package:meta/meta.dart';
 
 import 'package:engine_io_dart/src/packets/packet.dart';
 import 'package:engine_io_dart/src/packets/types/message.dart';
+import 'package:engine_io_dart/src/server/configuration.dart';
 import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:engine_io_dart/src/server/upgrade.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
@@ -13,6 +14,9 @@ import 'package:engine_io_dart/src/socket.dart' as base;
 /// An interface to a client connected to the engine.io server.
 @sealed
 class Socket extends base.Socket with Events {
+  /// A reference to the server configuration.
+  final ServerConfiguration configuration;
+
   late Transport _transport;
 
   /// The transport currently in use for communication.
@@ -27,7 +31,7 @@ class Socket extends base.Socket with Events {
 
   /// Keeps track of information regarding a possible upgrade to a different
   /// transport.
-  final UpgradeState upgrade = UpgradeState();
+  final UpgradeState upgrade;
 
   /// Whether the transport is in the process of being upgraded.
   bool get isUpgrading => upgrade.status != UpgradeStatus.none;
@@ -36,9 +40,10 @@ class Socket extends base.Socket with Events {
 
   /// Creates an instance of `Socket`.
   Socket({
+    required this.configuration,
     required this.sessionIdentifier,
     required this.ipAddress,
-  });
+  }) : upgrade = UpgradeState(upgradeTimeout: configuration.upgradeTimeout);
 
   /// List of subscriptions to events being piped from the transport to this
   /// socket.

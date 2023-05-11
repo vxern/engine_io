@@ -1,3 +1,4 @@
+import 'package:engine_io_dart/src/server/configuration.dart';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart' hide Socket, SocketException;
 
@@ -22,7 +23,12 @@ void main() {
 
   setUp(() async {
     client = HttpClient();
-    server = await Server.bind(remoteUrl);
+    server = await Server.bind(
+      remoteUrl,
+      configuration: ServerConfiguration(
+        upgradeTimeout: const Duration(seconds: 2),
+      ),
+    );
   });
   tearDown(() async {
     client.close();
@@ -188,9 +194,16 @@ void main() {
       websocket.close();
     });
 
-    // TODO(vxern): Add test for upgrade timeout.
-    // TODO(vxern): Add test for duplicate websocket connection.
-    // TODO(vxern): Add test for probing transport that is being upgraded.
+    test('cancels upgrades once timed out.', () async {
+      await upgradeRequest(client);
+
+      await Future<void>.delayed(
+        server.configuration.upgradeTimeout + const Duration(milliseconds: 100),
+      );
+
+      expect(socket.upgrade.status, equals(UpgradeStatus.none));
+    });
+
     // TODO(vxern): Add test for downgrading to polling from websockets.
     // TODO(vxern): Add test for HTTP GET/POST requests after upgrade.
   });
@@ -207,12 +220,12 @@ void main() {
     });
 
     test('Server accepts valid websocket handshake requests.', () async {
-      final socket = server.onConnect.first;
+      final socketLater = server.onConnect.first;
 
       final (response, _) = await upgrade(client);
 
       expectLater(
-        socket.then((socket) => socket.transport),
+        socketLater.then((socket) => socket.transport),
         completion(equals(isA<WebSocketTransport>())),
       );
 
@@ -220,10 +233,10 @@ void main() {
     });
 
     test('handles forced websocket closures.', () async {
-      final socket = server.onConnect.first;
+      final socketLater = server.onConnect.first;
 
       expectLater(
-        socket.then((socket) => socket.onTransportException.first),
+        socketLater.then((socket) => socket.onTransportException.first),
         completion(TransportException.closedForcefully),
       );
 
