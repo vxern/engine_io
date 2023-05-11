@@ -148,9 +148,10 @@ Future<UpgradeResult<WebSocket>> upgrade(
   );
 
   // ignore: close_sinks
-  final socket_ = await response.detachSocket();
+  final socketDetached = await response.detachSocket();
   // ignore: close_sinks
-  final socket = WebSocket.fromUpgradedSocket(socket_, serverSide: false);
+  final websocket =
+      WebSocket.fromUpgradedSocket(socketDetached, serverSide: false);
 
-  return (response, socket);
+  return (response, websocket);
 }

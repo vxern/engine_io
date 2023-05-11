@@ -204,7 +204,6 @@ void main() {
       expect(socket.upgrade.status, equals(UpgradeStatus.none));
     });
 
-    // TODO(vxern): Add test for downgrading to polling from websockets.
     // TODO(vxern): Add test for HTTP GET/POST requests after upgrade.
   });
 
@@ -243,6 +242,20 @@ void main() {
       final (_, websocket) = await upgrade(client);
 
       websocket.close();
+    });
+
+    test('rejects requests to downgrade connection.', () async {
+      final socketLater = server.onConnect.first;
+      await upgrade(client);
+      final socket = await socketLater;
+
+      final response = await upgradeRequest(
+        client,
+        sessionIdentifier: socket.sessionIdentifier,
+        connectionType: ConnectionType.polling.name,
+      );
+
+      expect(response, signals(TransportException.upgradeCourseNotAllowed));
     });
   });
 }
