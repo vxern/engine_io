@@ -203,8 +203,6 @@ void main() {
 
       expect(socket.upgrade.status, equals(UpgradeStatus.none));
     });
-
-    // TODO(vxern): Add test for HTTP GET/POST requests after upgrade.
   });
 
   group('Server', () {
@@ -256,6 +254,37 @@ void main() {
       );
 
       expect(response, signals(TransportException.upgradeCourseNotAllowed));
+    });
+
+    group('rejects HTTP requests after upgrade:', () {
+      test('GET', () async {
+        final socketLater = server.onConnect.first;
+        await upgrade(client);
+        final socket = await socketLater;
+
+        final (response, _) = await get(
+          client,
+          sessionIdentifier: socket.sessionIdentifier,
+          connectionType: ConnectionType.websocket.name,
+        );
+
+        expect(response, signals(SocketException.getRequestUnexpected));
+      });
+
+      test('POST', () async {
+        final socketLater = server.onConnect.first;
+        await upgrade(client);
+        final socket = await socketLater;
+
+        final response = await post(
+          client,
+          sessionIdentifier: socket.sessionIdentifier,
+          packets: [],
+          connectionType: ConnectionType.websocket.name,
+        );
+
+        expect(response, signals(SocketException.postRequestUnexpected));
+      });
     });
   });
 }
