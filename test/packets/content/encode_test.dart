@@ -100,7 +100,7 @@ void main() {
         expect(encoded, equals('sample_content'));
       });
 
-      test('(binary)', () {
+      test('(binary).', () {
         late final String encoded;
         expect(
           () => encoded = BinaryMessagePacket(

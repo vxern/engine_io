@@ -1,17 +1,20 @@
 import 'package:test/test.dart';
-import 'package:universal_io/io.dart';
+import 'package:universal_io/io.dart' hide Socket;
 
+import 'package:engine_io_dart/src/packets/types/open.dart';
 import 'package:engine_io_dart/src/packets/types/ping.dart';
 import 'package:engine_io_dart/src/packets/types/pong.dart';
 import 'package:engine_io_dart/src/server/configuration.dart';
-import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:engine_io_dart/src/server/server.dart';
+import 'package:engine_io_dart/src/server/socket.dart';
 
-import 'shared.dart';
+import '../shared.dart';
 
 void main() {
   late HttpClient client;
   late Server server;
+  late Socket socket;
+  late OpenPacket open;
 
   setUp(() async {
     client = HttpClient();
@@ -22,22 +25,29 @@ void main() {
         heartbeatTimeout: const Duration(seconds: 1),
       ),
     );
+
+    final handshake = await connect(server, client);
+    socket = handshake.socket;
+    open = handshake.packet;
   });
   tearDown(() async {
     client.close();
-    server.dispose();
+    await server.dispose();
   });
 
   group('Server', () {
     test(
       'heartbeats.',
       () async {
-        final open = await handshake(client).then((result) => result.packet);
+        expect(socket.transport.heartbeat.isExpectingHeartbeat, isFalse);
 
         await Future<void>.delayed(
           server.configuration.heartbeatInterval +
               const Duration(milliseconds: 100),
         );
+
+        expect(socket.transport.heartbeat.isExpectingHeartbeat, isTrue);
+
         await expectLater(
           get(client, sessionIdentifier: open.sessionIdentifier)
               .then((result) => result.packets.first),
@@ -47,13 +57,18 @@ void main() {
         await post(
           client,
           sessionIdentifier: open.sessionIdentifier,
-          packet: const PongPacket(),
+          packets: [const PongPacket()],
         );
+
+        expect(socket.transport.heartbeat.isExpectingHeartbeat, isFalse);
 
         await Future<void>.delayed(
           server.configuration.heartbeatInterval +
               const Duration(milliseconds: 100),
         );
+
+        expect(socket.transport.heartbeat.isExpectingHeartbeat, isTrue);
+
         await expectLater(
           get(client, sessionIdentifier: open.sessionIdentifier)
               .then((result) => result.packets.first),
@@ -65,12 +80,7 @@ void main() {
     test(
       'disconnects a client unresponsive to heartbeats.',
       () async {
-        expectLater(
-          server.onConnect.first.then((socket) => socket.onException.first),
-          completion(SocketException.transportException),
-        );
-
-        handshake(client);
+        expect(socket.onException, emits(anything));
       },
     );
   });

@@ -1,15 +1,20 @@
-import 'package:engine_io_dart/src/transports/websocket/websocket.dart';
 import 'package:test/test.dart';
-import 'package:universal_io/io.dart';
+import 'package:universal_io/io.dart' hide Socket, SocketException;
 
+import 'package:engine_io_dart/src/packets/types/open.dart';
 import 'package:engine_io_dart/src/packets/types/ping.dart';
-import 'package:engine_io_dart/src/packets/types/pong.dart';
 import 'package:engine_io_dart/src/packets/types/upgrade.dart';
 import 'package:engine_io_dart/src/packets/packet.dart';
 import 'package:engine_io_dart/src/server/server.dart';
+import 'package:engine_io_dart/src/server/socket.dart';
+import 'package:engine_io_dart/src/server/exception.dart';
+import 'package:engine_io_dart/src/transports/polling/polling.dart';
+import 'package:engine_io_dart/src/transports/websocket/websocket.dart';
+import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
 
-import 'shared.dart';
+import '../matchers.dart';
+import '../shared.dart';
 
 void main() {
   late HttpClient client;
@@ -21,260 +26,184 @@ void main() {
   });
   tearDown(() async {
     client.close();
-    server.dispose();
+    await server.dispose();
   });
 
   group('Server', () {
+    late Socket socket;
+    late OpenPacket open;
+
+    setUp(() async {
+      final handshake = await connect(server, client);
+      socket = handshake.socket;
+      open = handshake.packet;
+    });
+
     test(
       '''rejects HTTP websocket upgrade request without specifying websocket connection type.''',
       () async {
-        final open = await handshake(client).then((result) => result.packet);
-
         final response = await upgradeRequest(
           client,
           sessionIdentifier: open.sessionIdentifier,
           connectionType: ConnectionType.polling.name,
         );
 
-        expect(response.statusCode, equals(HttpStatus.badRequest));
-        expect(
-          response.reasonPhrase,
-          equals(
-            'Sent a HTTP websocket upgrade request when not seeking upgrade.',
-          ),
-        );
+        expect(response, signals(SocketException.upgradeRequestUnexpected));
       },
     );
 
     test(
       'rejects websocket upgrade without valid HTTP websocket upgrade request.',
       () async {
-        final open = await handshake(client).then((result) => result.packet);
-
         final response = await get(
           client,
           connectionType: ConnectionType.websocket.name,
           sessionIdentifier: open.sessionIdentifier,
         ).then((result) => result.response);
 
-        expect(response.statusCode, equals(HttpStatus.badRequest));
-        expect(
-          response.reasonPhrase,
-          equals(
-            '''The HTTP request received is not a valid websocket upgrade request.''',
-          ),
-        );
+        expect(response, signals(TransportException.upgradeRequestInvalid));
       },
     );
 
     test('initiates a connection upgrade.', () async {
-      final socket_ = server.onConnect.first;
-      final open = await handshake(client).then((result) => result.packet);
-      final socket = await socket_;
-
-      final initiateUpgrade_ = socket.onInitiateUpgrade.first;
+      expectLater(socket.onInitiateUpgrade, emits(anything));
 
       final result =
           await upgrade(client, sessionIdentifier: open.sessionIdentifier);
-
+      final websocket = result.socket;
       final response = result.response;
 
-      expect(response.statusCode, equals(HttpStatus.switchingProtocols));
-      expect(response.reasonPhrase, equals('Switching Protocols'));
+      expect(response, isSwitchingProtocols);
 
-      late final Transport transport;
-      await expectLater(
-        initiateUpgrade_.then((transport_) => transport = transport_),
-        completes,
-      );
+      final transport = socket.transport as PollingTransport;
 
-      expect(socket.transport.upgrade.isOrigin, equals(true));
-      expect(socket.transport.upgrade.state, equals(UpgradeState.initiated));
-      expect(() => socket.transport.upgrade.origin, throwsA(isA<Error>()));
-      expect(socket.transport.upgrade.destination, equals(transport));
+      final originUpgrade = transport.upgrade;
 
-      result.socket.close();
+      expect(originUpgrade.isOrigin, isTrue);
+      expect(originUpgrade.state, equals(UpgradeStatus.initiated));
+      expect(() => originUpgrade.origin, throwsA(isA<Error>()));
+      expect(originUpgrade.destination, isNot(equals(transport)));
+
+      final destinationUpgrade = originUpgrade.destination.upgrade;
+
+      expect(destinationUpgrade.isOrigin, isFalse);
+      expect(destinationUpgrade.state, equals(UpgradeStatus.initiated));
+      expect(destinationUpgrade.origin, equals(transport));
+      expect(() => destinationUpgrade.destination, throwsA(isA<Error>()));
+
+      websocket.close();
     });
 
     test(
       'rejects request to upgrade when an upgrade process is already underway.',
       () async {
-        final socket_ = server.onConnect.first;
-        final open = await handshake(client).then((result) => result.packet);
-        final socket = await socket_;
-
-        final initiateUpgrade_ = socket.onInitiateUpgrade.first;
-
         final websocket =
             await upgrade(client, sessionIdentifier: open.sessionIdentifier)
                 .then((result) => result.socket);
-
-        await initiateUpgrade_;
 
         final response = await upgradeRequest(
           client,
           sessionIdentifier: open.sessionIdentifier,
         );
 
-        expect(response.statusCode, equals(HttpStatus.badRequest));
-        expect(
-          response.reasonPhrase,
-          equals(
-            '''Attempted to initiate upgrade process when one was already underway.''',
-          ),
-        );
+        expect(response, signals(TransportException.upgradeAlreadyInitiated));
 
         websocket.close();
       },
     );
 
     test('handles probing on new transport.', () async {
-      final socket_ = server.onConnect.first;
-      final open = await handshake(client).then((result) => result.packet);
-      final socket = await socket_;
-
-      final initiateUpgrade_ = socket.onInitiateUpgrade.first;
-
       final websocket =
           await upgrade(client, sessionIdentifier: open.sessionIdentifier)
               .then((result) => result.socket);
 
-      await initiateUpgrade_;
+      final pong = websocket.first;
 
-      final packet_ = websocket.first;
       websocket.add(Packet.encode(const PingPacket(isProbe: true)));
+      await expectLater(pong, completes);
 
-      late final Packet packet;
-      await expectLater(
-        packet_.then((dynamic data) => packet = Packet.decode(data as String)),
-        completes,
-      );
-      expect(packet, equals(isA<PongPacket>()));
-
-      expect(socket.transport.upgrade.state, equals(UpgradeState.probed));
+      expect(socket.transport.upgrade.state, equals(UpgradeStatus.probed));
 
       websocket.close();
     });
 
     test('closes the connection on duplicate probe packets.', () async {
-      final socket_ = server.onConnect.first;
-      final open = await handshake(client).then((result) => result.packet);
-      final socket = await socket_;
-
-      final initiateUpgrade_ = socket.onInitiateUpgrade.first;
-
       final websocket =
           await upgrade(client, sessionIdentifier: open.sessionIdentifier)
               .then((result) => result.socket);
 
-      await initiateUpgrade_;
-
-      final exception_ = socket.onTransportException.first;
+      expectLater(
+        socket.onTransportException,
+        emits(signals(TransportException.transportAlreadyProbed)),
+      );
 
       websocket
         ..add(Packet.encode(const PingPacket(isProbe: true)))
-        ..add(Packet.encode(const PingPacket(isProbe: true)));
-
-      final exception = await exception_;
-
-      expect(exception.statusCode, equals(HttpStatus.badRequest));
-      expect(
-        exception.reasonPhrase,
-        equals('Attempted to probe transport that has already been probed.'),
-      );
-
-      websocket.close();
+        ..add(Packet.encode(const PingPacket(isProbe: true)))
+        ..close();
     });
 
     test(
       'closes the connection on upgrade packet on unprobed transport.',
       () async {
-        final socket_ = server.onConnect.first;
-        final open = await handshake(client).then((result) => result.packet);
-        final socket = await socket_;
-
-        final initiateUpgrade_ = socket.onInitiateUpgrade.first;
-
         final websocket =
             await upgrade(client, sessionIdentifier: open.sessionIdentifier)
                 .then((result) => result.socket);
 
-        await initiateUpgrade_;
-
-        final exception_ = socket.onTransportException.first;
-
-        websocket.add(Packet.encode(const UpgradePacket()));
-
-        final exception = await exception_;
-
-        expect(exception.statusCode, equals(HttpStatus.badRequest));
-        expect(
-          exception.reasonPhrase,
-          equals('Attempted to upgrade transport without probing first.'),
+        expectLater(
+          socket.onTransportException,
+          emits(signals(TransportException.transportNotProbed)),
         );
 
-        websocket.close();
+        websocket
+          ..add(Packet.encode(const UpgradePacket()))
+          ..close();
       },
     );
 
     test('upgrades the transport.', () async {
-      final socket_ = server.onConnect.first;
-      final open = await handshake(client).then((result) => result.packet);
-      final socket = await socket_;
-
-      final initiateUpgrade_ = socket.onInitiateUpgrade.first;
-
       final websocket =
           await upgrade(client, sessionIdentifier: open.sessionIdentifier)
               .then((result) => result.socket);
 
-      await initiateUpgrade_;
+      final upgraded = socket.onUpgrade.first;
 
-      final packet_ = websocket.first;
+      final pong = websocket.first;
+
       websocket.add(Packet.encode(const PingPacket(isProbe: true)));
-      await packet_;
+      await pong;
 
-      final upgrade_ = socket.onUpgrade.first;
       websocket.add(Packet.encode(const UpgradePacket()));
 
-      await expectLater(upgrade_, completes);
+      await upgraded;
 
-      expect(socket.transport.upgrade.state, equals(UpgradeState.none));
+      expect(socket.transport.upgrade.state, equals(UpgradeStatus.none));
       expect(socket.transport, equals(isA<WebSocketTransport>()));
 
       websocket.close();
     });
 
     test('closes the connection on duplicate upgrade packets.', () async {
-      final socket_ = server.onConnect.first;
-      final open = await handshake(client).then((result) => result.packet);
-      final socket = await socket_;
-
-      final initiateUpgrade_ = socket.onInitiateUpgrade.first;
-
       final websocket =
           await upgrade(client, sessionIdentifier: open.sessionIdentifier)
               .then((result) => result.socket);
 
-      await initiateUpgrade_;
+      final upgraded = socket.onUpgrade.first;
 
-      final packet_ = websocket.first;
+      final pong = websocket.first;
+
       websocket.add(Packet.encode(const PingPacket(isProbe: true)));
-      await packet_;
+      await pong;
 
-      final exception_ = socket.onTransportException.first;
+      expectLater(
+        socket.onTransportException,
+        emits(TransportException.transportAlreadyUpgraded),
+      );
+
       websocket
         ..add(Packet.encode(const UpgradePacket()))
         ..add(Packet.encode(const UpgradePacket()));
-      final exception = await exception_;
-
-      expect(exception.statusCode, equals(HttpStatus.badRequest));
-      expect(
-        exception.reasonPhrase,
-        equals(
-          'Attempted to upgrade transport that has already been upgraded.',
-        ),
-      );
+      await upgraded;
 
       websocket.close();
     });
@@ -284,5 +213,43 @@ void main() {
     // TODO(vxern): Add test for probing transport that is being upgraded.
     // TODO(vxern): Add test for downgrading to polling from websockets.
     // TODO(vxern): Add test for HTTP GET/POST requests after upgrade.
+  });
+
+  group('Server', () {
+    test('rejects invalid websocket handshake requests.', () async {
+      final response = await incompleteGet(
+        client,
+        protocolVersion: Server.protocolVersion.toString(),
+        connectionType: ConnectionType.websocket.name,
+      ).then((result) => result.response);
+
+      expect(response, signals(TransportException.upgradeRequestInvalid));
+    });
+
+    test('Server accepts valid websocket handshake requests.', () async {
+      final socket = server.onConnect.first;
+
+      final response = await upgrade(client).then((result) => result.response);
+
+      expectLater(
+        socket.then((socket) => socket.transport),
+        completion(equals(isA<WebSocketTransport>())),
+      );
+
+      expect(response, isSwitchingProtocols);
+    });
+
+    test('handles forced websocket closures.', () async {
+      final socket = server.onConnect.first;
+
+      expectLater(
+        socket.then((socket) => socket.onTransportException.first),
+        completion(TransportException.closedForcefully),
+      );
+
+      final websocket = await upgrade(client).then((result) => result.socket);
+
+      websocket.close();
+    });
   });
 }

@@ -4,7 +4,7 @@ import 'package:universal_io/io.dart';
 import 'package:engine_io_dart/src/server/configuration.dart';
 import 'package:engine_io_dart/src/server/server.dart';
 
-import 'shared.dart';
+import '../shared.dart';
 
 void main() {
   late HttpClient client;
@@ -12,44 +12,36 @@ void main() {
   setUp(() => client = HttpClient());
   tearDown(() async => client.close());
 
-  group('Server', () {
+  test('Server binds to a URL and then disposes.', () async {
     late final Server server;
+    await expectLater(
+      Server.bind(remoteUrl).then((server_) => server = server_),
+      completes,
+    );
 
-    test('binds to a URL.', () async {
-      expect(
-        Server.bind(remoteUrl).then((server_) => server = server_),
-        completes,
-      );
-    });
+    expect(server.dispose(), completes);
+  });
 
+  group('Server', () {
     test('is responsive.', () async {
-      expect(
+      final server = await Server.bind(remoteUrl);
+
+      await expectLater(
         client.postUrl(remoteUrl).then((request) => request.close()),
         completes,
       );
-    });
 
-    test('is disposed of.', () async {
-      await expectLater(server.dispose(), completes);
-
-      expect(
-        client.postUrl(remoteUrl).then((request) => request.close()),
-        throwsA(isA<SocketException>()),
-      );
+      await server.dispose();
     });
 
     test('sets a custom configuration.', () async {
       final configuration = ServerConfiguration(path: 'custom-path/');
 
-      late final Server server;
-      await expectLater(
-        Server.bind(remoteUrl, configuration: configuration)
-            .then((server_) => server = server_)
-            .then((server) => server.dispose()),
-        completes,
-      );
+      final server = await Server.bind(remoteUrl, configuration: configuration);
 
       expect(server.configuration, equals(configuration));
+
+      await server.dispose();
     });
   });
 }

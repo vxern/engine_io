@@ -7,7 +7,7 @@ import 'package:engine_io_dart/src/packets/types/open.dart';
 import 'package:engine_io_dart/src/packets/types/ping.dart';
 import 'package:engine_io_dart/src/packets/types/pong.dart';
 import 'package:engine_io_dart/src/packets/packet.dart';
-import 'package:engine_io_dart/src/transports/transport.dart';
+import 'package:engine_io_dart/src/server/configuration.dart';
 
 void main() {
   group('Decodes the content of', () {
@@ -46,10 +46,16 @@ void main() {
             () => packet = OpenPacket.decode(
               json.encode(<String, dynamic>{
                 'sid': 'session_identifier',
-                'upgrades': <String>[ConnectionType.websocket.name],
-                'pingInterval': 1000 * 5,
-                'pingTimeout': 1000 * 2,
-                'maxPayload': 1024 * 128,
+                'upgrades': ServerConfiguration
+                    .defaultConfiguration.availableConnectionTypes
+                    .map((connectionType) => connectionType.name)
+                    .toList(),
+                'pingInterval': ServerConfiguration
+                    .defaultConfiguration.heartbeatInterval.inMilliseconds,
+                'pingTimeout': ServerConfiguration
+                    .defaultConfiguration.heartbeatTimeout.inMilliseconds,
+                'maxPayload':
+                    ServerConfiguration.defaultConfiguration.maximumChunkBytes,
               }),
             ),
             returnsNormally,
@@ -57,11 +63,22 @@ void main() {
           expect(packet.sessionIdentifier, equals('session_identifier'));
           expect(
             packet.availableConnectionUpgrades,
-            equals({ConnectionType.websocket}),
+            equals(
+              ServerConfiguration.defaultConfiguration.availableConnectionTypes,
+            ),
           );
-          expect(packet.heartbeatInterval.inMilliseconds, equals(1000 * 5));
-          expect(packet.heartbeatTimeout.inMilliseconds, equals(1000 * 2));
-          expect(packet.maximumChunkBytes, equals(1024 * 128));
+          expect(
+            packet.heartbeatInterval,
+            equals(ServerConfiguration.defaultConfiguration.heartbeatInterval),
+          );
+          expect(
+            packet.heartbeatTimeout,
+            equals(ServerConfiguration.defaultConfiguration.heartbeatTimeout),
+          );
+          expect(
+            packet.maximumChunkBytes,
+            equals(ServerConfiguration.defaultConfiguration.maximumChunkBytes),
+          );
         },
       );
     });
@@ -81,7 +98,7 @@ void main() {
           () => packet = PingPacket.decode(PacketContents.empty),
           returnsNormally,
         );
-        expect(packet.isProbe, equals(false));
+        expect(packet.isProbe, isFalse);
       });
 
       test(
@@ -92,7 +109,7 @@ void main() {
             () => packet = PingPacket.decode(PacketContents.probe),
             returnsNormally,
           );
-          expect(packet.isProbe, equals(true));
+          expect(packet.isProbe, isTrue);
         },
       );
     });
@@ -112,7 +129,7 @@ void main() {
           () => packet = PongPacket.decode(PacketContents.empty),
           returnsNormally,
         );
-        expect(packet.isProbe, equals(false));
+        expect(packet.isProbe, isFalse);
       });
 
       test(
@@ -123,7 +140,7 @@ void main() {
             () => packet = PongPacket.decode(PacketContents.probe),
             returnsNormally,
           );
-          expect(packet.isProbe, equals(true));
+          expect(packet.isProbe, isTrue);
         },
       );
     });

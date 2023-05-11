@@ -62,10 +62,10 @@ abstract class Transport<T> with Events {
   late final HeartbeatManager heartbeat;
 
   /// Keeps track of information regarding upgrades to a different transport.
-  TransportUpgrade upgrade = TransportUpgrade();
+  UpgradeState upgrade = UpgradeState();
 
   /// Whether the transport is in the process of being upgraded.
-  bool get isUpgrading => upgrade.state != UpgradeState.none;
+  bool get isUpgrading => upgrade.state != UpgradeStatus.none;
 
   /// Whether the transport is closed.
   bool isClosed = false;
@@ -126,7 +126,7 @@ abstract class Transport<T> with Events {
           break;
         }
 
-        if (upgrade.state == UpgradeState.probed) {
+        if (upgrade.state == UpgradeStatus.probed) {
           exception = TransportException.transportAlreadyProbed;
           break;
         }
@@ -136,8 +136,8 @@ abstract class Transport<T> with Events {
           break;
         }
 
-        upgrade.state = UpgradeState.probed;
-        upgrade.origin.upgrade.state = UpgradeState.probed;
+        upgrade.state = UpgradeStatus.probed;
+        upgrade.origin.upgrade.state = UpgradeStatus.probed;
 
         send(const PongPacket());
 
@@ -166,7 +166,7 @@ abstract class Transport<T> with Events {
           break;
         }
 
-        if (upgrade.state != UpgradeState.probed) {
+        if (upgrade.state != UpgradeStatus.probed) {
           exception = TransportException.transportNotProbed;
           break;
         }
@@ -178,8 +178,8 @@ abstract class Transport<T> with Events {
 
         final origin = upgrade.origin;
 
-        upgrade.origin.upgrade = TransportUpgrade();
-        upgrade = TransportUpgrade();
+        upgrade.origin.upgrade = UpgradeState();
+        upgrade = UpgradeState();
 
         if (origin is PollingTransport) {
           sendAll(origin.packetBuffer);
@@ -237,9 +237,9 @@ abstract class Transport<T> with Events {
     }
 
     if (isUpgrading) {
-      upgrade.destination.upgrade = TransportUpgrade();
+      upgrade.destination.upgrade = UpgradeState();
       await upgrade.destination.dispose();
-      upgrade = TransportUpgrade();
+      upgrade = UpgradeState();
       return except(TransportException.upgradeAlreadyInitiated);
     }
 
@@ -349,8 +349,8 @@ mixin Events {
   }
 }
 
-/// Represents the state of a transport upgrade.
-enum UpgradeState {
+/// Represents the status of a transport upgrade.
+enum UpgradeStatus {
   /// The transport is not being upgraded.
   none,
 
@@ -361,14 +361,14 @@ enum UpgradeState {
   probed,
 }
 
-/// Represents a transport upgrade.
-class TransportUpgrade {
+/// Represents the state of a transport upgrade.
+class UpgradeState {
   /// Whether this upgrade belongs to the transport being upgraded, or the new
   /// transport.
   bool isOrigin = false;
 
   /// The current state of the upgrade.
-  UpgradeState state = UpgradeState.none;
+  UpgradeStatus state = UpgradeStatus.none;
 
   /// The transport that is getting upgraded.
   late Transport origin;

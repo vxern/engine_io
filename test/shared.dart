@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:universal_io/io.dart';
+import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_dart/src/packets/types/open.dart';
 import 'package:engine_io_dart/src/server/server.dart';
+import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/polling/polling.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
 import 'package:engine_io_dart/src/packets/packet.dart';
@@ -19,7 +20,7 @@ class GetResult {
   GetResult(this.response, this.packets);
 }
 
-Future<GetResult> unsafeGet(
+Future<GetResult> incompleteGet(
   HttpClient client, {
   String? protocolVersion,
   String? connectionType,
@@ -58,7 +59,7 @@ Future<GetResult> get(
   String? connectionType,
   String? sessionIdentifier,
 }) =>
-    unsafeGet(
+    incompleteGet(
       client,
       protocolVersion: protocolVersion ?? Server.protocolVersion.toString(),
       connectionType: connectionType ?? ConnectionType.polling.name,
@@ -72,7 +73,7 @@ class HandshakeResult {
   HandshakeResult(this.response, this.packet);
 }
 
-Future<HandshakeResult> handshake(HttpClient client) => unsafeGet(
+Future<HandshakeResult> handshake(HttpClient client) => incompleteGet(
       client,
       protocolVersion: Server.protocolVersion.toString(),
       connectionType: ConnectionType.polling.name,
@@ -81,10 +82,25 @@ Future<HandshakeResult> handshake(HttpClient client) => unsafeGet(
           HandshakeResult(result.response, result.packets.first as OpenPacket),
     );
 
+class ConnectResult {
+  final Socket socket;
+  final OpenPacket packet;
+
+  ConnectResult(this.socket, this.packet);
+}
+
+Future<ConnectResult> connect(Server server, HttpClient client) async {
+  final socketLater = server.onConnect.first;
+  final open = await handshake(client).then((result) => result.packet);
+  final socket = await socketLater;
+
+  return ConnectResult(socket, open);
+}
+
 Future<HttpClientResponse> post(
   HttpClient client, {
   required String sessionIdentifier,
-  required Packet packet,
+  required List<Packet> packets,
   String? connectionType,
   ContentType? contentType,
 }) async {
@@ -98,11 +114,14 @@ Future<HttpClientResponse> post(
 
   final response = await client.postUrl(url).then(
     (request) {
-      final encoded = Packet.encode(packet);
+      final encoded = <String>[];
+      for (final packet in packets) {
+        encoded.add(Packet.encode(packet));
+      }
 
       return request
         ..headers.contentType = contentType
-        ..write(encoded);
+        ..writeAll(encoded, PollingTransport.recordSeparator);
     },
   ).then((request) => request.close());
 

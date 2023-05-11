@@ -257,11 +257,11 @@ class PollingTransport extends Transport<HttpRequest> {
 
     upgrade
       ..isOrigin = true
-      ..state = UpgradeState.initiated
+      ..state = UpgradeStatus.initiated
       ..destination = transport;
 
     transport.upgrade
-      ..state = UpgradeState.initiated
+      ..state = UpgradeStatus.initiated
       ..origin = this;
 
     onInitiateUpgradeController.add(transport);

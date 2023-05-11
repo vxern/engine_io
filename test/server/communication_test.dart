@@ -1,172 +1,185 @@
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
-import 'package:universal_io/io.dart';
+import 'package:universal_io/io.dart' hide Socket, SocketException;
+import 'package:uuid/uuid.dart';
 
 import 'package:engine_io_dart/src/packets/types/message.dart';
 import 'package:engine_io_dart/src/packets/types/noop.dart';
 import 'package:engine_io_dart/src/packets/types/open.dart';
 import 'package:engine_io_dart/src/packets/types/ping.dart';
 import 'package:engine_io_dart/src/packets/types/pong.dart';
-import 'package:engine_io_dart/src/packets/types/upgrade.dart';
-import 'package:engine_io_dart/src/server/server.dart';
-import 'package:engine_io_dart/src/transports/polling/polling.dart';
 import 'package:engine_io_dart/src/packets/packet.dart';
-import 'package:engine_io_dart/src/transports/transport.dart';
+import 'package:engine_io_dart/src/server/exception.dart';
+import 'package:engine_io_dart/src/server/server.dart';
+import 'package:engine_io_dart/src/server/socket.dart';
+import 'package:engine_io_dart/src/transports/polling/exception.dart';
+import 'package:engine_io_dart/src/transports/polling/polling.dart';
+import 'package:engine_io_dart/src/transports/exception.dart';
 
-import 'shared.dart';
+import '../matchers.dart';
+import '../shared.dart' hide handshake;
+
+const _uuid = Uuid();
 
 void main() {
   late HttpClient client;
   late Server server;
+  late Socket socket;
+  late OpenPacket open;
 
   setUp(() async {
     client = HttpClient();
     server = await Server.bind(remoteUrl);
+
+    final handshake = await connect(server, client);
+    socket = handshake.socket;
+    open = handshake.packet;
   });
   tearDown(() async {
     client.close();
-    server.dispose();
+    await server.dispose();
   });
 
   group('Server', () {
-    test('offloads packets correctly.', () async {
-      final open = await handshake(client).then((result) => result.packet);
-      final socket = server.clientManager.get(
-        sessionIdentifier: open.sessionIdentifier,
-      )!;
+    test(
+      'rejects requests without session identifier when client is connected.',
+      () async {
+        expectLater(socket.onException, emits(anything));
 
-      socket.transport.sendAll([
-        const TextMessagePacket(data: 'first'),
-        const TextMessagePacket(data: 'second'),
-        const PingPacket(),
-        const TextMessagePacket(data: 'third'),
-        const UpgradePacket(),
-      ]);
+        final response = await get(client).then((result) => result.response);
 
-      {
-        final packets =
-            await get(client, sessionIdentifier: open.sessionIdentifier)
-                .then((result) => result.packets);
+        expect(response, signals(SocketException.sessionIdentifierRequired));
+      },
+    );
 
-        expect(packets.length, equals(5));
+    test('rejects invalid session identifiers.', () async {
+      expectLater(socket.onException, emits(anything));
 
-        final transport = socket.transport as PollingTransport;
-        expect(transport.packetBuffer.isEmpty, equals(true));
+      final response = await get(client, sessionIdentifier: 'invalid_sid')
+          .then((result) => result.response);
 
-        expect(packets[0], isA<TextMessagePacket>());
-        expect(packets[1], isA<TextMessagePacket>());
-        expect(packets[2], isA<PingPacket>());
-        expect(packets[3], isA<TextMessagePacket>());
-        expect(packets[4], isA<UpgradePacket>());
-      }
+      expect(response, signals(SocketException.sessionIdentifierInvalid));
     });
 
-    test('sets the correct content type header.', () async {
-      final open = await handshake(client).then((result) => result.packet);
-      final socket = server.clientManager.get(
-        sessionIdentifier: open.sessionIdentifier,
-      )!
-        ..send(const PingPacket());
+    test('rejects session identifiers that do not exist.', () async {
+      expectLater(socket.onException, emits(anything));
 
-      {
-        final response =
-            await get(client, sessionIdentifier: open.sessionIdentifier)
-                .then((result) => result.response);
+      final response = await get(client, sessionIdentifier: _uuid.v4())
+          .then((result) => result.response);
 
-        expect(
-          response.headers.contentType?.mimeType,
-          equals(ContentType.text.mimeType),
-        );
-      }
+      expect(response, signals(SocketException.sessionIdentifierInvalid));
+    });
 
-      socket.send(
-        const OpenPacket(
-          sessionIdentifier: 'sid',
-          availableConnectionUpgrades: {},
-          heartbeatInterval: Duration.zero,
-          heartbeatTimeout: Duration.zero,
-          maximumChunkBytes: 0,
-        ),
+    test('offloads packets.', () async {
+      expect(
+        () => socket.sendAll(const [
+          TextMessagePacket(data: 'first'),
+          TextMessagePacket(data: 'second'),
+          TextMessagePacket(data: 'third'),
+        ]),
+        returnsNormally,
       );
 
-      {
-        final response =
-            await get(client, sessionIdentifier: open.sessionIdentifier)
-                .then((result) => result.response);
+      final transport = socket.transport as PollingTransport;
 
-        expect(
-          response.headers.contentType?.mimeType,
-          equals(ContentType.json.mimeType),
-        );
-      }
+      expect(transport.packetBuffer, hasLength(3));
 
-      socket.send(
-        BinaryMessagePacket(data: Uint8List.fromList(<int>[])),
+      expectLater(
+        socket.onSend,
+        emitsInOrder(const <Packet>[
+          TextMessagePacket(data: 'first'),
+          TextMessagePacket(data: 'second'),
+          TextMessagePacket(data: 'third'),
+        ]),
       );
 
-      {
+      final packets =
+          await get(client, sessionIdentifier: open.sessionIdentifier)
+              .then((result) => result.packets);
+
+      expect(packets, everyElement(isA<TextMessagePacket>()));
+
+      expect(transport.packetBuffer, isEmpty);
+    });
+
+    group('sets the correct content type header:', () {
+      test('text/plain.', () async {
+        socket.send(const TextMessagePacket(data: 'plaintext'));
+
         final response =
             await get(client, sessionIdentifier: open.sessionIdentifier)
                 .then((result) => result.response);
 
-        expect(
-          response.headers.contentType?.mimeType,
-          equals(ContentType.binary.mimeType),
+        expect(response, hasContentType(ContentType.text));
+      });
+
+      test('application/json.', () async {
+        socket.send(
+          const OpenPacket(
+            sessionIdentifier: 'sid',
+            availableConnectionUpgrades: {},
+            heartbeatInterval: Duration.zero,
+            heartbeatTimeout: Duration.zero,
+            maximumChunkBytes: 0,
+          ),
         );
-      }
+
+        final response =
+            await get(client, sessionIdentifier: open.sessionIdentifier)
+                .then((result) => result.response);
+
+        expect(response, hasContentType(ContentType.json));
+      });
+
+      test('application/octet-stream.', () async {
+        socket.send(
+          BinaryMessagePacket(data: Uint8List.fromList(List.empty())),
+        );
+
+        final response =
+            await get(client, sessionIdentifier: open.sessionIdentifier)
+                .then((result) => result.response);
+
+        expect(response, hasContentType(ContentType.binary));
+      });
     });
 
     test(
       'limits the number of packets sent in accordance with chunk limits.',
       () async {
-        final open = await handshake(client).then((result) => result.packet);
-        final socket = server.clientManager.get(
-          sessionIdentifier: open.sessionIdentifier,
-        )!;
+        final packetCount = server.configuration.maximumChunkBytes;
 
-        for (var i = 0; i < server.configuration.maximumChunkBytes; i++) {
-          socket.send(const PingPacket());
-        }
+        socket.sendAll(List.filled(packetCount, const PingPacket()));
 
-        {
-          final packets =
-              await get(client, sessionIdentifier: open.sessionIdentifier)
-                  .then((result) => result.packets);
+        final transport = socket.transport as PollingTransport;
 
-          expect(
-            packets.length,
-            equals(server.configuration.maximumChunkBytes ~/ 2),
-          );
+        final packets =
+            await get(client, sessionIdentifier: open.sessionIdentifier)
+                .then((result) => result.packets);
 
-          final transport = socket.transport as PollingTransport;
-          expect(
-            transport.packetBuffer.length,
-            equals(server.configuration.maximumChunkBytes - packets.length),
-          );
-        }
+        expect(packets, hasLength(packetCount ~/ 2));
+        expect(transport.packetBuffer, hasLength(packetCount - packets.length));
       },
     );
 
     test(
       'rejects POST requests with binary data but no `Content-Type` header.',
       () async {
-        final open = await handshake(client).then((result) => result.packet);
+        expectLater(socket.onTransportException, emits(anything));
+        expectLater(socket.onException, emits(anything));
 
         final response = await post(
           client,
           sessionIdentifier: open.sessionIdentifier,
-          packet: BinaryMessagePacket(
-            data: Uint8List.fromList(<int>[]),
-          ),
+          packets: [
+            BinaryMessagePacket(data: Uint8List.fromList(List.empty()))
+          ],
         );
 
-        expect(response.statusCode, equals(HttpStatus.badRequest));
         expect(
-          response.reasonPhrase,
-          equals(
-            '''Detected a content type different to the implicit content type.''',
-          ),
+          response,
+          signals(PollingTransportException.contentTypeDifferentToImplicit),
         );
       },
     );
@@ -174,21 +187,19 @@ void main() {
     test(
       'rejects POST requests with invalid `Content-Type` header.',
       () async {
-        final open = await handshake(client).then((result) => result.packet);
+        expectLater(socket.onTransportException, emits(anything));
+        expectLater(socket.onException, emits(anything));
 
         final response = await post(
           client,
           sessionIdentifier: open.sessionIdentifier,
-          packet: const TextMessagePacket(data: ''),
+          packets: [const TextMessagePacket(data: PacketContents.empty)],
           contentType: ContentType.binary,
         );
 
-        expect(response.statusCode, equals(HttpStatus.badRequest));
         expect(
-          response.reasonPhrase,
-          equals(
-            '''Detected a content type different to the one specified by the client.''',
-          ),
+          response,
+          signals(PollingTransportException.contentTypeDifferentToSpecified),
         );
       },
     );
@@ -196,149 +207,123 @@ void main() {
     test(
       'rejects POST requests with a payload that is too large.',
       () async {
-        final open = await handshake(client).then((result) => result.packet);
+        expectLater(socket.onTransportException, emits(anything));
+        expectLater(socket.onException, emits(anything));
 
-        final url = serverUrl.replace(
-          queryParameters: <String, String>{
-            'EIO': Server.protocolVersion.toString(),
-            'transport': ConnectionType.polling.name,
-            'sid': open.sessionIdentifier,
-          },
+        final response = await post(
+          client,
+          sessionIdentifier: open.sessionIdentifier,
+          packets: List.filled(
+            server.configuration.maximumChunkBytes,
+            const TextMessagePacket(data: PacketContents.empty),
+          ),
         );
 
-        final response = await client.postUrl(url).then(
-          (request) {
-            final packets = <String>[];
-            for (var i = 0; i < server.configuration.maximumChunkBytes; i++) {
-              packets.add(Packet.encode(const TextMessagePacket(data: '')));
-            }
-
-            return request..writeAll(packets, PollingTransport.recordSeparator);
-          },
-        ).then((request) => request.close());
-
-        expect(response.statusCode, equals(HttpStatus.badRequest));
         expect(
-          response.reasonPhrase,
-          equals('Maximum payload chunk length exceeded.'),
+          response,
+          signals(PollingTransportException.contentLengthLimitExceeded),
         );
       },
     );
 
+    // TODO(vxern): Add a test for a content length that has been spoofed by the client.
+
     test('accepts valid POST requests.', () async {
-      final open = await handshake(client).then((result) => result.packet);
+      expectLater(socket.onReceive, emits(anything));
 
       final response = await post(
         client,
         sessionIdentifier: open.sessionIdentifier,
-        packet: const TextMessagePacket(data: ''),
+        packets: [const TextMessagePacket(data: PacketContents.probe)],
         contentType: ContentType.text,
       );
 
-      expect(response.statusCode, equals(HttpStatus.ok));
-      expect(response.reasonPhrase, equals('OK'));
+      expect(response, isOkay);
     });
 
     test(
       'rejects unexpected pong requests.',
       () async {
-        final open = await handshake(client).then((result) => result.packet);
+        expectLater(socket.onReceive, neverEmits(anything));
+        expectLater(socket.onTransportException, emits(anything));
+        expectLater(socket.onException, emits(anything));
 
         final response = await post(
           client,
           sessionIdentifier: open.sessionIdentifier,
-          packet: const PongPacket(),
+          packets: [const PongPacket()],
         );
 
-        expect(response.statusCode, equals(HttpStatus.badRequest));
-        expect(
-          response.reasonPhrase,
-          equals(
-            'The server did not expect to receive a heartbeat at this time.',
-          ),
-        );
+        expect(response, signals(TransportException.heartbeatUnexpected));
       },
     );
 
     group(
       'rejects illegal packets:',
       () {
-        late OpenPacket open;
-
-        setUp(
-          () async =>
-              open = await handshake(client).then((result) => result.packet),
-        );
-
         test('open', () async {
+          expectLater(socket.onReceive, neverEmits(anything));
+          expectLater(socket.onTransportException, emits(anything));
+          expectLater(socket.onException, emits(anything));
+
           final response = await post(
             client,
             sessionIdentifier: open.sessionIdentifier,
-            packet: const OpenPacket(
-              sessionIdentifier: 'sid',
-              availableConnectionUpgrades: {},
-              heartbeatInterval: Duration.zero,
-              heartbeatTimeout: Duration.zero,
-              maximumChunkBytes: 0,
-            ),
+            packets: [
+              const OpenPacket(
+                sessionIdentifier: 'sid',
+                availableConnectionUpgrades: {},
+                heartbeatInterval: Duration.zero,
+                heartbeatTimeout: Duration.zero,
+                maximumChunkBytes: 0,
+              )
+            ],
             contentType: ContentType.json,
           );
 
-          expect(response.statusCode, equals(HttpStatus.badRequest));
-          expect(
-            response.reasonPhrase,
-            equals(
-              'Received a packet that is not legal to be sent by the client.',
-            ),
-          );
+          expect(response, signals(TransportException.packetIllegal));
         });
 
         test('noop', () async {
+          expectLater(socket.onReceive, neverEmits(anything));
+          expectLater(socket.onTransportException, emits(anything));
+          expectLater(socket.onException, emits(anything));
+
           final response = await post(
             client,
             sessionIdentifier: open.sessionIdentifier,
-            packet: const NoopPacket(),
+            packets: [const NoopPacket()],
           );
 
-          expect(response.statusCode, equals(HttpStatus.badRequest));
-          expect(
-            response.reasonPhrase,
-            equals(
-              'Received a packet that is not legal to be sent by the client.',
-            ),
-          );
+          expect(response, signals(TransportException.packetIllegal));
         });
 
         test('ping (non-probe)', () async {
+          expectLater(socket.onReceive, neverEmits(anything));
+          expectLater(socket.onTransportException, emits(anything));
+          expectLater(socket.onException, emits(anything));
+
           final response = await post(
             client,
             sessionIdentifier: open.sessionIdentifier,
-            packet: const PingPacket(),
+            packets: [const PingPacket()],
           );
 
-          expect(response.statusCode, equals(HttpStatus.badRequest));
-          expect(
-            response.reasonPhrase,
-            equals(
-              'Received a packet that is not legal to be sent by the client.',
-            ),
-          );
+          expect(response, signals(TransportException.packetIllegal));
         });
 
         test('pong (probe)', () async {
+          expectLater(socket.onReceive, neverEmits(anything));
+          expectLater(socket.onTransportException, emits(anything));
+          expectLater(socket.onException, emits(anything));
+
           final response = await post(
             client,
             sessionIdentifier: open.sessionIdentifier,
-            packet: const PongPacket(isProbe: true),
+            packets: [const PongPacket(isProbe: true)],
           );
 
-          expect(response.statusCode, equals(HttpStatus.badRequest));
-          expect(
-            response.reasonPhrase,
-            equals(
-              'Received a packet that is not legal to be sent by the client.',
-            ),
-          );
+          expect(response, signals(TransportException.packetIllegal));
         });
       },
     );
