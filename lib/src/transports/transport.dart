@@ -9,6 +9,7 @@ import 'package:engine_io_dart/src/packets/types/pong.dart';
 import 'package:engine_io_dart/src/packets/type.dart';
 import 'package:engine_io_dart/src/server/configuration.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
+import 'package:engine_io_dart/src/server/upgrade.dart';
 import 'package:engine_io_dart/src/transports/polling/polling.dart';
 import 'package:engine_io_dart/src/transports/heartbeat_manager.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
@@ -54,18 +55,15 @@ abstract class Transport<T> with Events {
   /// The connection type corresponding to this transport.
   final ConnectionType connectionType;
 
+  /// A reference to the socket that is using this transport instance.
+  final Socket socket;
+
   /// A reference to the server configuration.
   final ServerConfiguration configuration;
 
   /// Instance of `HeartbeatManager` responsible for ensuring that the
   /// connection is still active.
   late final HeartbeatManager heartbeat;
-
-  /// Keeps track of information regarding upgrades to a different transport.
-  UpgradeState upgrade = UpgradeState();
-
-  /// Whether the transport is in the process of being upgraded.
-  bool get isUpgrading => upgrade.state != UpgradeStatus.none;
 
   /// Whether the transport is closed.
   bool isClosed = false;
@@ -75,6 +73,7 @@ abstract class Transport<T> with Events {
   /// Creates an instance of `Transport`.
   Transport({
     required this.connectionType,
+    required this.socket,
     required this.configuration,
   }) {
     heartbeat = HeartbeatManager.create(
@@ -121,23 +120,22 @@ abstract class Transport<T> with Events {
           break;
         }
 
-        if (!isUpgrading) {
+        if (!socket.isUpgrading) {
           exception = TransportException.upgradeNotUnderway;
           break;
         }
 
-        if (upgrade.state == UpgradeStatus.probed) {
+        if (socket.upgrade.status == UpgradeStatus.probed) {
           exception = TransportException.transportAlreadyProbed;
           break;
         }
 
-        if (upgrade.isOrigin) {
+        if (socket.upgrade.origin.connectionType == connectionType) {
           exception = TransportException.transportIsOrigin;
           break;
         }
 
-        upgrade.state = UpgradeStatus.probed;
-        upgrade.origin.upgrade.state = UpgradeStatus.probed;
+        socket.upgrade.markProbed();
 
         send(const PongPacket());
 
@@ -161,25 +159,24 @@ abstract class Transport<T> with Events {
         exception = TransportException.requestedClosure;
         break;
       case PacketType.upgrade:
-        if (!isUpgrading) {
+        if (!socket.isUpgrading) {
           exception = TransportException.transportAlreadyUpgraded;
           break;
         }
 
-        if (upgrade.state != UpgradeStatus.probed) {
+        if (socket.upgrade.status != UpgradeStatus.probed) {
           exception = TransportException.transportNotProbed;
           break;
         }
 
-        if (upgrade.isOrigin) {
+        if (socket.upgrade.origin.connectionType == connectionType) {
           exception = TransportException.transportIsOrigin;
           break;
         }
 
-        final origin = upgrade.origin;
+        final origin = socket.upgrade.origin;
 
-        upgrade.origin.upgrade = UpgradeState();
-        upgrade = UpgradeState();
+        socket.upgrade.markComplete();
 
         if (origin is PollingTransport) {
           sendAll(origin.packetBuffer);
@@ -227,8 +224,7 @@ abstract class Transport<T> with Events {
 
   /// Handles a request to upgrade the connection.
   Future<TransportException?> handleUpgradeRequest(
-    HttpRequest request,
-    Socket client, {
+    HttpRequest request, {
     required ConnectionType connectionType,
     required bool skipUpgradeProcess,
   }) async {
@@ -236,10 +232,10 @@ abstract class Transport<T> with Events {
       return except(TransportException.upgradeCourseNotAllowed);
     }
 
-    if (isUpgrading) {
-      upgrade.destination.upgrade = UpgradeState();
-      await upgrade.destination.dispose();
-      upgrade = UpgradeState();
+    if (socket.isUpgrading) {
+      socket.upgrade
+        ..destination.dispose()
+        ..reset();
       return except(TransportException.upgradeAlreadyInitiated);
     }
 
@@ -250,8 +246,8 @@ abstract class Transport<T> with Events {
   /// handled by the server.
   TransportException except(TransportException exception) {
     final Transport transport;
-    if (isUpgrading && !upgrade.isOrigin) {
-      transport = upgrade.origin;
+    if (socket.isUpgrading && socket.upgrade.origin != this) {
+      transport = socket.upgrade.origin;
     } else {
       transport = this;
     }
@@ -277,8 +273,9 @@ abstract class Transport<T> with Events {
 
     heartbeat.dispose();
 
-    if (isUpgrading && upgrade.isOrigin) {
-      await upgrade.destination.dispose();
+    if (socket.isUpgrading &&
+        socket.upgrade.origin.connectionType == connectionType) {
+      await socket.upgrade.destination.dispose();
     }
 
     await closeEventStreams();
@@ -347,32 +344,4 @@ mixin Events {
     onExceptionController.close().ignore();
     onCloseController.close().ignore();
   }
-}
-
-/// Represents the status of a transport upgrade.
-enum UpgradeStatus {
-  /// The transport is not being upgraded.
-  none,
-
-  /// A transport upgrade has been initiated.
-  initiated,
-
-  /// The new transport has been probed, and the upgrade is nearly ready.
-  probed,
-}
-
-/// Represents the state of a transport upgrade.
-class UpgradeState {
-  /// Whether this upgrade belongs to the transport being upgraded, or the new
-  /// transport.
-  bool isOrigin = false;
-
-  /// The current state of the upgrade.
-  UpgradeStatus state = UpgradeStatus.none;
-
-  /// The transport that is getting upgraded.
-  late Transport origin;
-
-  /// The transport being upgraded to.
-  late Transport destination;
 }

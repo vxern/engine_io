@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:meta/meta.dart';
-import 'package:universal_io/io.dart';
+import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_dart/src/packets/types/message.dart';
 import 'package:engine_io_dart/src/packets/packet.dart';
@@ -11,6 +11,7 @@ import 'package:engine_io_dart/src/transports/websocket/exception.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
 import 'package:engine_io_dart/src/server/configuration.dart';
+import 'package:engine_io_dart/src/server/socket.dart';
 
 /// Transport used for websocket connections.
 @sealed
@@ -21,11 +22,14 @@ class WebSocketTransport extends Transport<dynamic> {
   static const _websocketSalt = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 
   /// The socket interfacing with the other party.
-  final WebSocket _socket;
+  final WebSocket _websocket;
 
   /// Creates an instance of `WebSocketTransport`.
-  WebSocketTransport({required WebSocket socket, required super.configuration})
-      : _socket = socket,
+  WebSocketTransport({
+    required super.socket,
+    required WebSocket websocket,
+    required super.configuration,
+  })  : _websocket = websocket,
         super(connectionType: ConnectionType.websocket);
 
   /// Taking a HTTP request, upgrades it to a websocket transport.
@@ -34,7 +38,8 @@ class WebSocketTransport extends Transport<dynamic> {
   /// - The request was not a valid websocket upgrade request.
   /// - The websocket key was not valid.
   static Future<WebSocketTransport> fromRequest(
-    HttpRequest request, {
+    HttpRequest request,
+    Socket socket, {
     required ServerConfiguration configuration,
   }) async {
     if (!WebSocketTransformer.isUpgradeRequest(request)) {
@@ -47,13 +52,14 @@ class WebSocketTransport extends Transport<dynamic> {
 
     // Sink is closed during disposal.
     // ignore: close_sinks
-    final socket = await WebSocketTransformer.upgrade(request);
+    final websocket = await WebSocketTransformer.upgrade(request);
     final transport = WebSocketTransport(
       socket: socket,
+      websocket: websocket,
       configuration: configuration,
     );
 
-    socket.listen(
+    websocket.listen(
       transport.receive,
       onDone: () {
         if (!transport.isClosed) {
@@ -122,9 +128,9 @@ class WebSocketTransport extends Transport<dynamic> {
   void send(Packet packet) {
     // Do not encode binary message packets over websockets.
     if (packet is BinaryMessagePacket) {
-      _socket.add(packet.data);
+      _websocket.add(packet.data);
     } else {
-      _socket.add(Packet.encode(packet));
+      _websocket.add(Packet.encode(packet));
     }
 
     onSendController.add(packet);
@@ -134,6 +140,6 @@ class WebSocketTransport extends Transport<dynamic> {
   Future<void> dispose() async {
     await super.dispose();
     // TODO(vxern): Add status code and reason.
-    await _socket.close();
+    await _websocket.close();
   }
 }

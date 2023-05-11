@@ -8,7 +8,6 @@ import 'package:engine_io_dart/src/transports/polling/exception.dart';
 import 'package:engine_io_dart/src/transports/websocket/websocket.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/packets/packet.dart';
-import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
 
 /// Transport used with long polling connections.
@@ -39,7 +38,7 @@ class PollingTransport extends Transport<HttpRequest> {
   final post = Lock();
 
   /// Creates an instance of `PollingTransport`.
-  PollingTransport({required super.configuration})
+  PollingTransport({required super.socket, required super.configuration})
       : super(connectionType: ConnectionType.polling);
 
   @override
@@ -220,14 +219,12 @@ class PollingTransport extends Transport<HttpRequest> {
 
   @override
   Future<TransportException?> handleUpgradeRequest(
-    HttpRequest request,
-    Socket client, {
+    HttpRequest request, {
     required ConnectionType connectionType,
     required bool skipUpgradeProcess,
   }) async {
     final exception = await super.handleUpgradeRequest(
       request,
-      client,
       connectionType: connectionType,
       skipUpgradeProcess: skipUpgradeProcess,
     );
@@ -243,6 +240,7 @@ class PollingTransport extends Transport<HttpRequest> {
     try {
       transport = await WebSocketTransport.fromRequest(
         request,
+        socket,
         configuration: configuration,
       );
     } on TransportException catch (exception) {
@@ -250,19 +248,12 @@ class PollingTransport extends Transport<HttpRequest> {
     }
 
     if (skipUpgradeProcess) {
-      client.transport.onUpgradeController.add(transport);
-      client.setTransport(transport);
+      socket.transport.onUpgradeController.add(transport);
+      socket.setTransport(transport);
       return null;
     }
 
-    upgrade
-      ..isOrigin = true
-      ..state = UpgradeStatus.initiated
-      ..destination = transport;
-
-    transport.upgrade
-      ..state = UpgradeStatus.initiated
-      ..origin = this;
+    socket.upgrade.markInitiated(origin: this, destination: transport);
 
     onInitiateUpgradeController.add(transport);
 

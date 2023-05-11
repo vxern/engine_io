@@ -179,7 +179,6 @@ class Server with Events {
     if (isSeekingUpgrade) {
       final exception = await client.transport.handleUpgradeRequest(
         request,
-        client,
         connectionType: parameters.connectionType,
         skipUpgradeProcess: isEstablishingConnection,
       );
@@ -252,12 +251,13 @@ class Server with Events {
     final sessionIdentifier =
         configuration.sessionIdentifiers.generate(request);
 
-    final transport = PollingTransport(configuration: configuration);
-    final client = await Socket.create(
-      transport: transport,
+    final client = Socket(
       sessionIdentifier: sessionIdentifier,
       ipAddress: ipAddress,
     );
+    final transport =
+        PollingTransport(socket: client, configuration: configuration);
+    await client.setTransport(transport, isInitial: true);
 
     client.onException.listen((_) => _disconnect(client));
     client.onTransportClose.listen((transport) {

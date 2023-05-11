@@ -5,10 +5,10 @@ import 'package:engine_io_dart/src/packets/types/open.dart';
 import 'package:engine_io_dart/src/packets/types/ping.dart';
 import 'package:engine_io_dart/src/packets/types/upgrade.dart';
 import 'package:engine_io_dart/src/packets/packet.dart';
+import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:engine_io_dart/src/server/server.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
-import 'package:engine_io_dart/src/server/exception.dart';
-import 'package:engine_io_dart/src/transports/polling/polling.dart';
+import 'package:engine_io_dart/src/server/upgrade.dart';
 import 'package:engine_io_dart/src/transports/websocket/websocket.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
@@ -73,21 +73,9 @@ void main() {
 
       expect(response, isSwitchingProtocols);
 
-      final transport = socket.transport as PollingTransport;
-
-      final originUpgrade = transport.upgrade;
-
-      expect(originUpgrade.isOrigin, isTrue);
-      expect(originUpgrade.state, equals(UpgradeStatus.initiated));
-      expect(() => originUpgrade.origin, throwsA(isA<Error>()));
-      expect(originUpgrade.destination, isNot(equals(transport)));
-
-      final destinationUpgrade = originUpgrade.destination.upgrade;
-
-      expect(destinationUpgrade.isOrigin, isFalse);
-      expect(destinationUpgrade.state, equals(UpgradeStatus.initiated));
-      expect(destinationUpgrade.origin, equals(transport));
-      expect(() => destinationUpgrade.destination, throwsA(isA<Error>()));
+      expect(socket.upgrade.status, equals(UpgradeStatus.initiated));
+      expect(socket.upgrade.origin, equals(socket.transport));
+      expect(socket.upgrade.destination, equals(isA<WebSocketTransport>()));
 
       websocket.close();
     });
@@ -118,7 +106,7 @@ void main() {
       websocket.add(Packet.encode(const PingPacket(isProbe: true)));
       await expectLater(pong, completes);
 
-      expect(socket.transport.upgrade.state, equals(UpgradeStatus.probed));
+      expect(socket.upgrade.status, equals(UpgradeStatus.probed));
 
       websocket.close();
     });
@@ -170,7 +158,7 @@ void main() {
 
       await upgraded;
 
-      expect(socket.transport.upgrade.state, equals(UpgradeStatus.none));
+      expect(socket.upgrade.status, equals(UpgradeStatus.none));
       expect(socket.transport, equals(isA<WebSocketTransport>()));
 
       websocket.close();

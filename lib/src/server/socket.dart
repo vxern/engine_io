@@ -5,6 +5,7 @@ import 'package:meta/meta.dart';
 import 'package:engine_io_dart/src/packets/packet.dart';
 import 'package:engine_io_dart/src/packets/types/message.dart';
 import 'package:engine_io_dart/src/server/exception.dart';
+import 'package:engine_io_dart/src/server/upgrade.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
 import 'package:engine_io_dart/src/socket.dart' as base;
@@ -24,27 +25,20 @@ class Socket extends base.Socket with Events {
   /// The remote IP address of this client.
   final String ipAddress;
 
+  /// Keeps track of information regarding a possible upgrade to a different
+  /// transport.
+  final UpgradeState upgrade = UpgradeState();
+
+  /// Whether the transport is in the process of being upgraded.
+  bool get isUpgrading => upgrade.status != UpgradeStatus.none;
+
   bool _isDisposing = false;
 
   /// Creates an instance of `Socket`.
-  Socket._({
+  Socket({
     required this.sessionIdentifier,
     required this.ipAddress,
   });
-
-  /// Creates an instance of `Socket`, setting its transport to [transport].
-  static Future<Socket> create({
-    required Transport transport,
-    required String sessionIdentifier,
-    required String ipAddress,
-  }) async {
-    final socket = Socket._(
-      sessionIdentifier: sessionIdentifier,
-      ipAddress: ipAddress,
-    );
-    await socket.setTransport(transport, isInitial: true);
-    return socket;
-  }
 
   /// List of subscriptions to events being piped from the transport to this
   /// socket.
