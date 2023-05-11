@@ -13,14 +13,14 @@ import 'package:engine_io_dart/src/packets/packet.dart';
 final remoteUrl = Uri.http(InternetAddress.loopbackIPv4.address, '/');
 final serverUrl = remoteUrl.replace(path: '/engine.io/');
 
-class GetResult {
-  final HttpClientResponse response;
-  final List<Packet> packets;
+typedef EngineResponse<T> = (HttpClientResponse, T);
 
-  GetResult(this.response, this.packets);
-}
+typedef GetResult = EngineResponse<List<Packet>>;
+typedef UpgradeResult<T> = EngineResponse<T>;
 
-Future<GetResult> incompleteGet(
+typedef ConnectResult = (Socket, OpenPacket);
+
+Future<GetResult> getRaw(
   HttpClient client, {
   String? protocolVersion,
   String? connectionType,
@@ -39,7 +39,7 @@ Future<GetResult> incompleteGet(
   if (response.statusCode == HttpStatus.ok) {
     final body = await response.transform(utf8.decoder).join();
     if (body.isEmpty) {
-      return GetResult(response, []);
+      return (response, <Packet>[]);
     }
 
     final packets = body
@@ -47,10 +47,10 @@ Future<GetResult> incompleteGet(
         .map(Packet.decode)
         .toList();
 
-    return GetResult(response, packets);
+    return (response, packets);
   }
 
-  return GetResult(response, []);
+  return (response, <Packet>[]);
 }
 
 Future<GetResult> get(
@@ -59,42 +59,23 @@ Future<GetResult> get(
   String? connectionType,
   String? sessionIdentifier,
 }) =>
-    incompleteGet(
+    getRaw(
       client,
       protocolVersion: protocolVersion ?? Server.protocolVersion.toString(),
       connectionType: connectionType ?? ConnectionType.polling.name,
       sessionIdentifier: sessionIdentifier,
     );
 
-class HandshakeResult {
-  final HttpClientResponse response;
-  final OpenPacket packet;
-
-  HandshakeResult(this.response, this.packet);
-}
-
-Future<HandshakeResult> handshake(HttpClient client) => incompleteGet(
-      client,
-      protocolVersion: Server.protocolVersion.toString(),
-      connectionType: ConnectionType.polling.name,
-    ).then(
-      (result) =>
-          HandshakeResult(result.response, result.packets.first as OpenPacket),
-    );
-
-class ConnectResult {
-  final Socket socket;
-  final OpenPacket packet;
-
-  ConnectResult(this.socket, this.packet);
-}
-
 Future<ConnectResult> connect(Server server, HttpClient client) async {
   final socketLater = server.onConnect.first;
-  final open = await handshake(client).then((result) => result.packet);
+  final (_, open) = await getRaw(
+    client,
+    protocolVersion: Server.protocolVersion.toString(),
+    connectionType: ConnectionType.polling.name,
+  ).then((result) => (result.$1, result.$2.first as OpenPacket));
   final socket = await socketLater;
 
-  return ConnectResult(socket, open);
+  return (socket, open);
 }
 
 Future<HttpClientResponse> post(
@@ -156,14 +137,7 @@ final _random = Random();
 String generateWebsocketKey() =>
     base64.encode(List<int>.generate(16, (_) => _random.nextInt(256)));
 
-class WebSocketUpgradeResult {
-  final HttpClientResponse response;
-  final WebSocket socket;
-
-  WebSocketUpgradeResult(this.response, this.socket);
-}
-
-Future<WebSocketUpgradeResult> upgrade(
+Future<UpgradeResult<WebSocket>> upgrade(
   HttpClient client, {
   String? sessionIdentifier,
 }) async {
@@ -178,5 +152,5 @@ Future<WebSocketUpgradeResult> upgrade(
   // ignore: close_sinks
   final socket = WebSocket.fromUpgradedSocket(socket_, serverSide: false);
 
-  return WebSocketUpgradeResult(response, socket);
+  return (response, socket);
 }

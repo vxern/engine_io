@@ -40,9 +40,9 @@ void main() {
     late OpenPacket open;
 
     setUp(() async {
-      final handshake = await connect(server, client);
-      socket = handshake.socket;
-      open = handshake.packet;
+      final (socket_, open_) = await connect(server, client);
+      socket = socket_;
+      open = open_;
     });
 
     test('an `onReceive` event.', () async {
@@ -101,9 +101,8 @@ void main() {
       expectLater(socket.onUpgrade, emits(anything));
       expectLater(socket.onTransportClose, emits(anything));
 
-      final websocket =
-          await upgrade(client, sessionIdentifier: open.sessionIdentifier)
-              .then((result) => result.socket);
+      final (_, websocket) =
+          await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
       websocket
         ..add(Packet.encode(const PingPacket(isProbe: true)))
@@ -139,7 +138,8 @@ void main() {
 
     setUp(() async {
       final socket_ = server.onConnect.first;
-      websocket = await upgrade(client).then((result) => result.socket);
+      final (_, websocket_) = await upgrade(client);
+      websocket = websocket_;
       socket = await socket_;
     });
 

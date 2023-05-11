@@ -18,7 +18,7 @@ import 'package:engine_io_dart/src/transports/polling/polling.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
 
 import '../matchers.dart';
-import '../shared.dart' hide handshake;
+import '../shared.dart';
 
 const _uuid = Uuid();
 
@@ -32,9 +32,9 @@ void main() {
     client = HttpClient();
     server = await Server.bind(remoteUrl);
 
-    final handshake = await connect(server, client);
-    socket = handshake.socket;
-    open = handshake.packet;
+    final (socket_, open_) = await connect(server, client);
+    socket = socket_;
+    open = open_;
   });
   tearDown(() async {
     client.close();
@@ -47,7 +47,7 @@ void main() {
       () async {
         expectLater(socket.onException, emits(anything));
 
-        final response = await get(client).then((result) => result.response);
+        final (response, _) = await get(client);
 
         expect(response, signals(SocketException.sessionIdentifierRequired));
       },
@@ -56,8 +56,7 @@ void main() {
     test('rejects invalid session identifiers.', () async {
       expectLater(socket.onException, emits(anything));
 
-      final response = await get(client, sessionIdentifier: 'invalid_sid')
-          .then((result) => result.response);
+      final (response, _) = await get(client, sessionIdentifier: 'invalid_sid');
 
       expect(response, signals(SocketException.sessionIdentifierInvalid));
     });
@@ -65,8 +64,7 @@ void main() {
     test('rejects session identifiers that do not exist.', () async {
       expectLater(socket.onException, emits(anything));
 
-      final response = await get(client, sessionIdentifier: _uuid.v4())
-          .then((result) => result.response);
+      final (response, _) = await get(client, sessionIdentifier: _uuid.v4());
 
       expect(response, signals(SocketException.sessionIdentifierInvalid));
     });
@@ -94,9 +92,8 @@ void main() {
         ]),
       );
 
-      final packets =
-          await get(client, sessionIdentifier: open.sessionIdentifier)
-              .then((result) => result.packets);
+      final (_, packets) =
+          await get(client, sessionIdentifier: open.sessionIdentifier);
 
       expect(packets, everyElement(isA<TextMessagePacket>()));
 
@@ -107,9 +104,8 @@ void main() {
       test('text/plain.', () async {
         socket.send(const TextMessagePacket(data: 'plaintext'));
 
-        final response =
-            await get(client, sessionIdentifier: open.sessionIdentifier)
-                .then((result) => result.response);
+        final (response, _) =
+            await get(client, sessionIdentifier: open.sessionIdentifier);
 
         expect(response, hasContentType(ContentType.text));
       });
@@ -125,9 +121,8 @@ void main() {
           ),
         );
 
-        final response =
-            await get(client, sessionIdentifier: open.sessionIdentifier)
-                .then((result) => result.response);
+        final (response, _) =
+            await get(client, sessionIdentifier: open.sessionIdentifier);
 
         expect(response, hasContentType(ContentType.json));
       });
@@ -137,9 +132,8 @@ void main() {
           BinaryMessagePacket(data: Uint8List.fromList(List.empty())),
         );
 
-        final response =
-            await get(client, sessionIdentifier: open.sessionIdentifier)
-                .then((result) => result.response);
+        final (response, _) =
+            await get(client, sessionIdentifier: open.sessionIdentifier);
 
         expect(response, hasContentType(ContentType.binary));
       });
@@ -154,9 +148,8 @@ void main() {
 
         final transport = socket.transport as PollingTransport;
 
-        final packets =
-            await get(client, sessionIdentifier: open.sessionIdentifier)
-                .then((result) => result.packets);
+        final (_, packets) =
+            await get(client, sessionIdentifier: open.sessionIdentifier);
 
         expect(packets, hasLength(packetCount ~/ 2));
         expect(transport.packetBuffer, hasLength(packetCount - packets.length));

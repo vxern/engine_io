@@ -86,8 +86,7 @@ void main() {
     );
 
     test('rejects requests without mandatory query parameters.', () async {
-      final response =
-          await incompleteGet(client).then((result) => result.response);
+      final (response, _) = await getRaw(client);
 
       expect(response, signals(SocketException.missingMandatoryParameters));
     });
@@ -95,8 +94,7 @@ void main() {
     test(
       'rejects requests with a protocol version of an invalid type.',
       () async {
-        final response = await get(client, protocolVersion: 'abc')
-            .then((result) => result.response);
+        final (response, _) = await get(client, protocolVersion: 'abc');
 
         expect(response, signals(SocketException.protocolVersionInvalidType));
       },
@@ -104,8 +102,7 @@ void main() {
     test(
       'rejects requests with an invalid protocol version.',
       () async {
-        final response = await get(client, protocolVersion: '-1')
-            .then((result) => result.response);
+        final (response, _) = await get(client, protocolVersion: '-1');
 
         expect(response, signals(SocketException.protocolVersionInvalid));
       },
@@ -114,8 +111,7 @@ void main() {
     test(
       'rejects requests with an unsupported protocol version.',
       () async {
-        final response = await get(client, protocolVersion: '3')
-            .then((result) => result.response);
+        final (response, _) = await get(client, protocolVersion: '3');
 
         expect(response, signals(SocketException.protocolVersionUnsupported));
       },
@@ -124,8 +120,7 @@ void main() {
     test(
       'rejects requests with an invalid connection type.',
       () async {
-        final response = await get(client, connectionType: '123')
-            .then((result) => result.response);
+        final (response, _) = await get(client, connectionType: '123');
 
         expect(response, signals(SocketException.connectionTypeInvalid));
       },
@@ -134,8 +129,7 @@ void main() {
     test(
       '''rejects requests with session identifier when client is not connected.''',
       () async {
-        final response = await get(client, sessionIdentifier: '')
-            .then((result) => result.response);
+        final (response, _) = await get(client, sessionIdentifier: '');
 
         expect(response, signals(SocketException.sessionIdentifierUnexpected));
       },
@@ -144,8 +138,11 @@ void main() {
     test('accepts valid handshake requests.', () async {
       expectLater(server.onConnect, emits(anything));
 
-      final response =
-          await handshake(client).then((result) => result.response);
+      final response = await getRaw(
+        client,
+        protocolVersion: Server.protocolVersion.toString(),
+        connectionType: ConnectionType.polling.name,
+      ).then((result) => result.$1);
 
       expect(response, isOkay);
     });
@@ -153,9 +150,7 @@ void main() {
     test(
       'disconnects the client when it requests a closure.',
       () async {
-        final result = await connect(server, client);
-        final socket = result.socket;
-        final open = result.packet;
+        final (socket, open) = await connect(server, client);
 
         expect(socket.onException, neverEmits(anything));
         expect(socket.onClose, emits(anything));
@@ -189,9 +184,8 @@ void main() {
     test(
       'rejects requests with a connection type that is not enabled.',
       () async {
-        final response =
-            await get(client, connectionType: ConnectionType.websocket.name)
-                .then((result) => result.response);
+        final (response, _) =
+            await get(client, connectionType: ConnectionType.websocket.name);
 
         expect(response, signals(SocketException.connectionTypeUnavailable));
       },

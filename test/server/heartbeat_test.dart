@@ -26,9 +26,9 @@ void main() {
       ),
     );
 
-    final handshake = await connect(server, client);
-    socket = handshake.socket;
-    open = handshake.packet;
+    final (socket_, open_) = await connect(server, client);
+    socket = socket_;
+    open = open_;
   });
   tearDown(() async {
     client.close();
@@ -50,7 +50,7 @@ void main() {
 
         await expectLater(
           get(client, sessionIdentifier: open.sessionIdentifier)
-              .then((result) => result.packets.first),
+              .then((result) => result.$2.first),
           completion(const PingPacket()),
         );
 
@@ -71,7 +71,7 @@ void main() {
 
         await expectLater(
           get(client, sessionIdentifier: open.sessionIdentifier)
-              .then((result) => result.packets.first),
+              .then((result) => result.$2.first),
           completion(const PingPacket()),
         );
       },

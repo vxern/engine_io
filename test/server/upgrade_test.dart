@@ -34,9 +34,9 @@ void main() {
     late OpenPacket open;
 
     setUp(() async {
-      final handshake = await connect(server, client);
-      socket = handshake.socket;
-      open = handshake.packet;
+      final (socket_, open_) = await connect(server, client);
+      socket = socket_;
+      open = open_;
     });
 
     test(
@@ -55,11 +55,11 @@ void main() {
     test(
       'rejects websocket upgrade without valid HTTP websocket upgrade request.',
       () async {
-        final response = await get(
+        final (response, _) = await get(
           client,
           connectionType: ConnectionType.websocket.name,
           sessionIdentifier: open.sessionIdentifier,
-        ).then((result) => result.response);
+        );
 
         expect(response, signals(TransportException.upgradeRequestInvalid));
       },
@@ -68,10 +68,8 @@ void main() {
     test('initiates a connection upgrade.', () async {
       expectLater(socket.onInitiateUpgrade, emits(anything));
 
-      final result =
+      final (response, websocket) =
           await upgrade(client, sessionIdentifier: open.sessionIdentifier);
-      final websocket = result.socket;
-      final response = result.response;
 
       expect(response, isSwitchingProtocols);
 
@@ -97,9 +95,8 @@ void main() {
     test(
       'rejects request to upgrade when an upgrade process is already underway.',
       () async {
-        final websocket =
-            await upgrade(client, sessionIdentifier: open.sessionIdentifier)
-                .then((result) => result.socket);
+        final (_, websocket) =
+            await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
         final response = await upgradeRequest(
           client,
@@ -113,9 +110,8 @@ void main() {
     );
 
     test('handles probing on new transport.', () async {
-      final websocket =
-          await upgrade(client, sessionIdentifier: open.sessionIdentifier)
-              .then((result) => result.socket);
+      final (_, websocket) =
+          await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
       final pong = websocket.first;
 
@@ -128,9 +124,8 @@ void main() {
     });
 
     test('closes the connection on duplicate probe packets.', () async {
-      final websocket =
-          await upgrade(client, sessionIdentifier: open.sessionIdentifier)
-              .then((result) => result.socket);
+      final (_, websocket) =
+          await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
       expectLater(
         socket.onTransportException,
@@ -146,9 +141,8 @@ void main() {
     test(
       'closes the connection on upgrade packet on unprobed transport.',
       () async {
-        final websocket =
-            await upgrade(client, sessionIdentifier: open.sessionIdentifier)
-                .then((result) => result.socket);
+        final (_, websocket) =
+            await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
         expectLater(
           socket.onTransportException,
@@ -162,9 +156,8 @@ void main() {
     );
 
     test('upgrades the transport.', () async {
-      final websocket =
-          await upgrade(client, sessionIdentifier: open.sessionIdentifier)
-              .then((result) => result.socket);
+      final (_, websocket) =
+          await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
       final upgraded = socket.onUpgrade.first;
 
@@ -184,9 +177,8 @@ void main() {
     });
 
     test('closes the connection on duplicate upgrade packets.', () async {
-      final websocket =
-          await upgrade(client, sessionIdentifier: open.sessionIdentifier)
-              .then((result) => result.socket);
+      final (_, websocket) =
+          await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
       final upgraded = socket.onUpgrade.first;
 
@@ -217,11 +209,11 @@ void main() {
 
   group('Server', () {
     test('rejects invalid websocket handshake requests.', () async {
-      final response = await incompleteGet(
+      final (response, _) = await getRaw(
         client,
         protocolVersion: Server.protocolVersion.toString(),
         connectionType: ConnectionType.websocket.name,
-      ).then((result) => result.response);
+      );
 
       expect(response, signals(TransportException.upgradeRequestInvalid));
     });
@@ -229,7 +221,7 @@ void main() {
     test('Server accepts valid websocket handshake requests.', () async {
       final socket = server.onConnect.first;
 
-      final response = await upgrade(client).then((result) => result.response);
+      final (response, _) = await upgrade(client);
 
       expectLater(
         socket.then((socket) => socket.transport),
@@ -247,7 +239,7 @@ void main() {
         completion(TransportException.closedForcefully),
       );
 
-      final websocket = await upgrade(client).then((result) => result.socket);
+      final (_, websocket) = await upgrade(client);
 
       websocket.close();
     });
