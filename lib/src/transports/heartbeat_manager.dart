@@ -2,10 +2,6 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 
-// TODO(vxern): The heartbeat manager could work as just a single timer with
-//  a queue of events. The current implementation, whilst functional, is
-//  slightly convoluted.
-
 /// The `HeartbeatManager` is responsible for checking that connections are
 /// still active by ticking at intervals and flagging up when it has not been
 /// reset before the timeout had elapsed.
