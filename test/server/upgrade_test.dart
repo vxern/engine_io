@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:async/async.dart';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart' hide Socket, SocketException;
 
@@ -109,10 +110,10 @@ void main() {
       final (_, websocket) =
           await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
-      final pong = websocket.first;
+      final dataQueue = StreamQueue<dynamic>(websocket);
 
       websocket.add(Packet.encode(const PingPacket(isProbe: true)));
-      await expectLater(pong, completes);
+      await expectLater(dataQueue.next, completes);
 
       expect(socket.upgrade.status, equals(UpgradeStatus.probed));
 
@@ -155,16 +156,14 @@ void main() {
       final (_, websocket) =
           await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
-      final upgraded = socket.onUpgrade.first;
-
-      final pong = websocket.first;
+      final dataQueue = StreamQueue<dynamic>(websocket);
 
       websocket.add(Packet.encode(const PingPacket(isProbe: true)));
-      await pong;
+      await expectLater(dataQueue.next, completes);
 
+      final onUpgrade = socket.onUpgrade.first;
       websocket.add(Packet.encode(const UpgradePacket()));
-
-      await upgraded;
+      await onUpgrade;
 
       expect(socket.upgrade.status, equals(UpgradeStatus.none));
       expect(socket.transport, equals(isA<WebSocketTransport>()));
@@ -176,29 +175,23 @@ void main() {
       final (_, websocket) =
           await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
-      final first = Completer<void>();
-      final done = Completer<void>();
-      websocket.listen(
-        (dynamic _) => first.complete(),
-        onDone: done.complete,
-      );
-
-      final upgraded = socket.onUpgrade.first;
+      final dataQueue = StreamQueue<dynamic>(websocket);
 
       websocket.add(Packet.encode(const PingPacket(isProbe: true)));
-      await first.future;
+      await dataQueue.next;
 
       expectLater(
         socket.onTransportException,
         emits(TransportException.transportAlreadyUpgraded),
       );
 
+      final onUpgrade = socket.onUpgrade.first;
       websocket
         ..add(Packet.encode(const UpgradePacket()))
         ..add(Packet.encode(const UpgradePacket()));
-      await upgraded;
+      await onUpgrade;
 
-      await done.future;
+      await expectLater(dataQueue, emitsDone);
 
       expect(websocket.closeCode, WebSocketStatus.policyViolation);
       expect(
