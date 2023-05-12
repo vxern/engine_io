@@ -124,7 +124,7 @@ void main() {
           await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
       expectLater(
-        socket.onTransportException,
+        socket.onUpgradeException,
         emits(signals(TransportException.transportAlreadyProbed)),
       );
 
@@ -141,7 +141,7 @@ void main() {
             await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
         expectLater(
-          socket.onTransportException,
+          socket.onUpgradeException,
           emits(signals(TransportException.transportNotProbed)),
         );
 

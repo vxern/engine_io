@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:meta/meta.dart';
 
 import 'package:engine_io_dart/src/transports/transport.dart';
@@ -38,6 +39,8 @@ class UpgradeState {
 
   late final Timer Function() _getTimer;
 
+  StreamSubscription? _exceptionSubscription;
+
   /// Creates an instance of `UpgradeState`.
   UpgradeState({required Duration upgradeTimeout}) {
     _getTimer = () => Timer(upgradeTimeout, () async {
@@ -48,20 +51,25 @@ class UpgradeState {
   }
 
   /// Marks the upgrade process as initiated.
-  void markInitiated({
+  void markInitiated(
+    Socket socket, {
     required Transport origin,
     required Transport destination,
   }) {
     _status = UpgradeStatus.initiated;
     _origin = origin;
     _destination = destination;
+    _exceptionSubscription = destination.onUpgradeException
+        .listen(socket.onUpgradeExceptionController.add);
   }
 
   /// Marks the new transport as probed.
   void markProbed() => _status = UpgradeStatus.probed;
 
   /// Resets the upgrade state.
-  void reset() {
+  Future<void> reset() async {
+    _exceptionSubscription?.cancel();
+    _exceptionSubscription = null;
     _status = UpgradeStatus.none;
     _origin = null;
     _destination = null;
@@ -70,7 +78,7 @@ class UpgradeState {
   }
 
   /// Alias for `reset()`;
-  void markComplete() => reset();
+  Future<void> markComplete() => reset();
 
   /// Checks if a given connection type is the connection type of the original
   /// transport.

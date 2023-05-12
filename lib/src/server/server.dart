@@ -260,14 +260,9 @@ class Server with Events {
         PollingTransport(socket: client, configuration: configuration);
     await client.setTransport(transport, isInitial: true);
 
-    client.onException.listen((_) => _disconnect(client));
-    client.onTransportClose.listen((transport) {
-      // The only closure that could occur on the transport currently in use is
-      // an abnormal one. Disconnect.
-      if (transport == client.transport) {
-        _disconnect(client);
-      }
-    });
+    client.onException.listen((exception) => _disconnect(client));
+    client.onTransportClose.listen((_) => _disconnect(client));
+    client.onUpgradeException.listen((_) => _disconnect(client));
 
     clientManager.add(client);
     _onConnectController.add(client);

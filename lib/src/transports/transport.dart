@@ -245,19 +245,17 @@ abstract class Transport<T> with Events {
   /// Signals that an exception occurred on the transport, and returns it to be
   /// handled by the server.
   TransportException except(TransportException exception) {
-    final Transport transport;
-    if (socket.isUpgrading && socket.upgrade.origin != this) {
-      transport = socket.upgrade.origin;
-    } else {
-      transport = this;
+    // If this is the destination transport.
+    if (socket.isUpgrading && !socket.upgrade.isOrigin(connectionType)) {
+      onUpgradeExceptionController.add(exception);
+      return exception;
     }
 
     if (!exception.isSuccess) {
-      transport.onExceptionController.add(exception);
-      transport.onCloseController.add(this);
-    } else {
-      transport.onCloseController.add(this);
+      onExceptionController.add(exception);
     }
+
+    onCloseController.add(exception);
 
     return exception;
   }
@@ -303,11 +301,15 @@ mixin Events {
   /// Controller for the `onUpgrade` event stream.
   final onUpgradeController = StreamController<Transport>();
 
+  /// Controller for the `onUpgradeException` event stream.
+  final onUpgradeExceptionController =
+      StreamController<TransportException>.broadcast();
+
   /// Controller for the `onException` event stream.
   final onExceptionController = StreamController<TransportException>();
 
   /// Controller for the `onClose` event stream.
-  final onCloseController = StreamController<Transport>();
+  final onCloseController = StreamController<TransportException>();
 
   /// Added to when a packet is received.
   Stream<Packet> get onReceive => onReceiveController.stream;
@@ -327,11 +329,15 @@ mixin Events {
   /// Added to when a transport upgrade is complete.
   Stream<Transport> get onUpgrade => onUpgradeController.stream;
 
+  /// Added to when an exception occurs on a transport while upgrading.
+  Stream<TransportException> get onUpgradeException =>
+      onUpgradeExceptionController.stream;
+
   /// Added to when an exception occurs.
   Stream<TransportException> get onException => onExceptionController.stream;
 
   /// Added to when the transport is designated to close.
-  Stream<Transport> get onClose => onCloseController.stream;
+  Stream<TransportException> get onClose => onCloseController.stream;
 
   /// Closes event streams.
   Future<void> closeEventStreams() async {
@@ -341,6 +347,7 @@ mixin Events {
     onHeartbeatController.close().ignore();
     onInitiateUpgradeController.close().ignore();
     onUpgradeController.close().ignore();
+    onUpgradeExceptionController.close().ignore();
     onExceptionController.close().ignore();
     onCloseController.close().ignore();
   }

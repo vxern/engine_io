@@ -130,18 +130,24 @@ mixin Events {
   /// Controller for the `onHeartbeat` event stream.
   final _onHeartbeatController = StreamController<ProbePacket>.broadcast();
 
-  /// Controller for the `onTransportException` event stream.
-  final _onTransportExceptionController =
-      StreamController<TransportException>.broadcast();
-
-  /// Controller for the `onTransportClose` event stream.
-  final _onTransportCloseController = StreamController<Transport>.broadcast();
-
   /// Controller for the `onInitiateUpgrade` event stream.
   final _onInitiateUpgradeController = StreamController<Transport>.broadcast();
 
   /// Controller for the `onUpgrade` event stream.
   final _onUpgradeController = StreamController<Transport>.broadcast();
+
+  /// Controller for the `onUpgradeException` event stream.
+  @internal
+  final onUpgradeExceptionController =
+      StreamController<TransportException>.broadcast();
+
+  /// Controller for the `onTransportException` event stream.
+  final _onTransportExceptionController =
+      StreamController<TransportException>.broadcast();
+
+  /// Controller for the `onTransportClose` event stream.
+  final _onTransportCloseController =
+      StreamController<TransportException>.broadcast();
 
   /// Controller for the `onException` event stream.
   final _onExceptionController = StreamController<SocketException>.broadcast();
@@ -168,12 +174,17 @@ mixin Events {
   /// Added to when a transport upgrade is complete.
   Stream<Transport> get onUpgrade => _onUpgradeController.stream;
 
+  /// Added to when an exception occurs on a transport while upgrading.
+  Stream<TransportException> get onUpgradeException =>
+      onUpgradeExceptionController.stream;
+
   /// Added to when an exception occurs on a transport.
   Stream<TransportException> get onTransportException =>
       _onTransportExceptionController.stream;
 
   /// Added to when a transport is designated to close.
-  Stream<Transport> get onTransportClose => _onTransportCloseController.stream;
+  Stream<TransportException> get onTransportClose =>
+      _onTransportCloseController.stream;
 
   /// Added to when an exception occurs on this socket.
   Stream<SocketException> get onException => _onExceptionController.stream;
@@ -198,6 +209,7 @@ mixin Events {
     _onUpgradeController.close().ignore();
     _onTransportExceptionController.close().ignore();
     _onTransportCloseController.close().ignore();
+    onUpgradeExceptionController.close().ignore();
     _onExceptionController.close().ignore();
     _onCloseController.close().ignore();
   }
