@@ -1,4 +1,5 @@
-import 'package:engine_io_dart/src/server/configuration.dart';
+import 'dart:async';
+
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart' hide Socket, SocketException;
 
@@ -6,6 +7,7 @@ import 'package:engine_io_dart/src/packets/types/open.dart';
 import 'package:engine_io_dart/src/packets/types/ping.dart';
 import 'package:engine_io_dart/src/packets/types/upgrade.dart';
 import 'package:engine_io_dart/src/packets/packet.dart';
+import 'package:engine_io_dart/src/server/configuration.dart';
 import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:engine_io_dart/src/server/server.dart';
 import 'package:engine_io_dart/src/server/socket.dart';
@@ -174,12 +176,17 @@ void main() {
       final (_, websocket) =
           await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
+      final first = Completer<void>();
+      final done = Completer<void>();
+      websocket.listen(
+        (dynamic _) => first.complete(),
+        onDone: done.complete,
+      );
+
       final upgraded = socket.onUpgrade.first;
 
-      final pong = websocket.first;
-
       websocket.add(Packet.encode(const PingPacket(isProbe: true)));
-      await pong;
+      await first.future;
 
       expectLater(
         socket.onTransportException,
@@ -190,6 +197,14 @@ void main() {
         ..add(Packet.encode(const UpgradePacket()))
         ..add(Packet.encode(const UpgradePacket()));
       await upgraded;
+
+      await done.future;
+
+      expect(websocket.closeCode, WebSocketStatus.policyViolation);
+      expect(
+        websocket.closeReason,
+        TransportException.transportAlreadyUpgraded.reasonPhrase,
+      );
 
       websocket.close();
     });

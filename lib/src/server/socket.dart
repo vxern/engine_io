@@ -7,6 +7,7 @@ import 'package:engine_io_dart/src/packets/types/message.dart';
 import 'package:engine_io_dart/src/server/configuration.dart';
 import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:engine_io_dart/src/server/upgrade.dart';
+import 'package:engine_io_dart/src/transports/websocket/websocket.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
 import 'package:engine_io_dart/src/socket.dart' as base;
@@ -72,6 +73,9 @@ class Socket extends base.Socket with Events {
           _onUpgradeController.add(transport);
         }),
         transport.onException.listen((exception) async {
+          if (transport is WebSocketTransport) {
+            transport.close(exception);
+          }
           _onTransportExceptionController.add(exception);
           _onExceptionController.add(SocketException.transportException);
         }),

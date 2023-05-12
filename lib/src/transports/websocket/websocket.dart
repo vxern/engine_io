@@ -136,10 +136,21 @@ class WebSocketTransport extends Transport<dynamic> {
     onSendController.add(packet);
   }
 
+  /// Closes the websocket connection.
+  Future<void> close(TransportException exception) async {
+    if (isClosed) {
+      return;
+    }
+
+    isClosed = true;
+    final statusCode = exception is WebSocketTransportException
+        ? exception.statusCode
+        : WebSocketStatus.policyViolation;
+    await _websocket.close(statusCode, exception.reasonPhrase);
+  }
+
   @override
   Future<void> dispose() async {
     await super.dispose();
-    // TODO(vxern): Add status code and reason.
-    await _websocket.close();
   }
 }
