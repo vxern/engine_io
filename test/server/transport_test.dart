@@ -1,5 +1,7 @@
 // ignore_for_file: close_sinks
 
+import 'dart:async';
+
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
@@ -46,60 +48,66 @@ void main() {
     });
 
     test('an `onReceive` event.', () async {
-      expectLater(socket.onReceive, emits(anything));
+      unawaited(expectLater(socket.onReceive, emits(anything)));
 
-      post(
-        client,
-        sessionIdentifier: open.sessionIdentifier,
-        packets: [const TextMessagePacket(data: PacketContents.empty)],
+      unawaited(
+        post(
+          client,
+          sessionIdentifier: open.sessionIdentifier,
+          packets: [const TextMessagePacket(data: PacketContents.empty)],
+        ),
       );
     });
 
     test('an `onSend` event.', () async {
-      expectLater(socket.onSend, emits(anything));
+      unawaited(expectLater(socket.onSend, emits(anything)));
 
       socket.send(const TextMessagePacket(data: PacketContents.empty));
 
       // Since this is a long polling connection, the sent packets have to be
       // fetched manually for them to be received.
-      get(client, sessionIdentifier: open.sessionIdentifier);
+      unawaited(get(client, sessionIdentifier: open.sessionIdentifier));
     });
 
     test('an `onMessage` event.', () async {
-      expectLater(socket.onMessage, emits(anything));
+      unawaited(expectLater(socket.onMessage, emits(anything)));
 
-      post(
-        client,
-        sessionIdentifier: open.sessionIdentifier,
-        packets: [const TextMessagePacket(data: PacketContents.empty)],
+      unawaited(
+        post(
+          client,
+          sessionIdentifier: open.sessionIdentifier,
+          packets: [const TextMessagePacket(data: PacketContents.empty)],
+        ),
       );
     });
 
     test('an `onHeartbeat` event.', () async {
-      expectLater(socket.onHeartbeat, emits(anything));
+      unawaited(expectLater(socket.onHeartbeat, emits(anything)));
 
       await Future<void>.delayed(
         server.configuration.heartbeatInterval +
             const Duration(milliseconds: 100),
       );
 
-      post(
-        client,
-        sessionIdentifier: open.sessionIdentifier,
-        packets: [const PongPacket()],
+      unawaited(
+        post(
+          client,
+          sessionIdentifier: open.sessionIdentifier,
+          packets: [const PongPacket()],
+        ),
       );
     });
 
     test('an `onInitiateUpgrade` event.', () async {
-      expectLater(socket.onInitiateUpgrade, emits(anything));
+      unawaited(expectLater(socket.onInitiateUpgrade, emits(anything)));
 
       await upgrade(client, sessionIdentifier: open.sessionIdentifier);
     });
 
     test('an `onUpgrade` event.', () async {
-      expectLater(socket.onInitiateUpgrade, emits(anything));
-      expectLater(socket.onUpgrade, emits(anything));
-      expectLater(socket.onTransportClose, emits(anything));
+      unawaited(expectLater(socket.onInitiateUpgrade, emits(anything)));
+      unawaited(expectLater(socket.onUpgrade, emits(anything)));
+      unawaited(expectLater(socket.onTransportClose, emits(anything)));
 
       final (_, websocket) =
           await upgrade(client, sessionIdentifier: open.sessionIdentifier);
@@ -110,24 +118,28 @@ void main() {
     });
 
     test('an `onException` event.', () async {
-      expectLater(socket.onTransportException, emits(anything));
-      expectLater(socket.onException, emits(anything));
+      unawaited(expectLater(socket.onTransportException, emits(anything)));
+      unawaited(expectLater(socket.onException, emits(anything)));
 
       // Send an illegal packet.
-      post(
-        client,
-        sessionIdentifier: open.sessionIdentifier,
-        packets: [const PingPacket()],
+      unawaited(
+        post(
+          client,
+          sessionIdentifier: open.sessionIdentifier,
+          packets: [const PingPacket()],
+        ),
       );
     });
 
     test('an `onClose` event.', () async {
-      expectLater(socket.onTransportClose, emits(anything));
+      unawaited(expectLater(socket.onTransportClose, emits(anything)));
 
-      post(
-        client,
-        sessionIdentifier: open.sessionIdentifier,
-        packets: [const ClosePacket()],
+      unawaited(
+        post(
+          client,
+          sessionIdentifier: open.sessionIdentifier,
+          packets: [const ClosePacket()],
+        ),
       );
     });
   });
@@ -146,7 +158,7 @@ void main() {
     tearDown(() async => websocket.close());
 
     test('an `onReceive` event.', () async {
-      expectLater(socket.onReceive, emits(anything));
+      unawaited(expectLater(socket.onReceive, emits(anything)));
 
       websocket.add(
         Packet.encode(const TextMessagePacket(data: PacketContents.empty)),
@@ -154,7 +166,7 @@ void main() {
     });
 
     test('an `onSend` event.', () async {
-      expectLater(socket.onSend, emits(anything));
+      unawaited(expectLater(socket.onSend, emits(anything)));
 
       socket.send(const TextMessagePacket(data: PacketContents.empty));
     });

@@ -54,7 +54,7 @@ class ClientManager {
   /// Disposes of this `ClientManager` by removing and disposing of all managed
   /// clients.
   Future<void> dispose() async {
-    final futures = <Future>[];
+    final futures = <Future<void>>[];
     for (final client in clients.values) {
       futures.add(
         client

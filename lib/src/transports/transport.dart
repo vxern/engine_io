@@ -68,7 +68,8 @@ abstract class Transport<T> with Events {
   /// Whether the transport is closed.
   bool isClosed = false;
 
-  bool _isDisposing = false;
+  /// Whether the transport is disposing.
+  bool isDisposing = false;
 
   /// Creates an instance of `Transport`.
   Transport({
@@ -111,7 +112,6 @@ abstract class Transport<T> with Events {
       case PacketType.open:
       case PacketType.noop:
         exception = TransportException.packetIllegal;
-        break;
       case PacketType.ping:
         packet as ProbePacket;
 
@@ -138,8 +138,6 @@ abstract class Transport<T> with Events {
         socket.upgrade.markProbed();
 
         send(const PongPacket());
-
-        break;
       case PacketType.pong:
         packet as ProbePacket;
 
@@ -154,10 +152,8 @@ abstract class Transport<T> with Events {
         }
 
         heartbeat.reset();
-        break;
       case PacketType.close:
         exception = TransportException.requestedClosure;
-        break;
       case PacketType.upgrade:
         if (!socket.isUpgrading) {
           exception = TransportException.transportAlreadyUpgraded;
@@ -176,15 +172,13 @@ abstract class Transport<T> with Events {
 
         final origin = socket.upgrade.origin;
 
-        socket.upgrade.markComplete();
+        await socket.upgrade.markComplete();
 
         if (origin is PollingTransport) {
           sendAll(origin.packetBuffer);
         }
 
         origin.onUpgradeController.add(this);
-
-        break;
       case PacketType.textMessage:
       case PacketType.binaryMessage:
         break;
@@ -233,9 +227,8 @@ abstract class Transport<T> with Events {
     }
 
     if (socket.isUpgrading) {
-      socket.upgrade
-        ..destination.dispose()
-        ..reset();
+      await socket.upgrade.destination.dispose();
+      await socket.upgrade.reset();
       return except(TransportException.upgradeAlreadyInitiated);
     }
 
@@ -260,21 +253,18 @@ abstract class Transport<T> with Events {
     return exception;
   }
 
+  /// Closes any connection underlying this transport with an exception.
+  Future<void> close(TransportException exception);
+
   /// Disposes of this transport, closing event streams.
   Future<void> dispose() async {
-    if (_isDisposing) {
+    if (isDisposing) {
       return;
     }
 
-    _isDisposing = true;
-    isClosed = true;
+    isDisposing = true;
 
     heartbeat.dispose();
-
-    if (socket.isUpgrading &&
-        socket.upgrade.origin.connectionType == connectionType) {
-      await socket.upgrade.destination.dispose();
-    }
 
     await closeEventStreams();
   }
@@ -290,16 +280,16 @@ mixin Events {
   final onSendController = StreamController<Packet>();
 
   /// Controller for the `onMessage` event stream.
-  final onMessageController = StreamController<MessagePacket>();
+  final onMessageController = StreamController<MessagePacket<dynamic>>();
 
   /// Controller for the `onHeartbeat` event stream.
   final onHeartbeatController = StreamController<ProbePacket>();
 
   /// Controller for the `onInitiateUpgrade` event stream.
-  final onInitiateUpgradeController = StreamController<Transport>();
+  final onInitiateUpgradeController = StreamController<Transport<dynamic>>();
 
   /// Controller for the `onUpgrade` event stream.
-  final onUpgradeController = StreamController<Transport>();
+  final onUpgradeController = StreamController<Transport<dynamic>>();
 
   /// Controller for the `onUpgradeException` event stream.
   final onUpgradeExceptionController =
@@ -318,16 +308,17 @@ mixin Events {
   Stream<Packet> get onSend => onSendController.stream;
 
   /// Added to when a message packet is received.
-  Stream<MessagePacket> get onMessage => onMessageController.stream;
+  Stream<MessagePacket<dynamic>> get onMessage => onMessageController.stream;
 
   /// Added to when a heartbeat (ping / pong) packet is received.
   Stream<ProbePacket> get onHeartbeat => onHeartbeatController.stream;
 
   /// Added to when a transport upgrade is initiated.
-  Stream<Transport> get onInitiateUpgrade => onInitiateUpgradeController.stream;
+  Stream<Transport<dynamic>> get onInitiateUpgrade =>
+      onInitiateUpgradeController.stream;
 
   /// Added to when a transport upgrade is complete.
-  Stream<Transport> get onUpgrade => onUpgradeController.stream;
+  Stream<Transport<dynamic>> get onUpgrade => onUpgradeController.stream;
 
   /// Added to when an exception occurs on a transport while upgrading.
   Stream<TransportException> get onUpgradeException =>

@@ -21,4 +21,4 @@ dependencies:
 dev_dependencies:
   async: ^2.11.0 # Testing streams.
   test: ^1.24.2 # Testing.
-  words: ^0.2.0 # Lints.
+  words: ^0.4.0 # Lints.

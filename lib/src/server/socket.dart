@@ -7,7 +7,6 @@ import 'package:engine_io_dart/src/packets/types/message.dart';
 import 'package:engine_io_dart/src/server/configuration.dart';
 import 'package:engine_io_dart/src/server/exception.dart';
 import 'package:engine_io_dart/src/server/upgrade.dart';
-import 'package:engine_io_dart/src/transports/websocket/websocket.dart';
 import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
 import 'package:engine_io_dart/src/socket.dart' as base;
@@ -18,11 +17,11 @@ class Socket extends base.Socket with Events {
   /// A reference to the server configuration.
   final ServerConfiguration configuration;
 
-  late Transport _transport;
+  late Transport<dynamic> _transport;
 
   /// The transport currently in use for communication.
   @internal
-  Transport get transport => _transport;
+  Transport<dynamic> get transport => _transport;
 
   /// The session ID of this client.
   final String sessionIdentifier;
@@ -48,12 +47,12 @@ class Socket extends base.Socket with Events {
 
   /// List of subscriptions to events being piped from the transport to this
   /// socket.
-  final List<StreamSubscription> _transportSubscriptions = [];
+  final List<StreamSubscription<dynamic>> _transportSubscriptions = [];
 
   /// Sets a new transport, piping all of its events into this socket.
   @internal
   Future<void> setTransport(
-    Transport transport, {
+    Transport<dynamic> transport, {
     bool isInitial = false,
   }) async {
     await Future.wait(
@@ -73,9 +72,6 @@ class Socket extends base.Socket with Events {
           _onUpgradeController.add(transport);
         }),
         transport.onException.listen((exception) async {
-          if (transport is WebSocketTransport) {
-            transport.close(exception);
-          }
           _onTransportExceptionController.add(exception);
           _onExceptionController.add(SocketException.transportException);
         }),
@@ -111,6 +107,13 @@ class Socket extends base.Socket with Events {
 
     _onCloseController.add(this);
 
+    if (isUpgrading) {
+      final destination = upgrade.destination;
+      await upgrade.reset();
+      await destination.close(TransportException.connectionClosedDuringUpgrade);
+      await destination.dispose();
+    }
+
     await closeEventStreams();
   }
 }
@@ -125,16 +128,18 @@ mixin Events {
   final _onSendController = StreamController<Packet>.broadcast();
 
   /// Controller for the `onMessage` event stream.
-  final _onMessageController = StreamController<MessagePacket>.broadcast();
+  final _onMessageController =
+      StreamController<MessagePacket<dynamic>>.broadcast();
 
   /// Controller for the `onHeartbeat` event stream.
   final _onHeartbeatController = StreamController<ProbePacket>.broadcast();
 
   /// Controller for the `onInitiateUpgrade` event stream.
-  final _onInitiateUpgradeController = StreamController<Transport>.broadcast();
+  final _onInitiateUpgradeController =
+      StreamController<Transport<dynamic>>.broadcast();
 
   /// Controller for the `onUpgrade` event stream.
-  final _onUpgradeController = StreamController<Transport>.broadcast();
+  final _onUpgradeController = StreamController<Transport<dynamic>>.broadcast();
 
   /// Controller for the `onUpgradeException` event stream.
   @internal
@@ -162,17 +167,17 @@ mixin Events {
   Stream<Packet> get onSend => _onSendController.stream;
 
   /// Added to when a message packet is received.
-  Stream<MessagePacket> get onMessage => _onMessageController.stream;
+  Stream<MessagePacket<dynamic>> get onMessage => _onMessageController.stream;
 
   /// Added to when a heartbeat (ping / pong) packet is received.
   Stream<ProbePacket> get onHeartbeat => _onHeartbeatController.stream;
 
   /// Added to when a transport upgrade is initiated.
-  Stream<Transport> get onInitiateUpgrade =>
+  Stream<Transport<dynamic>> get onInitiateUpgrade =>
       _onInitiateUpgradeController.stream;
 
   /// Added to when a transport upgrade is complete.
-  Stream<Transport> get onUpgrade => _onUpgradeController.stream;
+  Stream<Transport<dynamic>> get onUpgrade => _onUpgradeController.stream;
 
   /// Added to when an exception occurs on a transport while upgrading.
   Stream<TransportException> get onUpgradeException =>

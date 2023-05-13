@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
@@ -136,7 +138,7 @@ void main() {
     );
 
     test('accepts valid handshake requests.', () async {
-      expectLater(server.onConnect, emits(anything));
+      unawaited(expectLater(server.onConnect, emits(anything)));
 
       final response = await getRaw(
         client,
@@ -157,10 +159,12 @@ void main() {
         expect(socket.onTransportException, neverEmits(anything));
         expect(socket.onTransportClose, emits(anything));
 
-        post(
-          client,
-          sessionIdentifier: open.sessionIdentifier,
-          packets: [const ClosePacket()],
+        unawaited(
+          post(
+            client,
+            sessionIdentifier: open.sessionIdentifier,
+            packets: [const ClosePacket()],
+          ),
         );
       },
     );

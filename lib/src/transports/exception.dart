@@ -98,6 +98,12 @@ class TransportException extends EngineException {
     reasonPhrase: 'Attempted to probe the transport that is being upgraded.',
   );
 
+  /// The connection with the socket has been closed during an upgrade.
+  static const connectionClosedDuringUpgrade = TransportException(
+    statusCode: HttpStatus.internalServerError,
+    reasonPhrase: 'Socket closed during upgrade.',
+  );
+
   /// The client closed a connection forcefully, without indicating to the
   /// server that a closure will occur.
   static const closedForcefully = TransportException(

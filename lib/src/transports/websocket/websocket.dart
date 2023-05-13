@@ -62,7 +62,7 @@ class WebSocketTransport extends Transport<dynamic> {
     websocket.listen(
       transport.receive,
       onDone: () {
-        if (!transport.isClosed) {
+        if (!transport.isDisposing) {
           transport.onExceptionController
               .add(TransportException.closedForcefully);
         }
@@ -137,6 +137,7 @@ class WebSocketTransport extends Transport<dynamic> {
   }
 
   /// Closes the websocket connection.
+  @override
   Future<void> close(TransportException exception) async {
     if (isClosed) {
       return;
@@ -146,6 +147,7 @@ class WebSocketTransport extends Transport<dynamic> {
     final statusCode = exception is WebSocketTransportException
         ? exception.statusCode
         : WebSocketStatus.policyViolation;
+
     await _websocket.close(statusCode, exception.reasonPhrase);
   }
 

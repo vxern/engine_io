@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
@@ -45,7 +46,7 @@ void main() {
     test(
       'rejects requests without session identifier when client is connected.',
       () async {
-        expectLater(socket.onException, emits(anything));
+        unawaited(expectLater(socket.onException, emits(anything)));
 
         final (response, _) = await get(client);
 
@@ -54,7 +55,7 @@ void main() {
     );
 
     test('rejects invalid session identifiers.', () async {
-      expectLater(socket.onException, emits(anything));
+      unawaited(expectLater(socket.onException, emits(anything)));
 
       final (response, _) = await get(client, sessionIdentifier: 'invalid_sid');
 
@@ -62,7 +63,7 @@ void main() {
     });
 
     test('rejects session identifiers that do not exist.', () async {
-      expectLater(socket.onException, emits(anything));
+      unawaited(expectLater(socket.onException, emits(anything)));
 
       final (response, _) = await get(client, sessionIdentifier: _uuid.v4());
 
@@ -83,13 +84,15 @@ void main() {
 
       expect(transport.packetBuffer, hasLength(3));
 
-      expectLater(
-        socket.onSend,
-        emitsInOrder(const <Packet>[
-          TextMessagePacket(data: 'first'),
-          TextMessagePacket(data: 'second'),
-          TextMessagePacket(data: 'third'),
-        ]),
+      unawaited(
+        expectLater(
+          socket.onSend,
+          emitsInOrder(const <Packet>[
+            TextMessagePacket(data: 'first'),
+            TextMessagePacket(data: 'second'),
+            TextMessagePacket(data: 'third'),
+          ]),
+        ),
       );
 
       final (_, packets) =
@@ -159,8 +162,8 @@ void main() {
     test(
       'rejects POST requests with binary data but no `Content-Type` header.',
       () async {
-        expectLater(socket.onTransportException, emits(anything));
-        expectLater(socket.onException, emits(anything));
+        unawaited(expectLater(socket.onTransportException, emits(anything)));
+        unawaited(expectLater(socket.onException, emits(anything)));
 
         final response = await post(
           client,
@@ -180,8 +183,8 @@ void main() {
     test(
       'rejects POST requests with invalid `Content-Type` header.',
       () async {
-        expectLater(socket.onTransportException, emits(anything));
-        expectLater(socket.onException, emits(anything));
+        unawaited(expectLater(socket.onTransportException, emits(anything)));
+        unawaited(expectLater(socket.onException, emits(anything)));
 
         final response = await post(
           client,
@@ -200,8 +203,8 @@ void main() {
     test(
       'rejects POST requests with a payload that is too large.',
       () async {
-        expectLater(socket.onTransportException, emits(anything));
-        expectLater(socket.onException, emits(anything));
+        unawaited(expectLater(socket.onTransportException, emits(anything)));
+        unawaited(expectLater(socket.onException, emits(anything)));
 
         final response = await post(
           client,
@@ -223,7 +226,7 @@ void main() {
     //  by the client.
 
     test('accepts valid POST requests.', () async {
-      expectLater(socket.onReceive, emits(anything));
+      unawaited(expectLater(socket.onReceive, emits(anything)));
 
       final response = await post(
         client,
@@ -238,9 +241,9 @@ void main() {
     test(
       'rejects unexpected pong requests.',
       () async {
-        expectLater(socket.onReceive, neverEmits(anything));
-        expectLater(socket.onTransportException, emits(anything));
-        expectLater(socket.onException, emits(anything));
+        unawaited(expectLater(socket.onReceive, neverEmits(anything)));
+        unawaited(expectLater(socket.onTransportException, emits(anything)));
+        unawaited(expectLater(socket.onException, emits(anything)));
 
         final response = await post(
           client,
@@ -256,9 +259,9 @@ void main() {
       'rejects illegal packets:',
       () {
         test('open', () async {
-          expectLater(socket.onReceive, neverEmits(anything));
-          expectLater(socket.onTransportException, emits(anything));
-          expectLater(socket.onException, emits(anything));
+          unawaited(expectLater(socket.onReceive, neverEmits(anything)));
+          unawaited(expectLater(socket.onTransportException, emits(anything)));
+          unawaited(expectLater(socket.onException, emits(anything)));
 
           final response = await post(
             client,
@@ -279,9 +282,9 @@ void main() {
         });
 
         test('noop', () async {
-          expectLater(socket.onReceive, neverEmits(anything));
-          expectLater(socket.onTransportException, emits(anything));
-          expectLater(socket.onException, emits(anything));
+          unawaited(expectLater(socket.onReceive, neverEmits(anything)));
+          unawaited(expectLater(socket.onTransportException, emits(anything)));
+          unawaited(expectLater(socket.onException, emits(anything)));
 
           final response = await post(
             client,
@@ -293,9 +296,9 @@ void main() {
         });
 
         test('ping (non-probe)', () async {
-          expectLater(socket.onReceive, neverEmits(anything));
-          expectLater(socket.onTransportException, emits(anything));
-          expectLater(socket.onException, emits(anything));
+          unawaited(expectLater(socket.onReceive, neverEmits(anything)));
+          unawaited(expectLater(socket.onTransportException, emits(anything)));
+          unawaited(expectLater(socket.onException, emits(anything)));
 
           final response = await post(
             client,
@@ -307,9 +310,9 @@ void main() {
         });
 
         test('pong (probe)', () async {
-          expectLater(socket.onReceive, neverEmits(anything));
-          expectLater(socket.onTransportException, emits(anything));
-          expectLater(socket.onException, emits(anything));
+          unawaited(expectLater(socket.onReceive, neverEmits(anything)));
+          unawaited(expectLater(socket.onTransportException, emits(anything)));
+          unawaited(expectLater(socket.onException, emits(anything)));
 
           final response = await post(
             client,

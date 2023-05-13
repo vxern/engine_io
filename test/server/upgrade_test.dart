@@ -75,7 +75,7 @@ void main() {
     );
 
     test('initiates a connection upgrade.', () async {
-      expectLater(socket.onInitiateUpgrade, emits(anything));
+      unawaited(expectLater(socket.onInitiateUpgrade, emits(anything)));
 
       final (response, websocket) =
           await upgrade(client, sessionIdentifier: open.sessionIdentifier);
@@ -86,7 +86,7 @@ void main() {
       expect(socket.upgrade.origin, equals(socket.transport));
       expect(socket.upgrade.destination, equals(isA<WebSocketTransport>()));
 
-      websocket.close();
+      await websocket.close();
     });
 
     test(
@@ -102,7 +102,7 @@ void main() {
 
         expect(response, signals(TransportException.upgradeAlreadyInitiated));
 
-        websocket.close();
+        await websocket.close();
       },
     );
 
@@ -117,22 +117,24 @@ void main() {
 
       expect(socket.upgrade.status, equals(UpgradeStatus.probed));
 
-      websocket.close();
+      await websocket.close();
     });
 
     test('closes the connection on duplicate probe packets.', () async {
       final (_, websocket) =
           await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
-      expectLater(
-        socket.onUpgradeException,
-        emits(signals(TransportException.transportAlreadyProbed)),
+      unawaited(
+        expectLater(
+          socket.onUpgradeException,
+          emits(signals(TransportException.transportAlreadyProbed)),
+        ),
       );
 
       websocket
         ..add(Packet.encode(const PingPacket(isProbe: true)))
-        ..add(Packet.encode(const PingPacket(isProbe: true)))
-        ..close();
+        ..add(Packet.encode(const PingPacket(isProbe: true)));
+      await websocket.close();
     });
 
     test(
@@ -141,14 +143,15 @@ void main() {
         final (_, websocket) =
             await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
-        expectLater(
-          socket.onUpgradeException,
-          emits(signals(TransportException.transportNotProbed)),
+        unawaited(
+          expectLater(
+            socket.onUpgradeException,
+            emits(signals(TransportException.transportNotProbed)),
+          ),
         );
 
-        websocket
-          ..add(Packet.encode(const UpgradePacket()))
-          ..close();
+        websocket.add(Packet.encode(const UpgradePacket()));
+        await websocket.close();
       },
     );
 
@@ -156,40 +159,41 @@ void main() {
       final (_, websocket) =
           await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
-      final dataQueue = StreamQueue<dynamic>(websocket);
+      final onPong = websocket.first;
 
       websocket.add(Packet.encode(const PingPacket(isProbe: true)));
-      await expectLater(dataQueue.next, completes);
+      await expectLater(onPong, completes);
 
       final onUpgrade = socket.onUpgrade.first;
       websocket.add(Packet.encode(const UpgradePacket()));
-      await onUpgrade;
+      await expectLater(onUpgrade, completes);
 
       expect(socket.upgrade.status, equals(UpgradeStatus.none));
       expect(socket.transport, equals(isA<WebSocketTransport>()));
 
-      websocket.close();
+      await websocket.close();
     });
 
     test('closes the connection on duplicate upgrade packets.', () async {
       final (_, websocket) =
           await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
-      final dataQueue = StreamQueue<dynamic>(websocket);
+      final dataQueue = StreamQueue(websocket);
 
       websocket.add(Packet.encode(const PingPacket(isProbe: true)));
       await dataQueue.next;
 
-      expectLater(
-        socket.onTransportException,
-        emits(TransportException.transportAlreadyUpgraded),
-      );
-
       final onUpgrade = socket.onUpgrade.first;
-      websocket
-        ..add(Packet.encode(const UpgradePacket()))
-        ..add(Packet.encode(const UpgradePacket()));
+      websocket.add(Packet.encode(const UpgradePacket()));
       await onUpgrade;
+
+      final onException = socket.onTransportException.first;
+      websocket.add(Packet.encode(const UpgradePacket()));
+
+      await expectLater(
+        onException,
+        completion(TransportException.transportAlreadyUpgraded),
+      );
 
       await expectLater(dataQueue, emitsDone);
 
@@ -199,7 +203,7 @@ void main() {
         TransportException.transportAlreadyUpgraded.reasonPhrase,
       );
 
-      websocket.close();
+      await websocket.close();
     });
 
     test('cancels upgrades once timed out.', () async {
@@ -229,9 +233,11 @@ void main() {
 
       final (response, _) = await upgrade(client);
 
-      expectLater(
-        socketLater.then((socket) => socket.transport),
-        completion(equals(isA<WebSocketTransport>())),
+      unawaited(
+        expectLater(
+          socketLater.then((socket) => socket.transport),
+          completion(equals(isA<WebSocketTransport>())),
+        ),
       );
 
       expect(response, isSwitchingProtocols);
@@ -240,14 +246,16 @@ void main() {
     test('handles forced websocket closures.', () async {
       final socketLater = server.onConnect.first;
 
-      expectLater(
-        socketLater.then((socket) => socket.onTransportException.first),
-        completion(TransportException.closedForcefully),
+      unawaited(
+        expectLater(
+          socketLater.then((socket) => socket.onTransportException.first),
+          completion(TransportException.closedForcefully),
+        ),
       );
 
       final (_, websocket) = await upgrade(client);
 
-      websocket.close();
+      await websocket.close();
     });
 
     test('rejects requests to downgrade connection.', () async {

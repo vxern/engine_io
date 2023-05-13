@@ -1,8 +1,9 @@
 import 'dart:async';
 
-import 'package:engine_io_dart/src/server/socket.dart';
 import 'package:meta/meta.dart';
 
+import 'package:engine_io_dart/src/server/socket.dart';
+import 'package:engine_io_dart/src/transports/exception.dart';
 import 'package:engine_io_dart/src/transports/transport.dart';
 
 /// Represents the status of a transport upgrade.
@@ -27,40 +28,40 @@ class UpgradeState {
   UpgradeStatus _status = _defaultUpgradeState;
 
   /// The current transport.
-  Transport get origin => _origin!;
-  Transport? _origin;
+  Transport<dynamic> get origin => _origin!;
+  Transport<dynamic>? _origin;
 
   /// The potential new transport.
-  Transport get destination => _destination!;
-  Transport? _destination;
+  Transport<dynamic> get destination => _destination!;
+  Transport<dynamic>? _destination;
 
   /// Keeps track of the upgrade timing out.
   late Timer timer;
 
   late final Timer Function() _getTimer;
 
-  StreamSubscription? _exceptionSubscription;
+  StreamSubscription<TransportException>? _exceptionSubscription;
 
   /// Creates an instance of `UpgradeState`.
   UpgradeState({required Duration upgradeTimeout}) {
     _getTimer = () => Timer(upgradeTimeout, () async {
-          _destination?.dispose();
-          reset();
+          await _destination?.dispose();
+          await reset();
         });
-    timer = _getTimer();
   }
 
   /// Marks the upgrade process as initiated.
   void markInitiated(
     Socket socket, {
-    required Transport origin,
-    required Transport destination,
+    required Transport<dynamic> origin,
+    required Transport<dynamic> destination,
   }) {
     _status = UpgradeStatus.initiated;
     _origin = origin;
     _destination = destination;
     _exceptionSubscription = destination.onUpgradeException
         .listen(socket.onUpgradeExceptionController.add);
+    timer = _getTimer();
   }
 
   /// Marks the new transport as probed.
@@ -68,13 +69,12 @@ class UpgradeState {
 
   /// Resets the upgrade state.
   Future<void> reset() async {
-    _exceptionSubscription?.cancel();
-    _exceptionSubscription = null;
     _status = UpgradeStatus.none;
     _origin = null;
     _destination = null;
     timer.cancel();
-    timer = _getTimer();
+    _exceptionSubscription = null;
+    await _exceptionSubscription?.cancel();
   }
 
   /// Alias for `reset()`;

@@ -66,14 +66,14 @@ class Server with Events {
   Future<void> _handleHttpRequest(HttpRequest request) async {
     final ipAddress = request.connectionInfo?.remoteAddress.address;
     if (ipAddress == null) {
-      _respond(request, SocketException.ipAddressUnobtainable);
+      await _respond(request, SocketException.ipAddressUnobtainable);
       return;
     }
 
     final clientByIP = clientManager.get(ipAddress: ipAddress);
 
     if (request.uri.path != '/${configuration.path}') {
-      _close(clientByIP, request, SocketException.serverPathInvalid);
+      await _close(clientByIP, request, SocketException.serverPathInvalid);
       return;
     }
 
@@ -96,7 +96,7 @@ class Server with Events {
     }
 
     if (!_allowedMethods.contains(requestMethod)) {
-      _close(clientByIP, request, SocketException.methodNotAllowed);
+      await _close(clientByIP, request, SocketException.methodNotAllowed);
       return;
     }
 
@@ -104,7 +104,7 @@ class Server with Events {
     final isEstablishingConnection = !isConnected;
 
     if (requestMethod != 'GET' && isEstablishingConnection) {
-      _close(clientByIP, request, SocketException.getExpected);
+      await _close(clientByIP, request, SocketException.getExpected);
       return;
     }
 
@@ -115,13 +115,13 @@ class Server with Events {
         availableConnectionTypes: configuration.availableConnectionTypes,
       );
     } on SocketException catch (exception) {
-      _close(clientByIP, request, exception);
+      await _close(clientByIP, request, exception);
       return;
     }
 
     if (!isEstablishingConnection) {
       if (parameters.sessionIdentifier == null) {
-        _close(
+        await _close(
           clientByIP,
           request,
           SocketException.sessionIdentifierRequired,
@@ -129,7 +129,7 @@ class Server with Events {
         return;
       }
     } else if (parameters.sessionIdentifier != null) {
-      _close(
+      await _close(
         clientByIP,
         request,
         SocketException.sessionIdentifierUnexpected,
@@ -140,7 +140,7 @@ class Server with Events {
     if (parameters.sessionIdentifier != null) {
       if (!configuration.sessionIdentifiers
           .validate(parameters.sessionIdentifier!)) {
-        _close(
+        await _close(
           clientByIP,
           request,
           SocketException.sessionIdentifierInvalid,
@@ -160,7 +160,7 @@ class Server with Events {
       final client_ =
           clientManager.get(sessionIdentifier: parameters.sessionIdentifier);
       if (client_ == null) {
-        _close(
+        await _close(
           clientByIP,
           request,
           SocketException.sessionIdentifierInvalid,
@@ -183,7 +183,7 @@ class Server with Events {
         skipUpgradeProcess: isEstablishingConnection,
       );
       if (exception != null) {
-        _respond(request, exception);
+        await _respond(request, exception);
         return;
       }
 
@@ -196,45 +196,41 @@ class Server with Events {
     }
 
     if (isWebsocketUpgradeRequest) {
-      _close(client, request, SocketException.upgradeRequestUnexpected);
+      await _close(client, request, SocketException.upgradeRequestUnexpected);
       return;
     }
 
     switch (requestMethod) {
       case 'GET':
         if (client.transport is! PollingTransport) {
-          _close(client, request, SocketException.getRequestUnexpected);
+          await _close(client, request, SocketException.getRequestUnexpected);
           return;
         }
 
         final exception = await (client.transport as PollingTransport)
             .offload(request.response);
         if (exception != null) {
-          _respond(request, exception);
+          await _respond(request, exception);
           break;
         }
 
         request.response.close().ignore();
-
-        break;
       case 'POST':
         if (client.transport is! PollingTransport) {
-          _close(client, request, SocketException.postRequestUnexpected);
+          await _close(client, request, SocketException.postRequestUnexpected);
           return;
         }
 
         final exception =
             await (client.transport as PollingTransport).receive(request);
         if (exception != null) {
-          _respond(request, exception);
+          await _respond(request, exception);
           break;
         }
 
         request.response
           ..statusCode = HttpStatus.ok
           ..close().ignore();
-
-        break;
     }
   }
 
@@ -260,9 +256,15 @@ class Server with Events {
         PollingTransport(socket: client, configuration: configuration);
     await client.setTransport(transport, isInitial: true);
 
-    client.onException.listen((exception) => _disconnect(client));
-    client.onTransportClose.listen((_) => _disconnect(client));
-    client.onUpgradeException.listen((_) => _disconnect(client));
+    client.onException.listen((_) => _disconnect(client));
+    client.onTransportClose.listen((exception) {
+      client.transport.close(exception);
+      _disconnect(client);
+    });
+    client.onUpgradeException.listen((exception) {
+      client.upgrade.destination.close(exception);
+      _disconnect(client);
+    });
 
     clientManager.add(client);
     _onConnectController.add(client);
@@ -308,14 +310,14 @@ class Server with Events {
     SocketException exception,
   ) async {
     if (client != null) {
-      _disconnect(client, exception);
+      await _disconnect(client, exception);
     } else {
       _onConnectExceptionController.add(
         ConnectException.fromSocketException(exception, request: request),
       );
     }
 
-    _respond(request, exception);
+    await _respond(request, exception);
   }
 
   /// Closes the underlying HTTP server, awaiting remaining requests to be

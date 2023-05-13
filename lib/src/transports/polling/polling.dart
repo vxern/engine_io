@@ -249,7 +249,7 @@ class PollingTransport extends Transport<HttpRequest> {
 
     if (skipUpgradeProcess) {
       socket.transport.onUpgradeController.add(transport);
-      socket.setTransport(transport);
+      await socket.setTransport(transport);
       return null;
     }
 
@@ -259,6 +259,9 @@ class PollingTransport extends Transport<HttpRequest> {
 
     return null;
   }
+
+  @override
+  Future<void> close(TransportException exception) async {}
 
   @override
   Future<void> dispose() async {

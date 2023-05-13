@@ -76,28 +76,20 @@ abstract class Packet {
     switch (packetType) {
       case PacketType.open:
         packet = OpenPacket.decode(content);
-        break;
       case PacketType.close:
         packet = const ClosePacket();
-        break;
       case PacketType.ping:
         packet = PingPacket.decode(content);
-        break;
       case PacketType.pong:
         packet = PongPacket.decode(content);
-        break;
       case PacketType.textMessage:
         packet = TextMessagePacket.decode(content);
-        break;
       case PacketType.binaryMessage:
         packet = BinaryMessagePacket.decode(content);
-        break;
       case PacketType.upgrade:
         packet = const UpgradePacket();
-        break;
       case PacketType.noop:
         packet = const NoopPacket();
-        break;
     }
 
     return packet;
