@@ -1,13 +1,15 @@
 publish_to: none
 
-name: engine_io_dart
+name: engine_io_server
 version: 0.1.0
 
-description: A Dart implementation of engine.io.
+description: >-
+  A purely Dart implementation of the engine.io server,
+  made with quality and correctness in mind.
 
-homepage: https://github.com/wordcollector/engine_io_dart
-repository: https://github.com/wordcollector/engine_io_dart
-issue_tracker: https://github.com/wordcollector/engine_io_dart/issues
+homepage: https://github.com/wordcollector/engine_io
+repository: https://github.com/wordcollector/engine_io
+issue_tracker: https://github.com/wordcollector/engine_io/issues
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

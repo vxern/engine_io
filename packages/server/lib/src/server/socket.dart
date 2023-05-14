@@ -2,14 +2,14 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 
-import 'package:engine_io_dart/src/packets/packet.dart';
-import 'package:engine_io_dart/src/packets/types/message.dart';
-import 'package:engine_io_dart/src/server/configuration.dart';
-import 'package:engine_io_dart/src/server/exception.dart';
-import 'package:engine_io_dart/src/server/upgrade.dart';
-import 'package:engine_io_dart/src/transports/exception.dart';
-import 'package:engine_io_dart/src/transports/transport.dart';
-import 'package:engine_io_dart/src/socket.dart' as base;
+import 'package:engine_io_server/src/packets/packet.dart';
+import 'package:engine_io_server/src/packets/types/message.dart';
+import 'package:engine_io_server/src/server/configuration.dart';
+import 'package:engine_io_server/src/server/exception.dart';
+import 'package:engine_io_server/src/server/upgrade.dart';
+import 'package:engine_io_server/src/transports/exception.dart';
+import 'package:engine_io_server/src/transports/transport.dart';
+import 'package:engine_io_server/src/socket.dart' as base;
 
 /// An interface to a client connected to the engine.io server.
 @sealed

@@ -5,16 +5,16 @@ import 'dart:async';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
-import 'package:engine_io_dart/src/packets/types/close.dart';
-import 'package:engine_io_dart/src/packets/types/message.dart';
-import 'package:engine_io_dart/src/packets/types/open.dart';
-import 'package:engine_io_dart/src/packets/types/ping.dart';
-import 'package:engine_io_dart/src/packets/types/pong.dart';
-import 'package:engine_io_dart/src/packets/types/upgrade.dart';
-import 'package:engine_io_dart/src/packets/packet.dart';
-import 'package:engine_io_dart/src/server/configuration.dart';
-import 'package:engine_io_dart/src/server/server.dart';
-import 'package:engine_io_dart/src/server/socket.dart';
+import 'package:engine_io_server/src/packets/types/close.dart';
+import 'package:engine_io_server/src/packets/types/message.dart';
+import 'package:engine_io_server/src/packets/types/open.dart';
+import 'package:engine_io_server/src/packets/types/ping.dart';
+import 'package:engine_io_server/src/packets/types/pong.dart';
+import 'package:engine_io_server/src/packets/types/upgrade.dart';
+import 'package:engine_io_server/src/packets/packet.dart';
+import 'package:engine_io_server/src/server/configuration.dart';
+import 'package:engine_io_server/src/server/server.dart';
+import 'package:engine_io_server/src/server/socket.dart';
 
 import '../shared.dart';
 

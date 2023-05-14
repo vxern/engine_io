@@ -1,7 +1,7 @@
 import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart';
 
-import 'package:engine_io_dart/src/transports/exception.dart';
+import 'package:engine_io_server/src/transports/exception.dart';
 
 /// An exception that occurred on a websocket transport.
 @immutable

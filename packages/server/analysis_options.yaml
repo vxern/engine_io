@@ -1,10 +1,1 @@
 include: package:words/core.yaml
-
-linter:
-  rules:
-    avoid_catching_errors: false
-    directives_ordering: false
-
-analyzer:
-  enable-experiment:
-    - records

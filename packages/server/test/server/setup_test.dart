@@ -1,8 +1,8 @@
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
-import 'package:engine_io_dart/src/server/configuration.dart';
-import 'package:engine_io_dart/src/server/server.dart';
+import 'package:engine_io_server/src/server/configuration.dart';
+import 'package:engine_io_server/src/server/server.dart';
 
 import '../shared.dart';
 

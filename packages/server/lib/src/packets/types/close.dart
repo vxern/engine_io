@@ -1,7 +1,7 @@
 import 'package:meta/meta.dart';
 
-import 'package:engine_io_dart/src/packets/packet.dart';
-import 'package:engine_io_dart/src/packets/type.dart';
+import 'package:engine_io_server/src/packets/packet.dart';
+import 'package:engine_io_server/src/packets/type.dart';
 
 /// Used to close a `Transport`.
 ///

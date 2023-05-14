@@ -3,15 +3,15 @@ import 'dart:async';
 import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
-import 'package:engine_io_dart/src/packets/types/open.dart';
-import 'package:engine_io_dart/src/server/client_manager.dart';
-import 'package:engine_io_dart/src/server/configuration.dart';
-import 'package:engine_io_dart/src/server/exception.dart';
-import 'package:engine_io_dart/src/server/query.dart';
-import 'package:engine_io_dart/src/server/socket.dart';
-import 'package:engine_io_dart/src/transports/polling/polling.dart';
-import 'package:engine_io_dart/src/transports/transport.dart';
-import 'package:engine_io_dart/src/exception.dart';
+import 'package:engine_io_server/src/packets/types/open.dart';
+import 'package:engine_io_server/src/server/client_manager.dart';
+import 'package:engine_io_server/src/server/configuration.dart';
+import 'package:engine_io_server/src/server/exception.dart';
+import 'package:engine_io_server/src/server/query.dart';
+import 'package:engine_io_server/src/server/socket.dart';
+import 'package:engine_io_server/src/transports/polling/polling.dart';
+import 'package:engine_io_server/src/transports/transport.dart';
+import 'package:engine_io_server/src/exception.dart';
 
 /// The engine.io server.
 @sealed

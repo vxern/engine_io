@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 
-import 'package:engine_io_dart/src/server/socket.dart';
-import 'package:engine_io_dart/src/transports/exception.dart';
-import 'package:engine_io_dart/src/transports/transport.dart';
+import 'package:engine_io_server/src/server/socket.dart';
+import 'package:engine_io_server/src/transports/exception.dart';
+import 'package:engine_io_server/src/transports/transport.dart';
 
 /// Represents the status of a transport upgrade.
 enum UpgradeStatus {

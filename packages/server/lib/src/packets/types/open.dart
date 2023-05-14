@@ -2,9 +2,9 @@ import 'dart:convert';
 
 import 'package:meta/meta.dart';
 
-import 'package:engine_io_dart/src/packets/packet.dart';
-import 'package:engine_io_dart/src/packets/type.dart';
-import 'package:engine_io_dart/src/transports/transport.dart';
+import 'package:engine_io_server/src/packets/packet.dart';
+import 'package:engine_io_server/src/packets/type.dart';
+import 'package:engine_io_server/src/transports/transport.dart';
 
 /// Used in establishing a connection between an engine.io client and server.
 ///
