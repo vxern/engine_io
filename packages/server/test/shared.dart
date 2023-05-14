@@ -147,11 +147,12 @@ Future<UpgradeResult<WebSocket>> upgrade(
     connectionType: ConnectionType.websocket.name,
   );
 
+  // The websocket sink is closed during disposal.
   // ignore: close_sinks
-  final socketDetached = await response.detachSocket();
-  // ignore: close_sinks
-  final websocket =
-      WebSocket.fromUpgradedSocket(socketDetached, serverSide: false);
+  final websocket = WebSocket.fromUpgradedSocket(
+    await response.detachSocket(),
+    serverSide: false,
+  );
 
   return (response, websocket);
 }

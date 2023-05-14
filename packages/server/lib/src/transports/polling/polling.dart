@@ -42,8 +42,7 @@ class PollingTransport extends Transport<HttpRequest> {
       : super(connectionType: ConnectionType.polling);
 
   @override
-  // ignore: avoid_renaming_method_parameters
-  Future<TransportException?> receive(HttpRequest request) async {
+  Future<TransportException?> receive(HttpRequest data) async {
     if (post.isLocked) {
       return except(PollingTransportException.duplicatePostRequest);
     }
@@ -53,13 +52,13 @@ class PollingTransport extends Transport<HttpRequest> {
     final List<int> bytes;
     try {
       bytes =
-          await request.fold(<int>[], (buffer, bytes) => buffer..addAll(bytes));
+          await data.fold(<int>[], (buffer, bytes) => buffer..addAll(bytes));
     } on Exception catch (_) {
       return except(PollingTransportException.readingBodyFailed);
     }
 
     final contentLength =
-        request.contentLength >= 0 ? request.contentLength : bytes.length;
+        data.contentLength >= 0 ? data.contentLength : bytes.length;
     if (bytes.length != contentLength) {
       return except(PollingTransportException.contentLengthDisparity);
     } else if (contentLength > configuration.maximumChunkBytes) {
@@ -83,7 +82,7 @@ class PollingTransport extends Transport<HttpRequest> {
       return except(PollingTransportException.decodingPacketsFailed);
     }
 
-    final specifiedContentType = request.headers.contentType;
+    final specifiedContentType = data.headers.contentType;
     final detectedContentType = _getContentType(packets);
 
     if (specifiedContentType == null) {

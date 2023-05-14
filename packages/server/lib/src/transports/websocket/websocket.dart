@@ -50,7 +50,7 @@ class WebSocketTransport extends Transport<dynamic> {
     final token = transformKey(key);
     request.response.headers.set('Sec-Websocket-Accept', token);
 
-    // Sink is closed during disposal.
+    // The websocket sink is closed during disposal.
     // ignore: close_sinks
     final websocket = await WebSocketTransformer.upgrade(request);
     final transport = WebSocketTransport(
