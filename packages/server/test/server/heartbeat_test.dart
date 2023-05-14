@@ -7,7 +7,6 @@ import 'package:engine_io_server/src/packets/types/pong.dart';
 import 'package:engine_io_server/src/server/configuration.dart';
 import 'package:engine_io_server/src/server/server.dart';
 import 'package:engine_io_server/src/server/socket.dart';
-
 import '../shared.dart';
 
 void main() {

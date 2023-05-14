@@ -1,5 +1,4 @@
 import 'package:meta/meta.dart';
-
 import 'package:universal_io/io.dart' hide Socket;
 import 'package:uuid/uuid.dart';
 

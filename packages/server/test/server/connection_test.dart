@@ -8,7 +8,6 @@ import 'package:engine_io_server/src/server/configuration.dart';
 import 'package:engine_io_server/src/server/exception.dart';
 import 'package:engine_io_server/src/server/server.dart';
 import 'package:engine_io_server/src/transports/transport.dart';
-
 import '../matchers.dart';
 import '../shared.dart';
 

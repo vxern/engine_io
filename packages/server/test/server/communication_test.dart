@@ -5,19 +5,18 @@ import 'package:test/test.dart';
 import 'package:universal_io/io.dart' hide Socket, SocketException;
 import 'package:uuid/uuid.dart';
 
+import 'package:engine_io_server/src/packets/packet.dart';
 import 'package:engine_io_server/src/packets/types/message.dart';
 import 'package:engine_io_server/src/packets/types/noop.dart';
 import 'package:engine_io_server/src/packets/types/open.dart';
 import 'package:engine_io_server/src/packets/types/ping.dart';
 import 'package:engine_io_server/src/packets/types/pong.dart';
-import 'package:engine_io_server/src/packets/packet.dart';
 import 'package:engine_io_server/src/server/exception.dart';
 import 'package:engine_io_server/src/server/server.dart';
 import 'package:engine_io_server/src/server/socket.dart';
+import 'package:engine_io_server/src/transports/exception.dart';
 import 'package:engine_io_server/src/transports/polling/exception.dart';
 import 'package:engine_io_server/src/transports/polling/polling.dart';
-import 'package:engine_io_server/src/transports/exception.dart';
-
 import '../matchers.dart';
 import '../shared.dart';
 

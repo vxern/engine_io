@@ -4,11 +4,11 @@ import 'dart:convert';
 import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
-import 'package:engine_io_server/src/transports/polling/exception.dart';
-import 'package:engine_io_server/src/transports/websocket/websocket.dart';
-import 'package:engine_io_server/src/transports/exception.dart';
 import 'package:engine_io_server/src/packets/packet.dart';
+import 'package:engine_io_server/src/transports/exception.dart';
+import 'package:engine_io_server/src/transports/polling/exception.dart';
 import 'package:engine_io_server/src/transports/transport.dart';
+import 'package:engine_io_server/src/transports/websocket/websocket.dart';
 
 /// Transport used with long polling connections.
 @sealed

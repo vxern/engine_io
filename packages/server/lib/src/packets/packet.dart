@@ -1,5 +1,6 @@
 import 'package:meta/meta.dart';
 
+import 'package:engine_io_server/src/packets/type.dart';
 import 'package:engine_io_server/src/packets/types/close.dart';
 import 'package:engine_io_server/src/packets/types/message.dart';
 import 'package:engine_io_server/src/packets/types/noop.dart';
@@ -7,7 +8,6 @@ import 'package:engine_io_server/src/packets/types/open.dart';
 import 'package:engine_io_server/src/packets/types/ping.dart';
 import 'package:engine_io_server/src/packets/types/pong.dart';
 import 'package:engine_io_server/src/packets/types/upgrade.dart';
-import 'package:engine_io_server/src/packets/type.dart';
 
 /// Contains well-defined packet contents.
 @sealed
