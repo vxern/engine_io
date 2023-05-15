@@ -1,4 +1,4 @@
-# engine_io_dart
+# engine_io
 
 A from-scratch implementation of the engine.io server-client communication
 protocol in Dart.
