@@ -1,17 +1,13 @@
-import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart';
 
 import 'package:engine_io_server/src/transports/exception.dart';
 
 /// An exception that occurred on a websocket transport.
-@immutable
-@sealed
 class WebSocketTransportException extends TransportException {
   @override
   bool get isSuccess => statusCode == WebSocketStatus.normalClosure;
 
   /// Creates an instance of `WebSocketTransportException`.
-  @literal
   const WebSocketTransportException({
     required super.statusCode,
     required super.reasonPhrase,

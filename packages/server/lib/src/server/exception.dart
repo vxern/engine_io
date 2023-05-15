@@ -1,19 +1,14 @@
-import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart';
 
 import 'package:engine_io_server/src/exception.dart';
 
 /// An exception that occurred either on the server when a client was
 /// establishing a connection, or on the socket itself during communication.
-@immutable
-@sealed
 class SocketException extends EngineException {
   @override
-  @nonVirtual
   bool get isSuccess => statusCode >= 200 && statusCode < 300;
 
   /// Creates an instance of `SocketException`.
-  @literal
   const SocketException({
     required super.statusCode,
     required super.reasonPhrase,

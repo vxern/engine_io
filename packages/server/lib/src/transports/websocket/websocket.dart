@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
-import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_server/src/packets/packet.dart';
@@ -14,8 +13,6 @@ import 'package:engine_io_server/src/transports/transport.dart';
 import 'package:engine_io_server/src/transports/websocket/exception.dart';
 
 /// Transport used for websocket connections.
-@sealed
-@internal
 class WebSocketTransport extends Transport<dynamic> {
   /// The salt used to transform a websocket key to a token during a websocket
   /// upgrade.

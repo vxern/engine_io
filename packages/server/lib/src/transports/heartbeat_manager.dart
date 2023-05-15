@@ -1,12 +1,8 @@
 import 'dart:async';
 
-import 'package:meta/meta.dart';
-
 /// The `HeartbeatManager` is responsible for checking that connections are
 /// still active by ticking at intervals and flagging up when it has not been
 /// reset before the timeout had elapsed.
-@sealed
-@internal
 class HeartbeatManager {
   /// The timer responsible for indicating when the next heartbeat should be.
   Timer _intervalTimer;

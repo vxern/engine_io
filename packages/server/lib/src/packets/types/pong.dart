@@ -1,5 +1,3 @@
-import 'package:meta/meta.dart';
-
 import 'package:engine_io_server/src/packets/packet.dart';
 import 'package:engine_io_server/src/packets/type.dart';
 
@@ -19,11 +17,8 @@ import 'package:engine_io_server/src/packets/type.dart';
 /// packets.
 ///
 ///   In this case, the packet payload is equal to 'probe' (in plaintext).
-@immutable
-@sealed
 class PongPacket extends ProbePacket {
   /// Creates an instance of `PongPacket`.
-  @literal
   const PongPacket({super.isProbe = false}) : super(type: PacketType.pong);
 
   /// Decodes [content], which should be either empty or 'probe' (in plaintext).

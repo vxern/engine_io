@@ -1,5 +1,3 @@
-import 'package:meta/meta.dart';
-
 import 'package:engine_io_server/src/packets/type.dart';
 import 'package:engine_io_server/src/packets/types/close.dart';
 import 'package:engine_io_server/src/packets/types/message.dart';
@@ -10,8 +8,6 @@ import 'package:engine_io_server/src/packets/types/pong.dart';
 import 'package:engine_io_server/src/packets/types/upgrade.dart';
 
 /// Contains well-defined packet contents.
-@sealed
-@internal
 class PacketContents {
   /// An empty packet content.
   static const empty = '';
@@ -23,8 +19,6 @@ class PacketContents {
 }
 
 /// Represents a unit of data passed between parties, client and server.
-@immutable
-@sealed
 abstract class Packet {
   /// Defines packets that contain binary data.
   static const _binaryPackets = {PacketType.binaryMessage};
@@ -36,23 +30,18 @@ abstract class Packet {
   static final _packetExpression = RegExp(r'^([0-6b])(.*?)$');
 
   /// The type of this packet.
-  @nonVirtual
   final PacketType type;
 
   /// Creates an instance of `Packet` with the given [type].
-  @literal
   const Packet({required this.type});
 
   /// Indicates whether or not this packet has a binary payload.
-  @nonVirtual
   bool get isBinary => _binaryPackets.contains(type);
 
   /// Indicates whether or not this packet has a binary payload.
-  @nonVirtual
   bool get isJSON => _jsonPackets.contains(type);
 
   /// Gets the packet content in its encoded format.
-  @internal
   String get encoded => PacketContents.empty;
 
   /// Encodes a packet ready to be sent to the other party in the connection.
@@ -98,8 +87,6 @@ abstract class Packet {
 
 /// A packet used in the upgrade process to ensure that a new `Transport` is
 /// operational and is processing packets before upgrading.
-@immutable
-@sealed
 abstract class ProbePacket extends Packet {
   /// Determines whether or not this is a probe packet.
   final bool isProbe;
@@ -110,11 +97,9 @@ abstract class ProbePacket extends Packet {
   final String _content;
 
   /// Creates an instance of `ProbePacket`.
-  @literal
   const ProbePacket({required super.type, required this.isProbe})
       : _content = isProbe ? PacketContents.probe : PacketContents.empty;
 
   @override
-  @nonVirtual
   String get encoded => _content;
 }

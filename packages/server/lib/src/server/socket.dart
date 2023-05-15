@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:meta/meta.dart';
-
 import 'package:engine_io_server/src/packets/packet.dart';
 import 'package:engine_io_server/src/packets/types/message.dart';
 import 'package:engine_io_server/src/server/configuration.dart';
@@ -12,7 +10,6 @@ import 'package:engine_io_server/src/transports/exception.dart';
 import 'package:engine_io_server/src/transports/transport.dart';
 
 /// An interface to a client connected to the engine.io server.
-@sealed
 class Socket extends base.Socket with Events {
   /// A reference to the server configuration.
   final ServerConfiguration configuration;
@@ -20,7 +17,6 @@ class Socket extends base.Socket with Events {
   late Transport<dynamic> _transport;
 
   /// The transport currently in use for communication.
-  @internal
   Transport<dynamic> get transport => _transport;
 
   /// The session ID of this client.
@@ -50,7 +46,6 @@ class Socket extends base.Socket with Events {
   final List<StreamSubscription<dynamic>> _transportSubscriptions = [];
 
   /// Sets a new transport, piping all of its events into this socket.
-  @internal
   Future<void> setTransport(
     Transport<dynamic> transport, {
     bool isInitial = false,
@@ -95,7 +90,6 @@ class Socket extends base.Socket with Events {
   void sendAll(List<Packet> packet) => transport.sendAll(packet);
 
   /// Disposes of this socket, closing event streams.
-  @internal
   Future<void> dispose() async {
     if (_isDisposing) {
       return;
@@ -119,7 +113,6 @@ class Socket extends base.Socket with Events {
 }
 
 /// Contains streams for events that can be emitted on the socket.
-@internal
 mixin Events {
   /// Controller for the `onReceive` event stream.
   final _onReceiveController = StreamController<Packet>.broadcast();
@@ -142,7 +135,6 @@ mixin Events {
   final _onUpgradeController = StreamController<Transport<dynamic>>.broadcast();
 
   /// Controller for the `onUpgradeException` event stream.
-  @internal
   final onUpgradeExceptionController =
       StreamController<TransportException>.broadcast();
 

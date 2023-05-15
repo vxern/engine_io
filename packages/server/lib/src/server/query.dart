@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_server/src/server/exception.dart';
@@ -8,9 +7,6 @@ import 'package:engine_io_server/src/server/server.dart';
 import 'package:engine_io_server/src/transports/transport.dart';
 
 /// Contains the parameters extracted from HTTP queries.
-@immutable
-@sealed
-@internal
 class QueryParameters {
   /// The version of the engine.io protocol in use.
   final int protocolVersion;
@@ -37,7 +33,6 @@ class QueryParameters {
   /// Returns an instance of `QueryParameters`.
   ///
   /// ⚠️ Throws a `SocketException` if any of the parameters are invalid.
-  @factory
   static Future<QueryParameters> read(
     HttpRequest request, {
     required Set<ConnectionType> availableConnectionTypes,

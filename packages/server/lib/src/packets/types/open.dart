@@ -1,7 +1,5 @@
 import 'dart:convert';
 
-import 'package:meta/meta.dart';
-
 import 'package:engine_io_server/src/packets/packet.dart';
 import 'package:engine_io_server/src/packets/type.dart';
 import 'package:engine_io_server/src/transports/transport.dart';
@@ -10,37 +8,29 @@ import 'package:engine_io_server/src/transports/transport.dart';
 ///
 /// The server signals to the client that a connection between the two
 /// parties, client and server, has been established, and is ready to be used.
-@immutable
-@sealed
 class OpenPacket extends Packet {
   /// The session identifier of the newly opened socket.
-  @nonVirtual
   final String sessionIdentifier;
   static const _sessionIdentifier = 'sid';
 
   /// The available connection upgrades for the newly opened socket.
-  @nonVirtual
   final Set<ConnectionType> availableConnectionUpgrades;
   static const _availableConnectionUpgrades = 'upgrades';
 
   /// The time interval for the ping cycle to repeat.
-  @nonVirtual
   final Duration heartbeatInterval;
   static const _heartbeatInterval = 'pingInterval';
 
   /// The period of time for the ping cycle to be broken, and subsequently for
   /// the connection to be closed.
-  @nonVirtual
   final Duration heartbeatTimeout;
   static const _heartbeatTimeout = 'pingTimeout';
 
   /// The maximum number of bytes per packet chunk.
-  @nonVirtual
   final int maximumChunkBytes;
   static const _maximumChunkBytes = 'maxPayload';
 
   /// Creates an instance of `OpenPacket`.
-  @literal
   const OpenPacket({
     required this.sessionIdentifier,
     required this.availableConnectionUpgrades,

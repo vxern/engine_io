@@ -1,17 +1,13 @@
-import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart';
 
 import 'package:engine_io_server/src/transports/exception.dart';
 
 /// An exception that occurred on a polling transport.
-@immutable
-@sealed
 class PollingTransportException extends TransportException {
   @override
   bool get isSuccess => statusCode >= 200 && statusCode < 300;
 
   /// Creates an instance of `PollingTransportException`.
-  @literal
   const PollingTransportException({
     required super.statusCode,
     required super.reasonPhrase,

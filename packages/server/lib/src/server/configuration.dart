@@ -1,4 +1,3 @@
-import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 import 'package:uuid/uuid.dart';
 
@@ -8,8 +7,6 @@ import 'package:engine_io_server/src/transports/transport.dart';
 const _uuid = Uuid();
 
 /// Contains functions used in generating and validating session identifiers.
-@immutable
-@sealed
 class SessionIdentifierConfiguration {
   /// Function that takes a HTTP request and returns a unique session
   /// identifier.
@@ -19,7 +16,6 @@ class SessionIdentifierConfiguration {
   final bool Function(String id) validate;
 
   /// Creates an instance of `UUID`.
-  @literal
   const SessionIdentifierConfiguration({
     required this.generate,
     required this.validate,
@@ -40,7 +36,6 @@ class SessionIdentifierConfiguration {
 }
 
 /// Settings used in configuring the engine.io `Server`.
-@sealed
 class ServerConfiguration {
   /// The path the `Server` should listen on for requests.
   final String path;

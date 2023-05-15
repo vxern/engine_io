@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_server/src/exception.dart';
@@ -14,7 +13,6 @@ import 'package:engine_io_server/src/transports/polling/polling.dart';
 import 'package:engine_io_server/src/transports/transport.dart';
 
 /// The engine.io server.
-@sealed
 class Server with Events {
   /// The version of the engine.io protocol this server operates on.
   static const protocolVersion = 4;
@@ -34,7 +32,6 @@ class Server with Events {
   final HttpServer httpServer;
 
   /// Object responsible for managing clients connected to the server.
-  @visibleForTesting
   final ClientManager clientManager = ClientManager();
 
   bool _isDisposing = false;
@@ -336,7 +333,6 @@ class Server with Events {
 }
 
 /// Contains streams for events that can be emitted on the server.
-@internal
 mixin Events {
   /// Controller for the `onConnect` event stream.
   final _onConnectController = StreamController<Socket>.broadcast();
@@ -360,14 +356,11 @@ mixin Events {
 }
 
 /// An exception that occurred whilst establishing a connection.
-@immutable
-@sealed
 class ConnectException extends SocketException {
   /// The request made that triggered an exception.
   final HttpRequest request;
 
   /// Creates an instance of `ConnectException`.
-  @literal
   const ConnectException._({
     required this.request,
     required super.statusCode,

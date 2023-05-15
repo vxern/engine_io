@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_server/src/packets/packet.dart';
@@ -49,8 +48,6 @@ enum ConnectionType {
 ///
 /// The method by which packets are encoded or decoded depends on the transport
 /// used.
-@sealed
-@internal
 abstract class Transport<T> with Events {
   /// The connection type corresponding to this transport.
   final ConnectionType connectionType;
@@ -271,7 +268,6 @@ abstract class Transport<T> with Events {
 }
 
 /// Contains streams for events that can be emitted on the transport.
-@internal
 mixin Events {
   /// Controller for the `onReceive` event stream.
   final onReceiveController = StreamController<Packet>();

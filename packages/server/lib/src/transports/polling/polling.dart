@@ -1,7 +1,6 @@
 import 'dart:collection';
 import 'dart:convert';
 
-import 'package:meta/meta.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_server/src/packets/packet.dart';
@@ -11,8 +10,6 @@ import 'package:engine_io_server/src/transports/transport.dart';
 import 'package:engine_io_server/src/transports/websocket/websocket.dart';
 
 /// Transport used with long polling connections.
-@sealed
-@internal
 class PollingTransport extends Transport<HttpRequest> {
   /// The character used to separate packets in the body of a long polling HTTP
   /// request.
@@ -270,7 +267,6 @@ class PollingTransport extends Transport<HttpRequest> {
 }
 
 /// Used for keeping track of and managing the lock state of requests.
-@internal
 class Lock {
   bool _isLocked = false;
 
