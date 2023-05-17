@@ -3,14 +3,14 @@ import 'dart:convert';
 
 import 'package:engine_io_shared/exceptions.dart';
 import 'package:engine_io_shared/packets.dart';
-import 'package:engine_io_shared/transports.dart';
+import 'package:engine_io_shared/transports.dart' show ConnectionType;
 import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_server/src/transports/transport.dart';
 import 'package:engine_io_server/src/transports/websocket/websocket.dart';
 
 /// Transport used with long polling connections.
-class PollingTransport extends Transport<HttpRequest> {
+final class PollingTransport extends Transport<HttpRequest> {
   /// The character used to separate packets in the body of a long polling HTTP
   /// request.
   ///
@@ -255,9 +255,6 @@ class PollingTransport extends Transport<HttpRequest> {
 
     return null;
   }
-
-  @override
-  Future<void> close(TransportException exception) async {}
 
   @override
   Future<void> dispose() async {

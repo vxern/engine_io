@@ -12,6 +12,7 @@
     - `upgrade`: `UpgradePacket`
     - `noop`: `NoopPacket`
 - Transports:
+  - Define the `Transport` class.
   - Define the available connection types in the `ConnectionType` enum.
 - Options:
   - Define connection options in the `ConnectionOptions` class.

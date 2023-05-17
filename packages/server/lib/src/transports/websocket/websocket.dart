@@ -5,14 +5,14 @@ import 'package:crypto/crypto.dart';
 import 'package:engine_io_shared/exceptions.dart';
 import 'package:engine_io_shared/options.dart';
 import 'package:engine_io_shared/packets.dart';
-import 'package:engine_io_shared/transports.dart';
+import 'package:engine_io_shared/transports.dart' show ConnectionType;
 import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_server/src/socket.dart';
 import 'package:engine_io_server/src/transports/transport.dart';
 
 /// Transport used for websocket connections.
-class WebSocketTransport extends Transport<dynamic> {
+final class WebSocketTransport extends Transport<dynamic> {
   /// The salt used to transform a websocket key to a token during a websocket
   /// upgrade.
   static const _websocketSalt = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
@@ -135,20 +135,12 @@ class WebSocketTransport extends Transport<dynamic> {
   /// Closes the websocket connection.
   @override
   Future<void> close(TransportException exception) async {
-    if (isClosed) {
-      return;
-    }
+    await super.close(exception);
 
-    isClosed = true;
     final statusCode = exception is WebSocketTransportException
         ? exception.statusCode
         : WebSocketStatus.policyViolation;
 
     await _websocket.close(statusCode, exception.reasonPhrase);
-  }
-
-  @override
-  Future<void> dispose() async {
-    await super.dispose();
   }
 }
