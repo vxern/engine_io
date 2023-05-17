@@ -1,6 +1,4 @@
-import 'package:universal_io/io.dart';
-
-import 'package:engine_io_server/src/transports/exception.dart';
+import 'package:engine_io_shared/src/transports/exception.dart';
 
 /// An exception that occurred on a polling transport.
 class PollingTransportException extends TransportException {
@@ -16,7 +14,7 @@ class PollingTransportException extends TransportException {
   /// The client sent a GET request, even though one was already active at the
   /// time.
   static const duplicateGetRequest = PollingTransportException(
-    statusCode: HttpStatus.badRequest,
+    statusCode: 400,
     reasonPhrase:
         'There may not be more than one GET request active at any given time.',
   );
@@ -24,21 +22,21 @@ class PollingTransportException extends TransportException {
   /// The client sent a POST request, even though one was already active at the
   /// time.
   static const duplicatePostRequest = PollingTransportException(
-    statusCode: HttpStatus.badRequest,
+    statusCode: 400,
     reasonPhrase:
         'There may not be more than one POST request active at any given time.',
   );
 
   /// The server failed to read the body of a request.
   static const readingBodyFailed = PollingTransportException(
-    statusCode: HttpStatus.badRequest,
+    statusCode: 400,
     reasonPhrase: 'Failed to read request body.',
   );
 
   /// The client specified a content length that did not match the actual
   /// content length.
   static const contentLengthDisparity = PollingTransportException(
-    statusCode: HttpStatus.badRequest,
+    statusCode: 400,
     reasonPhrase:
         '''Detected a content length different to the one provided by the client.''',
   );
@@ -46,27 +44,27 @@ class PollingTransportException extends TransportException {
   /// The configured limit on the byte length of a HTTP request payload was
   /// exceeded.
   static const contentLengthLimitExceeded = PollingTransportException(
-    statusCode: HttpStatus.badRequest,
+    statusCode: 400,
     reasonPhrase: 'Maximum payload chunk length exceeded.',
   );
 
   /// The server failed to decode the body of a request.
   static const decodingBodyFailed = PollingTransportException(
-    statusCode: HttpStatus.badRequest,
+    statusCode: 400,
     reasonPhrase: 'Failed to decode request body as utf8.',
   );
 
   /// The server failed to decode packets encoded and concatenated in the
   /// request body.
   static const decodingPacketsFailed = PollingTransportException(
-    statusCode: HttpStatus.badRequest,
+    statusCode: 400,
     reasonPhrase: 'Failed to decode packet(s) from the request body.',
   );
 
   /// The client did not provide a content type, but the detected content type
   /// was different to the implicit content type.
   static const contentTypeDifferentToImplicit = PollingTransportException(
-    statusCode: HttpStatus.badRequest,
+    statusCode: 400,
     reasonPhrase:
         'Detected a content type different to the implicit content type.',
   );
@@ -74,7 +72,7 @@ class PollingTransportException extends TransportException {
   /// The content type detected by the server was different to the content type
   /// the client provided.
   static const contentTypeDifferentToSpecified = PollingTransportException(
-    statusCode: HttpStatus.badRequest,
+    statusCode: 400,
     reasonPhrase:
         'Detected a content type different to the one specified by the client.',
   );

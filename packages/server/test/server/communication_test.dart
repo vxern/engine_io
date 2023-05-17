@@ -1,16 +1,14 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:engine_io_shared/exceptions.dart';
 import 'package:engine_io_shared/packets.dart';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart' hide Socket, SocketException;
 import 'package:uuid/uuid.dart';
 
-import 'package:engine_io_server/src/server/exception.dart';
 import 'package:engine_io_server/src/server/server.dart';
 import 'package:engine_io_server/src/server/socket.dart';
-import 'package:engine_io_server/src/transports/exception.dart';
-import 'package:engine_io_server/src/transports/polling/exception.dart';
 import 'package:engine_io_server/src/transports/polling/polling.dart';
 import '../matchers.dart';
 import '../shared.dart';

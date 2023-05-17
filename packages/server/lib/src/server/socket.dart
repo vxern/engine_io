@@ -1,12 +1,11 @@
 import 'dart:async';
 
+import 'package:engine_io_shared/exceptions.dart';
 import 'package:engine_io_shared/packets.dart';
 
 import 'package:engine_io_server/src/server/configuration.dart';
-import 'package:engine_io_server/src/server/exception.dart';
 import 'package:engine_io_server/src/server/upgrade.dart';
 import 'package:engine_io_server/src/socket.dart' as base;
-import 'package:engine_io_server/src/transports/exception.dart';
 import 'package:engine_io_server/src/transports/transport.dart';
 
 /// An interface to a client connected to the engine.io server.

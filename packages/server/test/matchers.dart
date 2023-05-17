@@ -1,7 +1,6 @@
+import 'package:engine_io_shared/exceptions.dart';
 import 'package:test/expect.dart';
 import 'package:universal_io/io.dart';
-
-import 'package:engine_io_server/src/exception.dart';
 
 class _Signals extends Matcher {
   final EngineException _exception;
