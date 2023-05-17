@@ -108,7 +108,8 @@ class Server with Events {
     try {
       parameters = await QueryParameters.read(
         request,
-        availableConnectionTypes: configuration.availableConnectionTypes,
+        availableConnectionTypes:
+            configuration.connection.availableConnectionTypes,
       );
     } on SocketException catch (exception) {
       await _close(clientByIP, request, exception);
@@ -249,7 +250,7 @@ class Server with Events {
       ipAddress: ipAddress,
     );
     final transport =
-        PollingTransport(socket: client, configuration: configuration);
+        PollingTransport(socket: client, connection: configuration.connection);
     await client.setTransport(transport, isInitial: true);
 
     client.onException.listen((_) => _disconnect(client));
@@ -267,10 +268,11 @@ class Server with Events {
 
     final openPacket = OpenPacket(
       sessionIdentifier: client.sessionIdentifier,
-      availableConnectionUpgrades: configuration.availableConnectionTypes,
-      heartbeatInterval: configuration.heartbeatInterval,
-      heartbeatTimeout: configuration.heartbeatTimeout,
-      maximumChunkBytes: configuration.maximumChunkBytes,
+      availableConnectionUpgrades:
+          configuration.connection.availableConnectionTypes,
+      heartbeatInterval: configuration.connection.heartbeatInterval,
+      heartbeatTimeout: configuration.connection.heartbeatTimeout,
+      maximumChunkBytes: configuration.connection.maximumChunkBytes,
     );
 
     client.send(openPacket);

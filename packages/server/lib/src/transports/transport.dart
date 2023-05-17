@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:engine_io_shared/exceptions.dart';
+import 'package:engine_io_shared/options.dart';
 import 'package:engine_io_shared/packets.dart';
 import 'package:engine_io_shared/transports.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
-import 'package:engine_io_server/src/server/configuration.dart';
 import 'package:engine_io_server/src/server/socket.dart';
 import 'package:engine_io_server/src/server/upgrade.dart';
 import 'package:engine_io_server/src/transports/heartbeat_manager.dart';
@@ -19,11 +19,11 @@ abstract class Transport<T> with Events {
   /// The connection type corresponding to this transport.
   final ConnectionType connectionType;
 
+  /// A reference to the connection options.
+  final ConnectionOptions connection;
+
   /// A reference to the socket that is using this transport instance.
   final Socket socket;
-
-  /// A reference to the server configuration.
-  final ServerConfiguration configuration;
 
   /// Instance of `HeartbeatManager` responsible for ensuring that the
   /// connection is still active.
@@ -38,12 +38,12 @@ abstract class Transport<T> with Events {
   /// Creates an instance of `Transport`.
   Transport({
     required this.connectionType,
+    required this.connection,
     required this.socket,
-    required this.configuration,
   }) {
     heartbeat = HeartbeatManager.create(
-      interval: configuration.heartbeatInterval,
-      timeout: configuration.heartbeatTimeout,
+      interval: connection.heartbeatInterval,
+      timeout: connection.heartbeatTimeout,
       onTick: () => send(const PingPacket()),
       onTimeout: () => except(TransportException.heartbeatTimedOut),
     );

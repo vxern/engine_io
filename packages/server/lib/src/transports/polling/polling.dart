@@ -35,7 +35,7 @@ class PollingTransport extends Transport<HttpRequest> {
   final post = Lock();
 
   /// Creates an instance of `PollingTransport`.
-  PollingTransport({required super.socket, required super.configuration})
+  PollingTransport({required super.connection, required super.socket})
       : super(connectionType: ConnectionType.polling);
 
   @override
@@ -58,7 +58,7 @@ class PollingTransport extends Transport<HttpRequest> {
         data.contentLength >= 0 ? data.contentLength : bytes.length;
     if (bytes.length != contentLength) {
       return except(PollingTransportException.contentLengthDisparity);
-    } else if (contentLength > configuration.maximumChunkBytes) {
+    } else if (contentLength > connection.maximumChunkBytes) {
       return except(PollingTransportException.contentLengthLimitExceeded);
     }
 
@@ -153,7 +153,7 @@ class PollingTransport extends Transport<HttpRequest> {
       final bytes = byteChunks.current;
       final newByteCount = getNewByteCount(bytes.length);
 
-      if (newByteCount > configuration.maximumChunkBytes) {
+      if (newByteCount > connection.maximumChunkBytes) {
         break;
       }
 
@@ -236,8 +236,8 @@ class PollingTransport extends Transport<HttpRequest> {
     try {
       transport = await WebSocketTransport.fromRequest(
         request,
-        socket,
-        configuration: configuration,
+        connection: connection,
+        socket: socket,
       );
     } on TransportException catch (exception) {
       return except(exception);

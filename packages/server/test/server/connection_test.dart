@@ -21,15 +21,7 @@ void main() {
     late Server server;
 
     setUp(
-      () async => server = await Server.bind(
-        remoteUrl,
-        configuration: ServerConfiguration(
-          availableConnectionTypes: {
-            ConnectionType.polling,
-            ConnectionType.websocket
-          },
-        ),
-      ),
+      () async => server = await Server.bind(remoteUrl),
     );
     tearDown(() async => server.dispose());
 
@@ -178,7 +170,9 @@ void main() {
       () async => server = await Server.bind(
         remoteUrl,
         configuration: ServerConfiguration(
-          availableConnectionTypes: {ConnectionType.polling},
+          connection: const ConnectionOptions(
+            availableConnectionTypes: {ConnectionType.polling},
+          ),
         ),
       ),
     );

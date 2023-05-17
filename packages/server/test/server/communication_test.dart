@@ -137,7 +137,7 @@ void main() {
     test(
       'limits the number of packets sent in accordance with chunk limits.',
       () async {
-        final packetCount = server.configuration.maximumChunkBytes;
+        final packetCount = server.configuration.connection.maximumChunkBytes;
 
         socket.sendAll(List.filled(packetCount, const PingPacket()));
 
@@ -202,7 +202,7 @@ void main() {
           client,
           sessionIdentifier: open.sessionIdentifier,
           packets: List.filled(
-            server.configuration.maximumChunkBytes,
+            server.configuration.connection.maximumChunkBytes,
             const TextMessagePacket(data: ''),
           ),
         );

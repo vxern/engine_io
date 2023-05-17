@@ -20,8 +20,10 @@ void main() {
     server = await Server.bind(
       remoteUrl,
       configuration: ServerConfiguration(
-        heartbeatInterval: const Duration(seconds: 2),
-        heartbeatTimeout: const Duration(seconds: 1),
+        connection: const ConnectionOptions(
+          heartbeatInterval: Duration(seconds: 2),
+          heartbeatTimeout: Duration(seconds: 1),
+        ),
       ),
     );
   });
@@ -78,7 +80,7 @@ void main() {
       unawaited(expectLater(socket.onHeartbeat, emits(anything)));
 
       await Future<void>.delayed(
-        server.configuration.heartbeatInterval +
+        server.configuration.connection.heartbeatInterval +
             const Duration(milliseconds: 100),
       );
 

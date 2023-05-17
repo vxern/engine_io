@@ -13,8 +13,11 @@
     - `noop`: `NoopPacket`
 - Transports:
   - Define the available connection types in the `ConnectionType` enum.
-- Define the `EngineException` class:
-  - Define the `SocketException` class.
-  - Define the `TransportException` class:
-    - Define the `PollingTransportException` class.
-    - Define the `WebSocketTransportException` class.
+- Options:
+  - Define connection options in the `ConnectionOptions` class.
+- Exceptions:
+  - Define the `EngineException` class:
+    - Define the `SocketException` class.
+    - Define the `TransportException` class:
+      - Define the `PollingTransportException` class.
+      - Define the `WebSocketTransportException` class.

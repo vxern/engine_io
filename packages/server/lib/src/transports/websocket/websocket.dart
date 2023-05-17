@@ -3,11 +3,11 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:engine_io_shared/exceptions.dart';
+import 'package:engine_io_shared/options.dart';
 import 'package:engine_io_shared/packets.dart';
 import 'package:engine_io_shared/transports.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
-import 'package:engine_io_server/src/server/configuration.dart';
 import 'package:engine_io_server/src/server/socket.dart';
 import 'package:engine_io_server/src/transports/transport.dart';
 
@@ -22,9 +22,9 @@ class WebSocketTransport extends Transport<dynamic> {
 
   /// Creates an instance of `WebSocketTransport`.
   WebSocketTransport({
+    required super.connection,
     required super.socket,
     required WebSocket websocket,
-    required super.configuration,
   })  : _websocket = websocket,
         super(connectionType: ConnectionType.websocket);
 
@@ -34,9 +34,9 @@ class WebSocketTransport extends Transport<dynamic> {
   /// - The request was not a valid websocket upgrade request.
   /// - The websocket key was not valid.
   static Future<WebSocketTransport> fromRequest(
-    HttpRequest request,
-    Socket socket, {
-    required ServerConfiguration configuration,
+    HttpRequest request, {
+    required ConnectionOptions connection,
+    required Socket socket,
   }) async {
     if (!WebSocketTransformer.isUpgradeRequest(request)) {
       throw TransportException.upgradeRequestInvalid;
@@ -50,9 +50,9 @@ class WebSocketTransport extends Transport<dynamic> {
     // ignore: close_sinks
     final websocket = await WebSocketTransformer.upgrade(request);
     final transport = WebSocketTransport(
+      connection: connection,
       socket: socket,
       websocket: websocket,
-      configuration: configuration,
     );
 
     websocket.listen(

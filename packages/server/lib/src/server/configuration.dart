@@ -1,3 +1,4 @@
+import 'package:engine_io_shared/options.dart' as shared;
 import 'package:engine_io_shared/transports.dart';
 import 'package:universal_io/io.dart' hide Socket;
 import 'package:uuid/uuid.dart';
@@ -34,28 +35,46 @@ class SessionIdentifierConfiguration {
   );
 }
 
+/// Options for the connection.
+class ConnectionOptions implements shared.ConnectionOptions {
+  @override
+  final Set<ConnectionType> availableConnectionTypes;
+
+  @override
+  final Duration heartbeatInterval;
+
+  @override
+  final Duration heartbeatTimeout;
+
+  @override
+  final int maximumChunkBytes;
+
+  /// Creates an instance of `ConnectionOptions`.
+  const ConnectionOptions({
+    this.availableConnectionTypes = const {
+      ConnectionType.polling,
+      ConnectionType.websocket,
+    },
+    this.heartbeatInterval = const Duration(seconds: 15),
+    this.heartbeatTimeout = const Duration(seconds: 10),
+    this.maximumChunkBytes = 1024 * 128,
+  });
+
+  /// The default connection options.
+  static const defaultOptions = ConnectionOptions();
+}
+
 /// Settings used in configuring the engine.io `Server`.
 class ServerConfiguration {
   /// The path the `Server` should listen on for requests.
   final String path;
 
-  /// The available types of connection.
-  final Set<ConnectionType> availableConnectionTypes;
-
-  /// The amount of time the server should wait in-between sending
-  /// `PacketType.ping` packets.
-  final Duration heartbeatInterval;
-
-  /// The amount of time the server should allow for a client to respond to a
-  /// heartbeat before closing the connection.
-  final Duration heartbeatTimeout;
+  /// The options used for the connection.
+  final ConnectionOptions connection;
 
   /// The amount of time the server should wait for a transport upgrade to be
-  /// finalised before cancelling it.
+  /// finalised before cancelling it and closing the probe transport.
   final Duration upgradeTimeout;
-
-  /// The maximum number of bytes per packet chunk.
-  final int maximumChunkBytes;
 
   /// The configuration for how session identifiers are generated and validated.
   final SessionIdentifierConfiguration sessionIdentifiers;
@@ -63,14 +82,8 @@ class ServerConfiguration {
   /// Creates an instance of `ServerConfiguration`.
   ServerConfiguration({
     this.path = 'engine.io/',
-    this.availableConnectionTypes = const {
-      ConnectionType.polling,
-      ConnectionType.websocket
-    },
-    this.heartbeatInterval = const Duration(seconds: 15),
-    this.heartbeatTimeout = const Duration(seconds: 10),
+    this.connection = ConnectionOptions.defaultOptions,
     this.upgradeTimeout = const Duration(seconds: 15),
-    this.maximumChunkBytes = 1024 * 128, // 128 KiB (Kibibytes)
     this.sessionIdentifiers =
         SessionIdentifierConfiguration.defaultConfiguration,
   })  : assert(
@@ -82,17 +95,17 @@ class ServerConfiguration {
           'The server path must end with a slash.',
         ),
         assert(
-          availableConnectionTypes.isNotEmpty,
+          connection.availableConnectionTypes.isNotEmpty,
           'There must be at least one connection type enabled.',
         ),
         assert(
-          heartbeatTimeout < heartbeatInterval,
+          connection.heartbeatTimeout < connection.heartbeatInterval,
           "'heartbeatTimeout' must be shorter than 'heartbeatInterval'.",
         ),
         assert(
           // 2 GB (Gigabytes), the payload limit generally agreed on by major
           // browsers.
-          maximumChunkBytes <= 1000 * 1000 * 1000 * 2,
+          connection.maximumChunkBytes <= 1000 * 1000 * 1000 * 2,
           "'maximumChunkBytes' must be smaller than or equal 2 GB.",
         );
 
