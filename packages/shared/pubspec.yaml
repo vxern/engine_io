@@ -14,6 +14,7 @@ environment:
 
 dev_dependencies:
   import_sorter: ^4.6.0 # Sorting imports.
+  test: ^1.24.2 # Testing.
   words: ^0.4.0 # Lints.
 
 import_sorter:

@@ -1,13 +1,13 @@
 import 'dart:async';
 
+import 'package:engine_io_shared/packets.dart';
+import 'package:engine_io_shared/transports.dart';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
-import 'package:engine_io_server/src/packets/types/close.dart';
 import 'package:engine_io_server/src/server/configuration.dart';
 import 'package:engine_io_server/src/server/exception.dart';
 import 'package:engine_io_server/src/server/server.dart';
-import 'package:engine_io_server/src/transports/transport.dart';
 import '../matchers.dart';
 import '../shared.dart';
 

@@ -1,18 +1,6 @@
 # 0.1.0 (Unreleased)
 
-- Define the available types of packet in the `PacketType` enum.
-- Define the `Packet` class as the super-type of all packets.
-- Model packets:
-  - `open`: `OpenPacket`
-  - `close`: `ClosePacket`
-  - `ping`: `PingPacket` : `ProbePacket`
-  - `pong`: `PongPacket` : `ProbePacket`
-  - `message`: `TextMessagePacket`, `BinaryMessagePacket` : `MessagePacket`
-  - `upgrade`: `UpgradePacket`
-  - `noop`: `NoopPacket`
 - [Work in progress] Define the `Transport` class:
-  - [Work in progress] Define the available connection types in the
-    `ConnectionType` enum.
   - [Work in progress] Model transports:
     - `polling`: `PollingTransport`
     - `websocket`: `WebSocketTransport`

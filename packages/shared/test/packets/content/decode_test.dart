@@ -2,12 +2,7 @@ import 'dart:convert';
 
 import 'package:test/test.dart';
 
-import 'package:engine_io_server/src/packets/packet.dart';
-import 'package:engine_io_server/src/packets/types/message.dart';
-import 'package:engine_io_server/src/packets/types/open.dart';
-import 'package:engine_io_server/src/packets/types/ping.dart';
-import 'package:engine_io_server/src/packets/types/pong.dart';
-import 'package:engine_io_server/src/server/configuration.dart';
+import 'package:engine_io_shared/packets.dart';
 
 void main() {
   group('Decodes the content of', () {
@@ -15,7 +10,7 @@ void main() {
       test(
         'with an empty content.',
         () => expect(
-          () => OpenPacket.decode(PacketContents.empty),
+          () => OpenPacket.decode(''),
           throwsFormatException,
         ),
       );
@@ -46,39 +41,24 @@ void main() {
             () => packet = OpenPacket.decode(
               json.encode(<String, dynamic>{
                 'sid': 'session_identifier',
-                'upgrades': ServerConfiguration
-                    .defaultConfiguration.availableConnectionTypes
-                    .map((connectionType) => connectionType.name)
-                    .toList(),
-                'pingInterval': ServerConfiguration
-                    .defaultConfiguration.heartbeatInterval.inMilliseconds,
-                'pingTimeout': ServerConfiguration
-                    .defaultConfiguration.heartbeatTimeout.inMilliseconds,
-                'maxPayload':
-                    ServerConfiguration.defaultConfiguration.maximumChunkBytes,
+                'upgrades': ['websocket', 'polling'],
+                'pingInterval': 15000,
+                'pingTimeout': 15000,
+                'maxPayload': 100000,
               }),
             ),
             returnsNormally,
           );
           expect(packet.sessionIdentifier, equals('session_identifier'));
           expect(
-            packet.availableConnectionUpgrades,
-            equals(
-              ServerConfiguration.defaultConfiguration.availableConnectionTypes,
-            ),
+            packet.availableConnectionUpgrades
+                .map((upgrade) => upgrade.name)
+                .toList(),
+            equals(['websocket', 'polling']),
           );
-          expect(
-            packet.heartbeatInterval,
-            equals(ServerConfiguration.defaultConfiguration.heartbeatInterval),
-          );
-          expect(
-            packet.heartbeatTimeout,
-            equals(ServerConfiguration.defaultConfiguration.heartbeatTimeout),
-          );
-          expect(
-            packet.maximumChunkBytes,
-            equals(ServerConfiguration.defaultConfiguration.maximumChunkBytes),
-          );
+          expect(packet.heartbeatInterval.inMilliseconds, equals(15000));
+          expect(packet.heartbeatTimeout.inMilliseconds, equals(15000));
+          expect(packet.maximumChunkBytes, equals(100000));
         },
       );
     });
@@ -95,7 +75,7 @@ void main() {
       test('with an empty content.', () {
         late final PingPacket packet;
         expect(
-          () => packet = PingPacket.decode(PacketContents.empty),
+          () => packet = PingPacket.decode(''),
           returnsNormally,
         );
         expect(packet.isProbe, isFalse);
@@ -106,7 +86,7 @@ void main() {
         () {
           late final PingPacket packet;
           expect(
-            () => packet = PingPacket.decode(PacketContents.probe),
+            () => packet = PingPacket.decode('probe'),
             returnsNormally,
           );
           expect(packet.isProbe, isTrue);
@@ -126,7 +106,7 @@ void main() {
       test('with an empty content.', () {
         late final PongPacket packet;
         expect(
-          () => packet = PongPacket.decode(PacketContents.empty),
+          () => packet = PongPacket.decode(''),
           returnsNormally,
         );
         expect(packet.isProbe, isFalse);
@@ -137,7 +117,7 @@ void main() {
         () {
           late final PongPacket packet;
           expect(
-            () => packet = PongPacket.decode(PacketContents.probe),
+            () => packet = PongPacket.decode('probe'),
             returnsNormally,
           );
           expect(packet.isProbe, isTrue);
@@ -167,7 +147,7 @@ void main() {
         test(
           'with an empty content.',
           () => expect(
-            () => BinaryMessagePacket.decode(PacketContents.empty),
+            () => BinaryMessagePacket.decode(''),
             returnsNormally,
           ),
         );

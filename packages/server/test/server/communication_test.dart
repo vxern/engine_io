@@ -1,16 +1,11 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:engine_io_shared/packets.dart';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart' hide Socket, SocketException;
 import 'package:uuid/uuid.dart';
 
-import 'package:engine_io_server/src/packets/packet.dart';
-import 'package:engine_io_server/src/packets/types/message.dart';
-import 'package:engine_io_server/src/packets/types/noop.dart';
-import 'package:engine_io_server/src/packets/types/open.dart';
-import 'package:engine_io_server/src/packets/types/ping.dart';
-import 'package:engine_io_server/src/packets/types/pong.dart';
 import 'package:engine_io_server/src/server/exception.dart';
 import 'package:engine_io_server/src/server/server.dart';
 import 'package:engine_io_server/src/server/socket.dart';
@@ -188,7 +183,7 @@ void main() {
         final response = await post(
           client,
           sessionIdentifier: open.sessionIdentifier,
-          packets: [const TextMessagePacket(data: PacketContents.empty)],
+          packets: [const TextMessagePacket(data: '')],
           contentType: ContentType.binary,
         );
 
@@ -210,7 +205,7 @@ void main() {
           sessionIdentifier: open.sessionIdentifier,
           packets: List.filled(
             server.configuration.maximumChunkBytes,
-            const TextMessagePacket(data: PacketContents.empty),
+            const TextMessagePacket(data: ''),
           ),
         );
 
@@ -230,7 +225,7 @@ void main() {
       final response = await post(
         client,
         sessionIdentifier: open.sessionIdentifier,
-        packets: [const TextMessagePacket(data: PacketContents.probe)],
+        packets: [const TextMessagePacket(data: '')],
         contentType: ContentType.text,
       );
 

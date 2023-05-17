@@ -1,9 +1,7 @@
+import 'package:engine_io_shared/packets.dart';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
-import 'package:engine_io_server/src/packets/types/open.dart';
-import 'package:engine_io_server/src/packets/types/ping.dart';
-import 'package:engine_io_server/src/packets/types/pong.dart';
 import 'package:engine_io_server/src/server/configuration.dart';
 import 'package:engine_io_server/src/server/server.dart';
 import 'package:engine_io_server/src/server/socket.dart';

@@ -2,15 +2,8 @@ import 'dart:typed_data';
 
 import 'package:test/test.dart';
 
-import 'package:engine_io_server/src/packets/packet.dart';
-import 'package:engine_io_server/src/packets/types/close.dart';
-import 'package:engine_io_server/src/packets/types/message.dart';
-import 'package:engine_io_server/src/packets/types/noop.dart';
-import 'package:engine_io_server/src/packets/types/open.dart';
-import 'package:engine_io_server/src/packets/types/ping.dart';
-import 'package:engine_io_server/src/packets/types/pong.dart';
-import 'package:engine_io_server/src/packets/types/upgrade.dart';
-import 'package:engine_io_server/src/transports/transport.dart';
+import 'package:engine_io_shared/packets.dart';
+import 'package:engine_io_shared/transports.dart';
 
 void main() {
   group('Encodes the content of', () {
@@ -46,7 +39,7 @@ void main() {
         () => encoded = const ClosePacket().encoded,
         returnsNormally,
       );
-      expect(encoded, equals(PacketContents.empty));
+      expect(encoded, equals(''));
     });
 
     group('ping packets', () {
@@ -56,7 +49,7 @@ void main() {
           () => encoded = const PingPacket(isProbe: true).encoded,
           returnsNormally,
         );
-        expect(encoded, equals(PacketContents.probe));
+        expect(encoded, equals('probe'));
       });
 
       test('without probe.', () {
@@ -65,7 +58,7 @@ void main() {
           () => encoded = const PingPacket().encoded,
           returnsNormally,
         );
-        expect(encoded, equals(PacketContents.empty));
+        expect(encoded, equals(''));
       });
     });
 
@@ -76,7 +69,7 @@ void main() {
           () => encoded = const PongPacket(isProbe: true).encoded,
           returnsNormally,
         );
-        expect(encoded, equals(PacketContents.probe));
+        expect(encoded, equals('probe'));
       });
 
       test('without probe.', () {
@@ -85,7 +78,7 @@ void main() {
           () => encoded = const PongPacket().encoded,
           returnsNormally,
         );
-        expect(encoded, equals(PacketContents.empty));
+        expect(encoded, equals(''));
       });
     });
 
@@ -118,7 +111,7 @@ void main() {
         () => encoded = const UpgradePacket().encoded,
         returnsNormally,
       );
-      expect(encoded, equals(PacketContents.empty));
+      expect(encoded, equals(''));
     });
 
     test('noop packets.', () {
@@ -127,7 +120,7 @@ void main() {
         () => encoded = const NoopPacket().encoded,
         returnsNormally,
       );
-      expect(encoded, equals(PacketContents.empty));
+      expect(encoded, equals(''));
     });
   });
 }

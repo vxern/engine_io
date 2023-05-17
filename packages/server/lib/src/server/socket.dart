@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:engine_io_server/src/packets/packet.dart';
-import 'package:engine_io_server/src/packets/types/message.dart';
+import 'package:engine_io_shared/packets.dart';
+
 import 'package:engine_io_server/src/server/configuration.dart';
 import 'package:engine_io_server/src/server/exception.dart';
 import 'package:engine_io_server/src/server/upgrade.dart';

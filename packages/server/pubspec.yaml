@@ -16,6 +16,8 @@ environment:
 
 dependencies:
   crypto: ^3.0.3 # Cryptography functions. (`sha1` is used.)
+  engine_io_shared:
+    path: ../shared
   universal_io: ^2.2.0 # Cross-platform dart:io.
   uuid: ^3.0.7 # Unique identifiers for socket connections. (`v4` is used.)
 

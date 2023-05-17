@@ -2,16 +2,10 @@
 
 import 'dart:async';
 
+import 'package:engine_io_shared/packets.dart';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
-import 'package:engine_io_server/src/packets/packet.dart';
-import 'package:engine_io_server/src/packets/types/close.dart';
-import 'package:engine_io_server/src/packets/types/message.dart';
-import 'package:engine_io_server/src/packets/types/open.dart';
-import 'package:engine_io_server/src/packets/types/ping.dart';
-import 'package:engine_io_server/src/packets/types/pong.dart';
-import 'package:engine_io_server/src/packets/types/upgrade.dart';
 import 'package:engine_io_server/src/server/configuration.dart';
 import 'package:engine_io_server/src/server/server.dart';
 import 'package:engine_io_server/src/server/socket.dart';
@@ -53,7 +47,7 @@ void main() {
         post(
           client,
           sessionIdentifier: open.sessionIdentifier,
-          packets: [const TextMessagePacket(data: PacketContents.empty)],
+          packets: [const TextMessagePacket(data: '')],
         ),
       );
     });
@@ -61,7 +55,7 @@ void main() {
     test('an `onSend` event.', () async {
       unawaited(expectLater(socket.onSend, emits(anything)));
 
-      socket.send(const TextMessagePacket(data: PacketContents.empty));
+      socket.send(const TextMessagePacket(data: ''));
 
       // Since this is a long polling connection, the sent packets have to be
       // fetched manually for them to be received.
@@ -75,7 +69,7 @@ void main() {
         post(
           client,
           sessionIdentifier: open.sessionIdentifier,
-          packets: [const TextMessagePacket(data: PacketContents.empty)],
+          packets: [const TextMessagePacket(data: '')],
         ),
       );
     });
@@ -160,14 +154,14 @@ void main() {
       unawaited(expectLater(socket.onReceive, emits(anything)));
 
       websocket.add(
-        Packet.encode(const TextMessagePacket(data: PacketContents.empty)),
+        Packet.encode(const TextMessagePacket(data: '')),
       );
     });
 
     test('an `onSend` event.', () async {
       unawaited(expectLater(socket.onSend, emits(anything)));
 
-      socket.send(const TextMessagePacket(data: PacketContents.empty));
+      socket.send(const TextMessagePacket(data: ''));
     });
   });
 }

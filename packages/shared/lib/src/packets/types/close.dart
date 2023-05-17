@@ -1,5 +1,5 @@
-import 'package:engine_io_server/src/packets/packet.dart';
-import 'package:engine_io_server/src/packets/type.dart';
+import 'package:engine_io_shared/src/packets/packet.dart';
+import 'package:engine_io_shared/src/packets/type.dart';
 
 /// Used to close a `Transport`.
 ///

@@ -2,14 +2,7 @@ import 'dart:typed_data';
 
 import 'package:test/test.dart';
 
-import 'package:engine_io_server/src/packets/packet.dart';
-import 'package:engine_io_server/src/packets/types/close.dart';
-import 'package:engine_io_server/src/packets/types/message.dart';
-import 'package:engine_io_server/src/packets/types/noop.dart';
-import 'package:engine_io_server/src/packets/types/open.dart';
-import 'package:engine_io_server/src/packets/types/ping.dart';
-import 'package:engine_io_server/src/packets/types/pong.dart';
-import 'package:engine_io_server/src/packets/types/upgrade.dart';
+import 'package:engine_io_shared/packets.dart';
 
 void main() {
   test('Rejects malformed packets.', () {

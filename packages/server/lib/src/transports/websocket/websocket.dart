@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:engine_io_shared/packets.dart';
+import 'package:engine_io_shared/transports.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
-import 'package:engine_io_server/src/packets/packet.dart';
-import 'package:engine_io_server/src/packets/types/message.dart';
 import 'package:engine_io_server/src/server/configuration.dart';
 import 'package:engine_io_server/src/server/socket.dart';
 import 'package:engine_io_server/src/transports/exception.dart';
