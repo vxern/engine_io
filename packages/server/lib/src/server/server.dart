@@ -245,9 +245,9 @@ class Server with Events {
         configuration.sessionIdentifiers.generate(request);
 
     final client = Socket(
-      configuration: configuration,
       sessionIdentifier: sessionIdentifier,
       ipAddress: ipAddress,
+      upgradeTimeout: configuration.upgradeTimeout,
     );
     final transport =
         PollingTransport(socket: client, connection: configuration.connection);

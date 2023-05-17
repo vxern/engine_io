@@ -3,16 +3,12 @@ import 'dart:async';
 import 'package:engine_io_shared/exceptions.dart';
 import 'package:engine_io_shared/packets.dart';
 
-import 'package:engine_io_server/src/server/configuration.dart';
 import 'package:engine_io_server/src/server/upgrade.dart';
 import 'package:engine_io_server/src/socket.dart' as base;
 import 'package:engine_io_server/src/transports/transport.dart';
 
 /// An interface to a client connected to the engine.io server.
 class Socket extends base.Socket with Events {
-  /// A reference to the server configuration.
-  final ServerConfiguration configuration;
-
   late Transport<dynamic> _transport;
 
   /// The transport currently in use for communication.
@@ -35,10 +31,10 @@ class Socket extends base.Socket with Events {
 
   /// Creates an instance of `Socket`.
   Socket({
-    required this.configuration,
     required this.sessionIdentifier,
     required this.ipAddress,
-  }) : upgrade = UpgradeState(upgradeTimeout: configuration.upgradeTimeout);
+    required Duration upgradeTimeout,
+  }) : upgrade = UpgradeState(upgradeTimeout: upgradeTimeout);
 
   /// List of subscriptions to events being piped from the transport to this
   /// socket.
