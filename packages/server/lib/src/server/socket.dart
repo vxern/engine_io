@@ -101,10 +101,10 @@ class Socket extends base.Socket with Events {
     _onCloseController.add(this);
 
     if (isUpgrading) {
-      final destination = upgrade.destination;
+      final probe = upgrade.probe;
       await upgrade.reset();
-      await destination.close(TransportException.connectionClosedDuringUpgrade);
-      await destination.dispose();
+      await probe.close(TransportException.connectionClosedDuringUpgrade);
+      await probe.dispose();
     }
 
     await closeEventStreams();

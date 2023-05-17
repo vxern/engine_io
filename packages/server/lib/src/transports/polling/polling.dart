@@ -249,7 +249,7 @@ class PollingTransport extends Transport<HttpRequest> {
       return null;
     }
 
-    socket.upgrade.markInitiated(socket, origin: this, destination: transport);
+    socket.upgrade.markInitiated(socket, origin: this, probe: transport);
 
     onInitiateUpgradeController.add(transport);
 

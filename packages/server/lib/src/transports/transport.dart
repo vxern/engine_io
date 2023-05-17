@@ -191,7 +191,7 @@ abstract class Transport<T> with Events {
     }
 
     if (socket.isUpgrading) {
-      await socket.upgrade.destination.dispose();
+      await socket.upgrade.probe.dispose();
       await socket.upgrade.reset();
       return except(TransportException.upgradeAlreadyInitiated);
     }
@@ -202,8 +202,7 @@ abstract class Transport<T> with Events {
   /// Signals that an exception occurred on the transport, and returns it to be
   /// handled by the server.
   TransportException except(TransportException exception) {
-    // If this is the destination transport.
-    if (socket.isUpgrading && !socket.upgrade.isOrigin(connectionType)) {
+    if (socket.isUpgrading && socket.upgrade.isProbe(connectionType)) {
       onUpgradeExceptionController.add(exception);
       return exception;
     }

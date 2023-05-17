@@ -79,7 +79,7 @@ void main() {
 
       expect(socket.upgrade.status, equals(UpgradeStatus.initiated));
       expect(socket.upgrade.origin, equals(socket.transport));
-      expect(socket.upgrade.destination, equals(isA<WebSocketTransport>()));
+      expect(socket.upgrade.probe, equals(isA<WebSocketTransport>()));
 
       await websocket.close();
     });

@@ -258,7 +258,7 @@ class Server with Events {
       _disconnect(client);
     });
     client.onUpgradeException.listen((exception) {
-      client.upgrade.destination.close(exception);
+      client.upgrade.probe.close(exception);
       _disconnect(client);
     });
 

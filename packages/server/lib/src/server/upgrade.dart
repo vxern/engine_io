@@ -31,8 +31,8 @@ class UpgradeState {
   Transport<dynamic>? _origin;
 
   /// The potential new transport.
-  Transport<dynamic> get destination => _destination!;
-  Transport<dynamic>? _destination;
+  Transport<dynamic> get probe => _probe!;
+  Transport<dynamic>? _probe;
 
   /// Keeps track of the upgrade timing out.
   late Timer timer;
@@ -44,7 +44,7 @@ class UpgradeState {
   /// Creates an instance of `UpgradeState`.
   UpgradeState({required Duration upgradeTimeout}) {
     _getTimer = () => Timer(upgradeTimeout, () async {
-          await _destination?.dispose();
+          await _probe?.dispose();
           await reset();
         });
   }
@@ -53,12 +53,12 @@ class UpgradeState {
   void markInitiated(
     Socket socket, {
     required Transport<dynamic> origin,
-    required Transport<dynamic> destination,
+    required Transport<dynamic> probe,
   }) {
     _status = UpgradeStatus.initiated;
     _origin = origin;
-    _destination = destination;
-    _exceptionSubscription = destination.onUpgradeException
+    _probe = probe;
+    _exceptionSubscription = probe.onUpgradeException
         .listen(socket.onUpgradeExceptionController.add);
     timer = _getTimer();
   }
@@ -70,7 +70,7 @@ class UpgradeState {
   Future<void> reset() async {
     _status = UpgradeStatus.none;
     _origin = null;
-    _destination = null;
+    _probe = null;
     timer.cancel();
     _exceptionSubscription = null;
     await _exceptionSubscription?.cancel();
@@ -79,8 +79,13 @@ class UpgradeState {
   /// Alias for `reset()`;
   Future<void> markComplete() => reset();
 
-  /// Checks if a given connection type is the connection type of the original
+  /// Checks if a given connection type is the connection type of the origin
   /// transport.
   bool isOrigin(ConnectionType connectionType) =>
       origin.connectionType == connectionType;
+
+  /// Checks if a given connection type is the connection type of the probe
+  /// transport.
+  bool isProbe(ConnectionType connectionType) =>
+      origin.connectionType != connectionType;
 }
