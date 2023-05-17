@@ -7,8 +7,8 @@ import 'package:test/test.dart';
 import 'package:universal_io/io.dart' hide Socket, SocketException;
 import 'package:uuid/uuid.dart';
 
-import 'package:engine_io_server/src/server/server.dart';
-import 'package:engine_io_server/src/server/socket.dart';
+import 'package:engine_io_server/src/server.dart';
+import 'package:engine_io_server/src/socket.dart';
 import 'package:engine_io_server/src/transports/polling/polling.dart';
 import '../matchers.dart';
 import '../shared.dart';

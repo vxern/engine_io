@@ -2,9 +2,9 @@ import 'package:engine_io_shared/packets.dart';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
-import 'package:engine_io_server/src/server/configuration.dart';
-import 'package:engine_io_server/src/server/server.dart';
-import 'package:engine_io_server/src/server/socket.dart';
+import 'package:engine_io_server/src/configuration.dart';
+import 'package:engine_io_server/src/server.dart';
+import 'package:engine_io_server/src/socket.dart';
 import '../shared.dart';
 
 void main() {

@@ -6,8 +6,8 @@ import 'package:engine_io_shared/packets.dart';
 import 'package:engine_io_shared/transports.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
-import 'package:engine_io_server/src/server/socket.dart';
-import 'package:engine_io_server/src/server/upgrade.dart';
+import 'package:engine_io_server/src/socket.dart';
+import 'package:engine_io_server/src/upgrade.dart';
 import 'package:engine_io_server/src/transports/heartbeat_manager.dart';
 import 'package:engine_io_server/src/transports/polling/polling.dart';
 

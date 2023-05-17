@@ -3,7 +3,7 @@ import 'dart:collection';
 
 import 'package:engine_io_shared/exceptions.dart';
 
-import 'package:engine_io_server/src/server/socket.dart';
+import 'package:engine_io_server/src/socket.dart';
 
 /// Object responsible for maintaining references to and handling `Socket`s of
 /// clients connected to the `Server`.

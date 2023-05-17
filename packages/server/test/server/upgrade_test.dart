@@ -7,10 +7,10 @@ import 'package:engine_io_shared/transports.dart';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart' hide Socket, SocketException;
 
-import 'package:engine_io_server/src/server/configuration.dart';
-import 'package:engine_io_server/src/server/server.dart';
-import 'package:engine_io_server/src/server/socket.dart';
-import 'package:engine_io_server/src/server/upgrade.dart';
+import 'package:engine_io_server/src/configuration.dart';
+import 'package:engine_io_server/src/server.dart';
+import 'package:engine_io_server/src/socket.dart';
+import 'package:engine_io_server/src/upgrade.dart';
 import 'package:engine_io_server/src/transports/websocket/websocket.dart';
 import '../matchers.dart';
 import '../shared.dart';
