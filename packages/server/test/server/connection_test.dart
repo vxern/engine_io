@@ -1,13 +1,9 @@
 import 'dart:async';
 
-import 'package:engine_io_shared/exceptions.dart';
-import 'package:engine_io_shared/packets.dart';
-import 'package:engine_io_shared/transports.dart';
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
-import 'package:engine_io_server/src/configuration.dart';
-import 'package:engine_io_server/src/server.dart';
+import 'package:engine_io_server/engine_io_server.dart';
 import '../matchers.dart';
 import '../shared.dart';
 

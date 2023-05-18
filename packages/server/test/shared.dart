@@ -1,13 +1,9 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:engine_io_shared/packets.dart';
-import 'package:engine_io_shared/transports.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
-import 'package:engine_io_server/src/server.dart';
-import 'package:engine_io_server/src/socket.dart';
-import 'package:engine_io_server/src/transports/polling/polling.dart';
+import 'package:engine_io_server/engine_io_server.dart';
 
 final remoteUrl = Uri.http(InternetAddress.loopbackIPv4.address, '/');
 final serverUrl = remoteUrl.replace(path: '/engine.io/');

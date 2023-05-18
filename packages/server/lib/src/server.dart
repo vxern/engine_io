@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:engine_io_shared/exceptions.dart';
 import 'package:engine_io_shared/packets.dart';
-import 'package:engine_io_shared/transports.dart';
+import 'package:engine_io_shared/transports.dart' show ConnectionType;
 import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_server/src/client_manager.dart';

@@ -1,10 +1,9 @@
 import 'dart:async';
 
 import 'package:engine_io_shared/exceptions.dart';
-import 'package:engine_io_shared/options.dart';
 import 'package:engine_io_shared/packets.dart';
 import 'package:engine_io_shared/transports.dart' as shared;
-import 'package:engine_io_shared/transports.dart' hide Transport;
+import 'package:engine_io_shared/transports.dart' show ConnectionType;
 import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_server/src/socket.dart';
@@ -12,11 +11,13 @@ import 'package:engine_io_server/src/upgrade.dart';
 import 'package:engine_io_server/src/transports/heartbeat_manager.dart';
 import 'package:engine_io_server/src/transports/polling/polling.dart';
 
-abstract base class Transport<IncomingData>
+/// Represents a medium by which the server is able to communicate with the
+/// client.
+///
+/// The method by which packets are encoded or decoded depends on the transport
+/// used.
+abstract class Transport<IncomingData>
     extends shared.Transport<Transport<dynamic>, IncomingData> {
-  /// A reference to the connection options.
-  final ConnectionOptions connection;
-
   /// A reference to the socket that is using this transport instance.
   final Socket socket;
 
@@ -27,7 +28,7 @@ abstract base class Transport<IncomingData>
   /// Creates an instance of `Transport`.
   Transport({
     required super.connectionType,
-    required this.connection,
+    required super.connection,
     required this.socket,
   }) {
     heartbeat = HeartbeatManager.create(

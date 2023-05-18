@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:engine_io_shared/packets.dart';
 import 'package:engine_io_shared/src/event_emitter.dart';
+import 'package:engine_io_shared/src/options.dart';
 import 'package:engine_io_shared/src/transports/connection_type.dart';
 import 'package:engine_io_shared/src/transports/exception.dart';
 
@@ -9,10 +10,13 @@ import 'package:engine_io_shared/src/transports/exception.dart';
 ///
 /// The method by which packets are encoded or decoded depends on the transport
 /// used.
-abstract base class Transport<T extends Transport<dynamic, dynamic>,
-    IncomingData> extends Events<T> {
+abstract class Transport<T extends Transport<dynamic, dynamic>, IncomingData>
+    extends Events<T> {
   /// The connection type corresponding to this transport.
   final ConnectionType connectionType;
+
+  /// A reference to the connection options.
+  final ConnectionOptions connection;
 
   /// Whether the transport is closed.
   bool isClosed = false;
@@ -21,7 +25,7 @@ abstract base class Transport<T extends Transport<dynamic, dynamic>,
   bool isDisposing = false;
 
   /// Creates an instance of `Transport`.
-  Transport({required this.connectionType});
+  Transport({required this.connectionType, required this.connection});
 
   /// Receives data from the remote party.
   ///

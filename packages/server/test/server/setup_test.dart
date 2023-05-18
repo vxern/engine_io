@@ -1,8 +1,7 @@
 import 'package:test/test.dart';
 import 'package:universal_io/io.dart';
 
-import 'package:engine_io_server/src/configuration.dart';
-import 'package:engine_io_server/src/server.dart';
+import 'package:engine_io_server/engine_io_server.dart';
 import '../shared.dart';
 
 void main() {

@@ -12,7 +12,7 @@ import 'package:engine_io_server/src/socket.dart';
 import 'package:engine_io_server/src/transports/transport.dart';
 
 /// Transport used for websocket connections.
-final class WebSocketTransport extends Transport<dynamic> {
+class WebSocketTransport extends Transport<dynamic> {
   /// The salt used to transform a websocket key to a token during a websocket
   /// upgrade.
   static const _websocketSalt = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
