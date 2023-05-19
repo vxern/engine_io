@@ -29,7 +29,6 @@ abstract class Transport<IncomingData>
   }
 
   @override
-  // TODO(vxern): This should be a method on the socket, not on the transport.
   Future<TransportException?> processPacket(Packet packet) async {
     TransportException? exception;
 

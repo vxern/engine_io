@@ -15,7 +15,6 @@ environment:
   sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
-  crypto: ^3.0.3 # Cryptography functions. (`sha1` is used.)
   engine_io_shared:
     path: ../shared
   universal_io: ^2.2.0 # Cross-platform dart:io.
