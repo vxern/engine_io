@@ -105,7 +105,7 @@ void main() {
           await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
       websocket
-        ..add(Packet.encode(const PingPacket(isProbe: true)))
+        ..add(Packet.encode(Packet.pingProbe))
         ..add(Packet.encode(const UpgradePacket()));
     });
 
@@ -118,7 +118,7 @@ void main() {
         post(
           client,
           sessionIdentifier: open.sessionIdentifier,
-          packets: [const PingPacket()],
+          packets: [Packet.ping],
         ),
       );
     });

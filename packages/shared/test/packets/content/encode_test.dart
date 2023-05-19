@@ -46,7 +46,7 @@ void main() {
       test('with probe.', () {
         late final String encoded;
         expect(
-          () => encoded = const PingPacket(isProbe: true).encoded,
+          () => encoded = Packet.pingProbe.encoded,
           returnsNormally,
         );
         expect(encoded, equals('probe'));
@@ -55,7 +55,7 @@ void main() {
       test('without probe.', () {
         late final String encoded;
         expect(
-          () => encoded = const PingPacket().encoded,
+          () => encoded = Packet.ping.encoded,
           returnsNormally,
         );
         expect(encoded, equals(''));
@@ -66,7 +66,7 @@ void main() {
       test('with probe.', () {
         late final String encoded;
         expect(
-          () => encoded = const PongPacket(isProbe: true).encoded,
+          () => encoded = Packet.pongProbe.encoded,
           returnsNormally,
         );
         expect(encoded, equals('probe'));

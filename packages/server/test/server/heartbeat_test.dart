@@ -47,7 +47,7 @@ void main() {
         await expectLater(
           get(client, sessionIdentifier: open.sessionIdentifier)
               .then((result) => result.$2.first),
-          completion(const PingPacket()),
+          completion(Packet.ping),
         );
 
         await post(
@@ -68,7 +68,7 @@ void main() {
         await expectLater(
           get(client, sessionIdentifier: open.sessionIdentifier)
               .then((result) => result.$2.first),
-          completion(const PingPacket()),
+          completion(Packet.ping),
         );
       },
     );

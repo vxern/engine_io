@@ -34,7 +34,7 @@ void main() {
     });
 
     test('ping packets.', () {
-      final encoded = Packet.encode(const PingPacket());
+      final encoded = Packet.encode(Packet.ping);
       late final Packet packet;
       expect(() => packet = Packet.decode(encoded), returnsNormally);
       expect(packet, isA<PingPacket>());

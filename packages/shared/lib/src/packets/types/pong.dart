@@ -33,7 +33,7 @@ class PongPacket extends ProbePacket {
     }
 
     if (content == PacketContents.probe) {
-      return const PongPacket(isProbe: true);
+      return Packet.pongProbe;
     }
 
     throw FormatException('Invalid packet data.', content);

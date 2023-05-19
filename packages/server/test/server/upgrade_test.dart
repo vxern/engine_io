@@ -100,7 +100,7 @@ void main() {
 
       final dataQueue = StreamQueue<dynamic>(websocket);
 
-      websocket.add(Packet.encode(const PingPacket(isProbe: true)));
+      websocket.add(Packet.encode(Packet.pingProbe));
       await expectLater(dataQueue.next, completes);
 
       expect(socket.upgrade.status, equals(UpgradeStatus.probed));
@@ -120,8 +120,8 @@ void main() {
       );
 
       websocket
-        ..add(Packet.encode(const PingPacket(isProbe: true)))
-        ..add(Packet.encode(const PingPacket(isProbe: true)));
+        ..add(Packet.encode(Packet.pingProbe))
+        ..add(Packet.encode(Packet.pingProbe));
       await websocket.close();
     });
 
@@ -149,7 +149,7 @@ void main() {
 
       final onPong = websocket.first;
 
-      websocket.add(Packet.encode(const PingPacket(isProbe: true)));
+      websocket.add(Packet.encode(Packet.pingProbe));
       await expectLater(onPong, completes);
 
       final onUpgrade = socket.onUpgrade.first;
@@ -168,7 +168,7 @@ void main() {
 
       final dataQueue = StreamQueue(websocket);
 
-      websocket.add(Packet.encode(const PingPacket(isProbe: true)));
+      websocket.add(Packet.encode(Packet.pingProbe));
       await dataQueue.next;
 
       final onUpgrade = socket.onUpgrade.first;

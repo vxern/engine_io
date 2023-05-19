@@ -28,11 +28,11 @@ class PingPacket extends ProbePacket {
   /// 'probe' (in plaintext).
   factory PingPacket.decode(String content) {
     if (content.isEmpty) {
-      return const PingPacket();
+      return Packet.ping;
     }
 
     if (content == PacketContents.probe) {
-      return const PingPacket(isProbe: true);
+      return Packet.pingProbe;
     }
 
     throw FormatException('Invalid packet data.', content);

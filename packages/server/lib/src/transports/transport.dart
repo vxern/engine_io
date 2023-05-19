@@ -26,7 +26,7 @@ abstract class Transport<IncomingData>
     required super.connection,
     required this.socket,
   }) {
-    heart.onTick.listen((_) => send(const PingPacket()));
+    heart.onTick.listen((_) => send(Packet.ping));
   }
 
   @override

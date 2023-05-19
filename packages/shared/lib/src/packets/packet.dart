@@ -29,6 +29,27 @@ abstract class Packet {
   /// Matches to a valid engine.io packet.
   static final _packetExpression = RegExp(r'^([0-6b])(.*?)$');
 
+  /// Reference to a close packet used as an alias.
+  static const close = ClosePacket();
+
+  /// Reference to a ping packet used as an alias.
+  static const ping = PingPacket();
+
+  /// Reference to a probe ping packet used as an alias.
+  static const pingProbe = PingPacket(isProbe: true);
+
+  /// Reference to a pong packet used as an alias.
+  static const pong = PongPacket();
+
+  /// Reference to a probe pong packet used as an alias.
+  static const pongProbe = PongPacket(isProbe: true);
+
+  /// Reference to an upgrade packet used as an alias.
+  static const upgrade = UpgradePacket();
+
+  /// Reference to a noop packet used as an alias.
+  static const noop = NoopPacket();
+
   /// The type of this packet.
   final PacketType type;
 

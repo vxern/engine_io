@@ -135,7 +135,7 @@ void main() {
       () async {
         final packetCount = server.configuration.connection.maximumChunkBytes;
 
-        socket.sendAll(List.filled(packetCount, const PingPacket()));
+        socket.sendAll(List.filled(packetCount, Packet.ping));
 
         final transport = socket.transport as PollingTransport;
 
@@ -291,7 +291,7 @@ void main() {
           final response = await post(
             client,
             sessionIdentifier: open.sessionIdentifier,
-            packets: [const PingPacket()],
+            packets: [Packet.ping],
           );
 
           expect(response, signals(TransportException.packetIllegal));
@@ -305,7 +305,7 @@ void main() {
           final response = await post(
             client,
             sessionIdentifier: open.sessionIdentifier,
-            packets: [const PongPacket(isProbe: true)],
+            packets: [Packet.pongProbe],
           );
 
           expect(response, signals(TransportException.packetIllegal));
