@@ -91,7 +91,7 @@ abstract class EngineTransport<
 }
 
 /// Contains streams for events that can be emitted on the transport.
-class Events<T extends EngineTransport<dynamic, dynamic>>
+class Events<Transport extends EngineTransport<dynamic, dynamic>>
     implements EventEmitter {
   /// Controller for the `onReceive` event stream.
   final onReceiveController = StreamController<Packet>();
@@ -106,10 +106,10 @@ class Events<T extends EngineTransport<dynamic, dynamic>>
   final onHeartbeatController = StreamController<ProbePacket>();
 
   /// Controller for the `onInitiateUpgrade` event stream.
-  final onInitiateUpgradeController = StreamController<T>();
+  final onInitiateUpgradeController = StreamController<Transport>();
 
   /// Controller for the `onUpgrade` event stream.
-  final onUpgradeController = StreamController<T>();
+  final onUpgradeController = StreamController<Transport>();
 
   /// Controller for the `onUpgradeException` event stream.
   final onUpgradeExceptionController =
@@ -134,10 +134,10 @@ class Events<T extends EngineTransport<dynamic, dynamic>>
   Stream<ProbePacket> get onHeartbeat => onHeartbeatController.stream;
 
   /// Added to when a transport upgrade is initiated.
-  Stream<T> get onInitiateUpgrade => onInitiateUpgradeController.stream;
+  Stream<Transport> get onInitiateUpgrade => onInitiateUpgradeController.stream;
 
   /// Added to when a transport upgrade is complete.
-  Stream<T> get onUpgrade => onUpgradeController.stream;
+  Stream<Transport> get onUpgrade => onUpgradeController.stream;
 
   /// Added to when an exception occurs on a transport while upgrading.
   Stream<TransportException> get onUpgradeException =>

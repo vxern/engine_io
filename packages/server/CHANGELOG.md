@@ -13,5 +13,3 @@
     connected clients.
 - [Work in progress] Define the `Socket` class to represent clients connected to
   the server.
-  - [Work in progress] Define the `UpgradeState` class to manage the state of
-    transport upgrades.

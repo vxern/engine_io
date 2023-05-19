@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:engine_io_shared/exceptions.dart';
 import 'package:engine_io_shared/packets.dart';
+import 'package:engine_io_shared/socket.dart';
 import 'package:engine_io_shared/transports.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_server/src/socket.dart';
-import 'package:engine_io_server/src/upgrade.dart';
 import 'package:engine_io_server/src/transports/polling/polling.dart';
 
 /// Represents a medium by which the server is able to communicate with the

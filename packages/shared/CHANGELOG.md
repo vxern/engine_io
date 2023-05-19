@@ -11,6 +11,9 @@
     - `message`: `TextMessagePacket`, `BinaryMessagePacket` : `MessagePacket`
     - `upgrade`: `UpgradePacket`
     - `noop`: `NoopPacket`
+- Define the `Socket` class as an interface to the connection between client and
+  server.
+  - Define the `UpgradeState` class to manage the state of transport upgrades.
 - Transports:
   - Define the `Transport` class:
     - Define the `PollingTransport` mixin.

@@ -1,10 +1,8 @@
 import 'dart:async';
 
 import 'package:engine_io_shared/exceptions.dart';
-import 'package:engine_io_shared/transports.dart' show ConnectionType;
-
-import 'package:engine_io_server/src/socket.dart';
-import 'package:engine_io_server/src/transports/transport.dart';
+import 'package:engine_io_shared/src/socket/socket.dart';
+import 'package:engine_io_shared/transports.dart';
 
 /// Represents the status of a transport upgrade.
 enum UpgradeStatus {
@@ -19,7 +17,8 @@ enum UpgradeStatus {
 }
 
 /// Represents the state of a transport upgrade.
-class UpgradeState {
+class UpgradeState<Transport extends EngineTransport<Transport, dynamic>,
+    Socket extends EngineSocket<Transport, dynamic>> {
   static const _defaultUpgradeState = UpgradeStatus.none;
 
   /// The current state of the upgrade.
@@ -27,12 +26,12 @@ class UpgradeState {
   UpgradeStatus _status = _defaultUpgradeState;
 
   /// The current transport.
-  Transport<dynamic> get origin => _origin!;
-  Transport<dynamic>? _origin;
+  Transport get origin => _origin!;
+  Transport? _origin;
 
   /// The potential new transport.
-  Transport<dynamic> get probe => _probe!;
-  Transport<dynamic>? _probe;
+  Transport get probe => _probe!;
+  Transport? _probe;
 
   /// Keeps track of the upgrade timing out.
   late Timer timer;
@@ -52,8 +51,8 @@ class UpgradeState {
   /// Marks the upgrade process as initiated.
   void markInitiated(
     Socket socket, {
-    required Transport<dynamic> origin,
-    required Transport<dynamic> probe,
+    required Transport origin,
+    required Transport probe,
   }) {
     _status = UpgradeStatus.initiated;
     _origin = origin;
