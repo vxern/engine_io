@@ -1,7 +1,6 @@
 import 'package:engine_io_shared/exceptions.dart';
 import 'package:engine_io_shared/options.dart';
-import 'package:engine_io_shared/transports.dart' as shared;
-import 'package:engine_io_shared/transports.dart' show ConnectionType;
+import 'package:engine_io_shared/transports.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_server/src/socket.dart';
@@ -9,7 +8,7 @@ import 'package:engine_io_server/src/transports/transport.dart';
 
 /// Transport used for websocket connections.
 class WebSocketTransport extends Transport<dynamic>
-    with shared.WebSocketTransport<WebSocket, Transport<dynamic>> {
+    with EngineWebSocketTransport<WebSocket, Transport<dynamic>> {
   @override
   final WebSocket websocket;
 
@@ -27,7 +26,7 @@ class WebSocketTransport extends Transport<dynamic>
   /// ⚠️ Throws a `TransportException` if the passed key is not a valid 16-byte
   /// base64-encoded UTF-8 string.
   static String transformKey(String key) =>
-      shared.WebSocketTransport.transformKey(key);
+      EngineWebSocketTransport.transformKey(key);
 
   /// Taking a HTTP request, upgrades it to a websocket transport.
   ///

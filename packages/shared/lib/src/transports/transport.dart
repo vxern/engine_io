@@ -11,8 +11,9 @@ import 'package:engine_io_shared/src/transports/heart.dart';
 ///
 /// The method by which packets are encoded or decoded depends on the transport
 /// used.
-abstract class Transport<T extends Transport<dynamic, dynamic>, IncomingData>
-    extends Events<T> {
+abstract class EngineTransport<
+    Transport extends EngineTransport<dynamic, dynamic>,
+    IncomingData> extends Events<Transport> {
   /// The connection type corresponding to this transport.
   final ConnectionType connectionType;
 
@@ -30,7 +31,7 @@ abstract class Transport<T extends Transport<dynamic, dynamic>, IncomingData>
   bool isDisposing = false;
 
   /// Creates an instance of `Transport`.
-  Transport({
+  EngineTransport({
     required this.connectionType,
     required this.connection,
   }) : heart = Heart.create(
@@ -90,7 +91,8 @@ abstract class Transport<T extends Transport<dynamic, dynamic>, IncomingData>
 }
 
 /// Contains streams for events that can be emitted on the transport.
-class Events<T extends Transport<dynamic, dynamic>> implements EventEmitter {
+class Events<T extends EngineTransport<dynamic, dynamic>>
+    implements EventEmitter {
   /// Controller for the `onReceive` event stream.
   final onReceiveController = StreamController<Packet>();
 

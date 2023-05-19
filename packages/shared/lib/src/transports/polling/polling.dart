@@ -9,10 +9,11 @@ import 'package:engine_io_shared/src/transports/polling/lock.dart';
 import 'package:engine_io_shared/src/transports/transport.dart';
 
 /// Provides polling transport
-mixin PollingTransport<
-    IncomingData extends Stream<List<int>>,
-    OutgoingData extends Sink<List<int>>,
-    T extends Transport<dynamic, dynamic>> on Transport<T, IncomingData> {
+mixin EnginePollingTransport<
+        IncomingData extends Stream<List<int>>,
+        OutgoingData extends Sink<List<int>>,
+        Transport extends EngineTransport<dynamic, dynamic>>
+    on EngineTransport<Transport, IncomingData> {
   /// The character used to separate packets in the body of a long polling HTTP
   /// request.
   ///
@@ -94,7 +95,7 @@ mixin PollingTransport<
     final List<Packet> packets;
     try {
       packets = body
-          .split(PollingTransport.recordSeparator)
+          .split(EnginePollingTransport.recordSeparator)
           .map(Packet.decode)
           .toList();
     } on FormatException {

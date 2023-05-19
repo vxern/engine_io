@@ -2,8 +2,7 @@ import 'dart:async';
 
 import 'package:engine_io_shared/exceptions.dart';
 import 'package:engine_io_shared/packets.dart';
-import 'package:engine_io_shared/transports.dart' as shared;
-import 'package:engine_io_shared/transports.dart' show ConnectionType;
+import 'package:engine_io_shared/transports.dart';
 import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_server/src/socket.dart';
@@ -16,7 +15,7 @@ import 'package:engine_io_server/src/transports/polling/polling.dart';
 /// The method by which packets are encoded or decoded depends on the transport
 /// used.
 abstract class Transport<IncomingData>
-    extends shared.Transport<Transport<dynamic>, IncomingData> {
+    extends EngineTransport<Transport<dynamic>, IncomingData> {
   /// A reference to the socket that is using this transport instance.
   final Socket socket;
 
