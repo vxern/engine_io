@@ -35,14 +35,14 @@ void main() {
     test(
       'heartbeats.',
       () async {
-        expect(socket.transport.heartbeat.isExpectingHeartbeat, isFalse);
+        expect(socket.transport.heart.isExpectingHeartbeat, isFalse);
 
         await Future<void>.delayed(
           server.configuration.connection.heartbeatInterval +
               const Duration(milliseconds: 100),
         );
 
-        expect(socket.transport.heartbeat.isExpectingHeartbeat, isTrue);
+        expect(socket.transport.heart.isExpectingHeartbeat, isTrue);
 
         await expectLater(
           get(client, sessionIdentifier: open.sessionIdentifier)
@@ -56,14 +56,14 @@ void main() {
           packets: [const PongPacket()],
         );
 
-        expect(socket.transport.heartbeat.isExpectingHeartbeat, isFalse);
+        expect(socket.transport.heart.isExpectingHeartbeat, isFalse);
 
         await Future<void>.delayed(
           server.configuration.connection.heartbeatInterval +
               const Duration(milliseconds: 100),
         );
 
-        expect(socket.transport.heartbeat.isExpectingHeartbeat, isTrue);
+        expect(socket.transport.heart.isExpectingHeartbeat, isTrue);
 
         await expectLater(
           get(client, sessionIdentifier: open.sessionIdentifier)

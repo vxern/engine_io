@@ -104,7 +104,7 @@ class PollingTransport extends Transport<HttpRequest>
 
   @override
   Future<void> dispose() async {
-    heartbeat.dispose();
+    heart.dispose();
     await super.dispose();
   }
 }

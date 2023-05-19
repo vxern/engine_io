@@ -12,7 +12,7 @@ class TransportException extends EngineException {
   });
 
   /// A heartbeat was not received in time, and timed out.
-  static const heartbeatTimedOut = TransportException(
+  static const heartbeatTimeout = TransportException(
     statusCode: 400,
     reasonPhrase: 'Did not respond to a heartbeat in time.',
   );

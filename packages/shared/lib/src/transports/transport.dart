@@ -5,6 +5,7 @@ import 'package:engine_io_shared/src/event_emitter.dart';
 import 'package:engine_io_shared/src/options.dart';
 import 'package:engine_io_shared/src/transports/connection_type.dart';
 import 'package:engine_io_shared/src/transports/exception.dart';
+import 'package:engine_io_shared/src/transports/heart.dart';
 
 /// Represents a medium by which the connected parties are able to communicate.
 ///
@@ -18,6 +19,10 @@ abstract class Transport<T extends Transport<dynamic, dynamic>, IncomingData>
   /// A reference to the connection options.
   final ConnectionOptions connection;
 
+  /// Instance of `Heart` responsible for ensuring that the connection is still
+  /// active.
+  final Heart heart;
+
   /// Whether the transport is closed.
   bool isClosed = false;
 
@@ -25,7 +30,15 @@ abstract class Transport<T extends Transport<dynamic, dynamic>, IncomingData>
   bool isDisposing = false;
 
   /// Creates an instance of `Transport`.
-  Transport({required this.connectionType, required this.connection});
+  Transport({
+    required this.connectionType,
+    required this.connection,
+  }) : heart = Heart.create(
+          interval: connection.heartbeatInterval,
+          timeout: connection.heartbeatTimeout,
+        ) {
+    heart.onTimeout.listen((_) => except(TransportException.heartbeatTimeout));
+  }
 
   /// Receives data from the remote party.
   ///

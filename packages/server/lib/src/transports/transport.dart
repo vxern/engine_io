@@ -8,7 +8,6 @@ import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_server/src/socket.dart';
 import 'package:engine_io_server/src/upgrade.dart';
-import 'package:engine_io_server/src/transports/heartbeat_manager.dart';
 import 'package:engine_io_server/src/transports/polling/polling.dart';
 
 /// Represents a medium by which the server is able to communicate with the
@@ -21,22 +20,13 @@ abstract class Transport<IncomingData>
   /// A reference to the socket that is using this transport instance.
   final Socket socket;
 
-  /// Instance of `HeartbeatManager` responsible for ensuring that the
-  /// connection is still active.
-  late final HeartbeatManager heartbeat;
-
   /// Creates an instance of `Transport`.
   Transport({
     required super.connectionType,
     required super.connection,
     required this.socket,
   }) {
-    heartbeat = HeartbeatManager.create(
-      interval: connection.heartbeatInterval,
-      timeout: connection.heartbeatTimeout,
-      onTick: () => send(const PingPacket()),
-      onTimeout: () => except(TransportException.heartbeatTimedOut),
-    );
+    heart.onTick.listen((_) => send(const PingPacket()));
   }
 
   @override
@@ -82,12 +72,12 @@ abstract class Transport<IncomingData>
           break;
         }
 
-        if (!heartbeat.isExpectingHeartbeat) {
+        if (!heart.isExpectingHeartbeat) {
           exception = TransportException.heartbeatUnexpected;
           break;
         }
 
-        heartbeat.reset();
+        heart.reset();
       case PacketType.close:
         exception = TransportException.requestedClosure;
       case PacketType.upgrade:
@@ -159,7 +149,7 @@ abstract class Transport<IncomingData>
   /// Disposes of this transport, closing event streams.
   @override
   Future<void> dispose() async {
-    heartbeat.dispose();
+    heart.dispose();
     await super.dispose();
   }
 }

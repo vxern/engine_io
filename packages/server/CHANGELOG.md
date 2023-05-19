@@ -1,8 +1,6 @@
 # 0.1.0 (Unreleased)
 
 - [Work in progress] Define the `Transport` class:
-  - [Work in progress] Define the `HeartbeatManager` class to manage the
-    heartbeat mechanism.
   - [Work in progress] Model transports:
     - `polling`: `PollingTransport`
     - `websocket`: `WebSocketTransport`
