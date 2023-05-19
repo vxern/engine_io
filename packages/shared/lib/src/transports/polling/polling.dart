@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 
@@ -8,7 +9,9 @@ import 'package:engine_io_shared/src/transports/polling/lock.dart';
 import 'package:engine_io_shared/src/transports/transport.dart';
 
 /// Provides polling transport
-mixin PollingTransport<IncomingData, OutgoingData,
+mixin PollingTransport<
+    IncomingData extends Stream<List<int>>,
+    OutgoingData extends Sink<List<int>>,
     T extends Transport<dynamic, dynamic>> on Transport<T, IncomingData> {
   /// The character used to separate packets in the body of a long polling HTTP
   /// request.
@@ -61,8 +64,8 @@ mixin PollingTransport<IncomingData, OutgoingData,
 
     final List<int> bytes;
     try {
-      bytes = await (message as Stream<List<int>>)
-          .fold(<int>[], (buffer, bytes) => buffer..addAll(bytes));
+      bytes =
+          await message.fold(<int>[], (buffer, bytes) => buffer..addAll(bytes));
     } on Exception catch (_) {
       return except(PollingTransportException.readingBodyFailed);
     }

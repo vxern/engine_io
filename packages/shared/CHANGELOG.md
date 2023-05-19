@@ -12,7 +12,9 @@
     - `upgrade`: `UpgradePacket`
     - `noop`: `NoopPacket`
 - Transports:
-  - Define the `Transport` class.
+  - Define the `Transport` class:
+    - Define the `PollingTransport` mixin.
+    - Define the `WebSocketTransport` mixin.
   - Define the available connection types in the `ConnectionType` enum.
 - Options:
   - Define connection options in the `ConnectionOptions` class.
