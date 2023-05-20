@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:engine_io_shared/packets.dart';
 import 'package:engine_io_shared/src/event_emitter.dart';
 import 'package:engine_io_shared/src/options.dart';
+import 'package:engine_io_shared/src/socket/socket.dart';
 import 'package:engine_io_shared/src/transports/connection_type.dart';
 import 'package:engine_io_shared/src/transports/exception.dart';
 import 'package:engine_io_shared/src/transports/heart.dart';
@@ -12,13 +13,17 @@ import 'package:engine_io_shared/src/transports/heart.dart';
 /// The method by which packets are encoded or decoded depends on the transport
 /// used.
 abstract class EngineTransport<
-    Transport extends EngineTransport<dynamic, dynamic>,
+    Transport extends EngineTransport<dynamic, dynamic, dynamic>,
+    Socket extends EngineSocket<dynamic, dynamic>,
     IncomingData> extends Events<Transport> {
   /// The connection type corresponding to this transport.
   final ConnectionType connectionType;
 
   /// A reference to the connection options.
   final ConnectionOptions connection;
+
+  /// A reference to the socket that is using this transport instance.
+  final Socket socket;
 
   /// Instance of `Heart` responsible for ensuring that the connection is still
   /// active.
@@ -34,6 +39,7 @@ abstract class EngineTransport<
   EngineTransport({
     required this.connectionType,
     required this.connection,
+    required this.socket,
   }) : heart = Heart.create(
           interval: connection.heartbeatInterval,
           timeout: connection.heartbeatTimeout,
@@ -60,6 +66,11 @@ abstract class EngineTransport<
   /// Signals that an exception occurred on the transport, and returns it to be
   /// handled by the server.
   TransportException except(TransportException exception) {
+    if (socket.isUpgrading && socket.upgrade.isProbe(connectionType)) {
+      onUpgradeExceptionController.add(exception);
+      return exception;
+    }
+
     if (!exception.isSuccess) {
       onExceptionController.add(exception);
     }
@@ -86,12 +97,14 @@ abstract class EngineTransport<
 
     isDisposing = true;
 
+    heart.dispose();
+
     return closeStreams();
   }
 }
 
 /// Contains streams for events that can be emitted on the transport.
-class Events<Transport extends EngineTransport<dynamic, dynamic>>
+class Events<Transport extends EngineTransport<dynamic, dynamic, dynamic>>
     implements EventEmitter {
   /// Controller for the `onReceive` event stream.
   final onReceiveController = StreamController<Packet>();

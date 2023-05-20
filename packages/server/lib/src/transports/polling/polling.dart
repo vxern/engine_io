@@ -1,5 +1,6 @@
 import 'dart:io' hide Socket;
 
+import 'package:engine_io_server/src/socket.dart';
 import 'package:engine_io_shared/exceptions.dart';
 import 'package:engine_io_shared/packets.dart';
 import 'package:engine_io_shared/transports.dart';
@@ -9,7 +10,7 @@ import 'package:engine_io_server/src/transports/websocket/websocket.dart';
 
 /// Transport used with long polling connections.
 class PollingTransport extends Transport<HttpRequest>
-    with EnginePollingTransport<HttpRequest, HttpResponse, Transport> {
+    with EnginePollingTransport<HttpRequest, HttpResponse, Transport, Socket> {
   /// The character used to separate packets in the body of a long polling HTTP
   /// request.
   ///

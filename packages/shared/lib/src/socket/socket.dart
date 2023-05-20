@@ -10,7 +10,8 @@ import 'package:engine_io_shared/src/transports/transport.dart';
 
 /// An interface for communication between connected parties, client and server.
 abstract class EngineSocket<
-    Transport extends EngineTransport<Transport, dynamic>,
+    Transport extends EngineTransport<Transport, EngineSocket<dynamic, dynamic>,
+        dynamic>,
     Socket extends EngineSocket<Transport, dynamic>> extends Events<Transport> {
   /// The transport currently in use for communication.
   late Transport transport;
@@ -101,8 +102,9 @@ abstract class EngineSocket<
 }
 
 /// Contains streams for events that can be emitted on the socket.
-class Events<Transport extends EngineTransport<Transport, dynamic>>
-    implements EventEmitter {
+class Events<
+    Transport extends EngineTransport<Transport, EngineSocket<dynamic, dynamic>,
+        dynamic>> implements EventEmitter {
   /// Controller for the `onReceive` event stream.
   final onReceiveController = StreamController<Packet>.broadcast();
 

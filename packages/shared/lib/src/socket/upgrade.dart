@@ -17,7 +17,9 @@ enum UpgradeStatus {
 }
 
 /// Represents the state of a transport upgrade.
-class UpgradeState<Transport extends EngineTransport<Transport, dynamic>,
+class UpgradeState<
+    Transport extends EngineTransport<Transport, EngineSocket<dynamic, dynamic>,
+        dynamic>,
     Socket extends EngineSocket<Transport, dynamic>> {
   static const _defaultUpgradeState = UpgradeStatus.none;
 

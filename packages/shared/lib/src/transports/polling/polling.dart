@@ -3,15 +3,19 @@ import 'dart:collection';
 import 'dart:convert';
 
 import 'package:engine_io_shared/src/packets/packet.dart';
+import 'package:engine_io_shared/src/socket/socket.dart';
 import 'package:engine_io_shared/src/transports/exception.dart';
 import 'package:engine_io_shared/src/transports/polling/exception.dart';
 import 'package:engine_io_shared/src/transports/polling/lock.dart';
 import 'package:engine_io_shared/src/transports/transport.dart';
 
 /// Provides polling transport
-mixin EnginePollingTransport<IncomingData extends Stream<List<int>>,
-        OutgoingData extends Sink<List<int>>, Transport extends EngineTransport>
-    on EngineTransport<Transport, IncomingData> {
+mixin EnginePollingTransport<
+        IncomingData extends Stream<List<int>>,
+        OutgoingData extends Sink<List<int>>,
+        Transport extends EngineTransport,
+        Socket extends EngineSocket<dynamic, dynamic>>
+    on EngineTransport<Transport, Socket, IncomingData> {
   /// The character used to separate packets in the body of a long polling HTTP
   /// request.
   ///

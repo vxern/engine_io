@@ -4,13 +4,17 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:engine_io_shared/src/packets/packet.dart';
 import 'package:engine_io_shared/src/packets/types/message.dart';
+import 'package:engine_io_shared/src/socket/socket.dart';
 import 'package:engine_io_shared/src/transports/exception.dart';
 import 'package:engine_io_shared/src/transports/transport.dart';
 import 'package:engine_io_shared/src/transports/websocket/exception.dart';
 
 /// Transport used for websocket connections.
-mixin EngineWebSocketTransport<WebSocket extends dynamic,
-    Transport extends EngineTransport> on EngineTransport<Transport, dynamic> {
+mixin EngineWebSocketTransport<
+        WebSocket extends dynamic,
+        Transport extends EngineTransport,
+        Socket extends EngineSocket<dynamic, dynamic>>
+    on EngineTransport<Transport, Socket, dynamic> {
   /// The salt used to transform a websocket key to a token during a websocket
   /// upgrade.
   static const _websocketSalt = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';

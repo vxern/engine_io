@@ -15,15 +15,12 @@ import 'package:engine_io_server/src/transports/polling/polling.dart';
 /// The method by which packets are encoded or decoded depends on the transport
 /// used.
 abstract class Transport<IncomingData>
-    extends EngineTransport<Transport, IncomingData> {
-  /// A reference to the socket that is using this transport instance.
-  final Socket socket;
-
+    extends EngineTransport<Transport, Socket, IncomingData> {
   /// Creates an instance of `Transport`.
   Transport({
     required super.connectionType,
     required super.connection,
-    required this.socket,
+    required super.socket,
   }) {
     heart.onTick.listen((_) => send(Packet.ping));
   }
@@ -132,22 +129,5 @@ abstract class Transport<IncomingData>
     }
 
     return null;
-  }
-
-  @override
-  TransportException except(TransportException exception) {
-    if (socket.isUpgrading && socket.upgrade.isProbe(connectionType)) {
-      onUpgradeExceptionController.add(exception);
-      return exception;
-    }
-
-    return super.except(exception);
-  }
-
-  /// Disposes of this transport, closing event streams.
-  @override
-  Future<void> dispose() async {
-    heart.dispose();
-    await super.dispose();
   }
 }
