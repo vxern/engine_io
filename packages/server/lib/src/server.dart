@@ -1,3 +1,5 @@
+// ignore_for_file: comment_references
+
 import 'dart:async';
 
 import 'package:engine_io_shared/exceptions.dart';
@@ -28,7 +30,7 @@ class Server with Events {
 
   /// The underlying HTTP server used to receive requests from connected
   /// clients.
-  final HttpServer httpServer;
+  final HttpServer http;
 
   /// Object responsible for managing clients connected to the server.
   final ClientManager clientManager = ClientManager();
@@ -36,7 +38,7 @@ class Server with Events {
   bool _isDisposing = false;
 
   Server._({
-    required this.httpServer,
+    required this.http,
     ServerConfiguration? configuration,
   }) : configuration =
             configuration ?? ServerConfiguration.defaultConfiguration;
@@ -49,7 +51,7 @@ class Server with Events {
   }) async {
     final httpServer = await HttpServer.bind(uri.host, uri.port);
     final server = Server._(
-      httpServer: httpServer,
+      http: httpServer,
       configuration: configuration,
     );
 
@@ -264,7 +266,7 @@ class Server with Events {
     });
 
     clientManager.add(client);
-    _onConnectController.add(client);
+    _onConnectController.add((request: request, client: client));
 
     final openPacket = OpenPacket(
       sessionIdentifier: client.sessionIdentifier,
@@ -310,9 +312,10 @@ class Server with Events {
     if (client != null) {
       await _disconnect(client, exception);
     } else {
-      _onConnectExceptionController.add(
-        ConnectException.fromSocketException(exception, request: request),
-      );
+      final connectException =
+          ConnectException.fromSocketException(exception, request: request);
+      _onConnectExceptionController
+          .add((request: request, exception: connectException));
     }
 
     await _respond(request, exception);
@@ -327,26 +330,39 @@ class Server with Events {
 
     _isDisposing = true;
 
-    await httpServer.close().catchError((dynamic _) {});
+    await http.close().catchError((dynamic _) {});
     await clientManager.dispose();
     await closeEventStreams();
   }
 }
 
+/// [request] - The HTTP request made by the client to connect to the server.
+///
+/// [client] - The client socket.
+typedef OnConnectEvent = ({HttpRequest request, Socket client});
+
+/// [request] - The HTTP request made by the client to connect to the server.
+///
+/// [exception] - The exception that occurred during connection.
+typedef OnConnectExceptionEvent = ({
+  HttpRequest request,
+  ConnectException exception
+});
+
 /// Contains streams for events that can be emitted on the server.
 mixin Events {
   /// Controller for the `onConnect` event stream.
-  final _onConnectController = StreamController<Socket>.broadcast();
+  final _onConnectController = StreamController<OnConnectEvent>.broadcast();
 
   /// Controller for the `onConnectException` event stream.
   final _onConnectExceptionController =
-      StreamController<ConnectException>.broadcast();
+      StreamController<OnConnectExceptionEvent>.broadcast();
 
   /// Added to when a new connection is established.
-  Stream<Socket> get onConnect => _onConnectController.stream;
+  Stream<OnConnectEvent> get onConnect => _onConnectController.stream;
 
   /// Added to when a connection could not be established.
-  Stream<ConnectException> get onConnectException =>
+  Stream<OnConnectExceptionEvent> get onConnectException =>
       _onConnectExceptionController.stream;
 
   /// Closes event streams.

@@ -62,15 +62,15 @@ Future<GetResult> get(
     );
 
 Future<ConnectResult> connect(Server server, HttpClient client) async {
-  final socketLater = server.onConnect.first;
+  final onConnect = server.onConnect.first;
   final (_, open) = await getRaw(
     client,
     protocolVersion: Server.protocolVersion.toString(),
     connectionType: ConnectionType.polling.name,
   ).then((result) => (result.$1, result.$2.first as OpenPacket));
-  final socket = await socketLater;
+  final onConnectEvent = await onConnect;
 
-  return (socket, open);
+  return (onConnectEvent.client, open);
 }
 
 Future<HttpClientResponse> post(

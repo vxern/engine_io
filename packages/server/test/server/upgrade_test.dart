@@ -217,13 +217,13 @@ void main() {
     });
 
     test('Server accepts valid websocket handshake requests.', () async {
-      final socketLater = server.onConnect.first;
+      final onConnect = server.onConnect.first;
 
       final (response, _) = await upgrade(client);
 
       unawaited(
         expectLater(
-          socketLater.then((socket) => socket.transport),
+          onConnect.then((event) => event.client.transport),
           completion(equals(isA<WebSocketTransport>())),
         ),
       );
@@ -232,11 +232,11 @@ void main() {
     });
 
     test('handles forced websocket closures.', () async {
-      final socketLater = server.onConnect.first;
+      final onConnect = server.onConnect.first;
 
       unawaited(
         expectLater(
-          socketLater.then((socket) => socket.onTransportException.first),
+          onConnect.then((event) => event.client.onTransportException.first),
           completion(TransportException.closedForcefully),
         ),
       );
@@ -247,13 +247,13 @@ void main() {
     });
 
     test('rejects requests to downgrade connection.', () async {
-      final socketLater = server.onConnect.first;
+      final onConnect = server.onConnect.first;
       await upgrade(client);
-      final socket = await socketLater;
+      final onConnectEvent = await onConnect;
 
       final response = await upgradeRequest(
         client,
-        sessionIdentifier: socket.sessionIdentifier,
+        sessionIdentifier: onConnectEvent.client.sessionIdentifier,
         connectionType: ConnectionType.polling.name,
       );
 
@@ -262,13 +262,13 @@ void main() {
 
     group('rejects HTTP requests after upgrade:', () {
       test('GET', () async {
-        final socketLater = server.onConnect.first;
+        final onConnect = server.onConnect.first;
         await upgrade(client);
-        final socket = await socketLater;
+        final onConnectEvent = await onConnect;
 
         final (response, _) = await get(
           client,
-          sessionIdentifier: socket.sessionIdentifier,
+          sessionIdentifier: onConnectEvent.client.sessionIdentifier,
           connectionType: ConnectionType.websocket.name,
         );
 
@@ -276,13 +276,13 @@ void main() {
       });
 
       test('POST', () async {
-        final socketLater = server.onConnect.first;
+        final onConnect = server.onConnect.first;
         await upgrade(client);
-        final socket = await socketLater;
+        final onConnectEvent = await onConnect;
 
         final response = await post(
           client,
-          sessionIdentifier: socket.sessionIdentifier,
+          sessionIdentifier: onConnectEvent.client.sessionIdentifier,
           packets: [],
           connectionType: ConnectionType.websocket.name,
         );

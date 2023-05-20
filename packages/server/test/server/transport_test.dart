@@ -141,7 +141,7 @@ void main() {
     late WebSocket websocket;
 
     setUp(() async {
-      final socketLater = server.onConnect.first;
+      final socketLater = server.onConnect.first.then((event) => event.client);
       final (_, websocket_) = await upgrade(client);
       websocket = websocket_;
       socket = await socketLater;
