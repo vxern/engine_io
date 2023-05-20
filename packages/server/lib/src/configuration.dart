@@ -62,6 +62,19 @@ class ConnectionOptions implements shared.ConnectionOptions {
 
   /// The default connection options.
   static const defaultOptions = ConnectionOptions();
+
+  @override
+  String toString() {
+    final connectionTypesFormatted = availableConnectionTypes
+        .map((connectionType) => connectionType.name)
+        .join(', ');
+
+    return '''
+Available connection types: $connectionTypesFormatted
+Heartbeat interval: ${heartbeatInterval.inSeconds.toStringAsFixed(1)} s
+Heartbeat timeout: ${heartbeatTimeout.inSeconds.toStringAsFixed(1)} s
+Maximum chunk bytes: ${(maximumChunkBytes / 1024).toStringAsFixed(1)} KiB''';
+  }
 }
 
 /// Settings used in configuring the engine.io `Server`.
@@ -111,4 +124,10 @@ class ServerConfiguration {
 
   /// The default server configuration.
   static final defaultConfiguration = ServerConfiguration();
+
+  @override
+  String toString() => '''
+Server path: $path
+$connection
+Upgrade timeout: ${upgradeTimeout.inSeconds.toStringAsFixed(1)} s''';
 }
