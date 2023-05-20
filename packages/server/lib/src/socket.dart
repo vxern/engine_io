@@ -3,7 +3,7 @@ import 'package:engine_io_shared/socket.dart';
 import 'package:engine_io_server/src/transports/transport.dart';
 
 /// An interface to a client connected to the engine.io server.
-class Socket extends EngineSocket<Transport<dynamic>, Socket> {
+class Socket extends EngineSocket<Transport, Socket> {
   /// The session ID of this client.
   final String sessionIdentifier;
 

@@ -9,10 +9,8 @@ import 'package:engine_io_shared/src/transports/polling/lock.dart';
 import 'package:engine_io_shared/src/transports/transport.dart';
 
 /// Provides polling transport
-mixin EnginePollingTransport<
-        IncomingData extends Stream<List<int>>,
-        OutgoingData extends Sink<List<int>>,
-        Transport extends EngineTransport<dynamic, dynamic>>
+mixin EnginePollingTransport<IncomingData extends Stream<List<int>>,
+        OutgoingData extends Sink<List<int>>, Transport extends EngineTransport>
     on EngineTransport<Transport, IncomingData> {
   /// The character used to separate packets in the body of a long polling HTTP
   /// request.

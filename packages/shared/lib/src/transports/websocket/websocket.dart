@@ -10,8 +10,7 @@ import 'package:engine_io_shared/src/transports/websocket/exception.dart';
 
 /// Transport used for websocket connections.
 mixin EngineWebSocketTransport<WebSocket extends dynamic,
-        Transport extends EngineTransport<dynamic, dynamic>>
-    on EngineTransport<Transport, dynamic> {
+    Transport extends EngineTransport> on EngineTransport<Transport, dynamic> {
   /// The salt used to transform a websocket key to a token during a websocket
   /// upgrade.
   static const _websocketSalt = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';

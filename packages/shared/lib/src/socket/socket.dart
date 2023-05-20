@@ -31,7 +31,7 @@ abstract class EngineSocket<
 
   /// List of subscriptions to events being piped from the transport to this
   /// socket.
-  final List<StreamSubscription<dynamic>> _transportSubscriptions = [];
+  final List<StreamSubscription> _transportSubscriptions = [];
 
   /// Sets a new transport, piping all of its events into this socket.
   Future<void> setTransport(
@@ -110,8 +110,7 @@ class Events<Transport extends EngineTransport<Transport, dynamic>>
   final onSendController = StreamController<Packet>.broadcast();
 
   /// Controller for the `onMessage` event stream.
-  final onMessageController =
-      StreamController<MessagePacket<dynamic>>.broadcast();
+  final onMessageController = StreamController<MessagePacket>.broadcast();
 
   /// Controller for the `onHeartbeat` event stream.
   final onHeartbeatController = StreamController<ProbePacket>.broadcast();
@@ -147,7 +146,7 @@ class Events<Transport extends EngineTransport<Transport, dynamic>>
   Stream<Packet> get onSend => onSendController.stream;
 
   /// Added to when a message packet is received.
-  Stream<MessagePacket<dynamic>> get onMessage => onMessageController.stream;
+  Stream<MessagePacket> get onMessage => onMessageController.stream;
 
   /// Added to when a heartbeat (ping / pong) packet is received.
   Stream<ProbePacket> get onHeartbeat => onHeartbeatController.stream;

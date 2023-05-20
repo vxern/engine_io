@@ -100,7 +100,7 @@ class Events<Transport extends EngineTransport<dynamic, dynamic>>
   final onSendController = StreamController<Packet>();
 
   /// Controller for the `onMessage` event stream.
-  final onMessageController = StreamController<MessagePacket<dynamic>>();
+  final onMessageController = StreamController<MessagePacket>();
 
   /// Controller for the `onHeartbeat` event stream.
   final onHeartbeatController = StreamController<ProbePacket>();
@@ -128,7 +128,7 @@ class Events<Transport extends EngineTransport<dynamic, dynamic>>
   Stream<Packet> get onSend => onSendController.stream;
 
   /// Added to when a message packet is received.
-  Stream<MessagePacket<dynamic>> get onMessage => onMessageController.stream;
+  Stream<MessagePacket> get onMessage => onMessageController.stream;
 
   /// Added to when a heartbeat (ping / pong) packet is received.
   Stream<ProbePacket> get onHeartbeat => onHeartbeatController.stream;

@@ -7,8 +7,8 @@ import 'package:engine_io_server/src/socket.dart';
 import 'package:engine_io_server/src/transports/transport.dart';
 
 /// Transport used for websocket connections.
-class WebSocketTransport extends Transport<dynamic>
-    with EngineWebSocketTransport<WebSocket, Transport<dynamic>> {
+class WebSocketTransport extends Transport
+    with EngineWebSocketTransport<WebSocket, Transport> {
   @override
   final WebSocket websocket;
 

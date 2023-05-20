@@ -98,7 +98,7 @@ void main() {
       final (_, websocket) =
           await upgrade(client, sessionIdentifier: open.sessionIdentifier);
 
-      final dataQueue = StreamQueue<dynamic>(websocket);
+      final dataQueue = StreamQueue(websocket);
 
       websocket.add(Packet.encode(Packet.pingProbe));
       await expectLater(dataQueue.next, completes);

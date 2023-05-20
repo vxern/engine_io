@@ -8,7 +8,7 @@ import 'package:engine_io_server/src/transports/websocket/websocket.dart';
 
 /// Transport used with long polling connections.
 class PollingTransport extends Transport<HttpRequest>
-    with EnginePollingTransport<HttpRequest, HttpResponse, Transport<dynamic>> {
+    with EnginePollingTransport<HttpRequest, HttpResponse, Transport> {
   /// The character used to separate packets in the body of a long polling HTTP
   /// request.
   ///

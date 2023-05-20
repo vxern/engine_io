@@ -18,7 +18,7 @@ void main() {
       test(
         'with a non-map content type.',
         () => expect(
-          () => OpenPacket.decode(json.encode(<dynamic>[])),
+          () => OpenPacket.decode(json.encode([])),
           throwsFormatException,
         ),
       );

@@ -15,7 +15,7 @@ import 'package:engine_io_server/src/transports/polling/polling.dart';
 /// The method by which packets are encoded or decoded depends on the transport
 /// used.
 abstract class Transport<IncomingData>
-    extends EngineTransport<Transport<dynamic>, IncomingData> {
+    extends EngineTransport<Transport, IncomingData> {
   /// A reference to the socket that is using this transport instance.
   final Socket socket;
 
