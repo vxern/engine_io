@@ -1,7 +1,8 @@
+import 'dart:io' hide Socket;
+
 import 'package:engine_io_shared/exceptions.dart';
 import 'package:engine_io_shared/packets.dart';
 import 'package:engine_io_shared/transports.dart';
-import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_server/src/transports/transport.dart';
 import 'package:engine_io_server/src/transports/websocket/websocket.dart';

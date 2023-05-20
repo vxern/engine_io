@@ -1,7 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:test/test.dart';
-import 'package:universal_io/io.dart';
 
 import 'package:engine_io_server/engine_io_server.dart';
 import '../matchers.dart';

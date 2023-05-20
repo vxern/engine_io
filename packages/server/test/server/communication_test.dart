@@ -1,8 +1,8 @@
 import 'dart:async';
+import 'dart:io' hide Socket, SocketException;
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
-import 'package:universal_io/io.dart' hide Socket, SocketException;
 import 'package:uuid/uuid.dart';
 
 import 'package:engine_io_server/engine_io_server.dart';

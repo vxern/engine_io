@@ -1,5 +1,5 @@
 import 'package:engine_io_server/engine_io_server.dart';
-import 'package:universal_io/io.dart';
+import 'dart:io';
 
 void main() async {
   final server = await Server.bind(Uri.http('localhost', '/engine.io'));

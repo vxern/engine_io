@@ -1,5 +1,6 @@
+import 'dart:io' hide Socket;
+
 import 'package:test/test.dart';
-import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_server/engine_io_server.dart';
 import '../shared.dart';

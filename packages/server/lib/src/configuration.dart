@@ -1,6 +1,7 @@
+import 'dart:io' hide Socket;
+
 import 'package:engine_io_shared/options.dart' as shared;
 import 'package:engine_io_shared/transports.dart';
-import 'package:universal_io/io.dart' hide Socket;
 import 'package:uuid/uuid.dart';
 
 /// Object responsible for creating unique identifiers for `Socket`s.

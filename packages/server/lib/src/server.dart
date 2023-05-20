@@ -1,11 +1,11 @@
 // ignore_for_file: comment_references
 
 import 'dart:async';
+import 'dart:io' hide Socket;
 
 import 'package:engine_io_shared/exceptions.dart';
 import 'package:engine_io_shared/packets.dart';
 import 'package:engine_io_shared/transports.dart' show ConnectionType;
-import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_server/src/client_manager.dart';
 import 'package:engine_io_server/src/configuration.dart';

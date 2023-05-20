@@ -1,7 +1,6 @@
 import 'dart:convert';
+import 'dart:io' hide Socket;
 import 'dart:math';
-
-import 'package:universal_io/io.dart' hide Socket;
 
 import 'package:engine_io_server/engine_io_server.dart';
 
