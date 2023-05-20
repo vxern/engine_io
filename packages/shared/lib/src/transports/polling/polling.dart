@@ -4,8 +4,8 @@ import 'dart:convert';
 
 import 'package:engine_io_shared/src/packets/packet.dart';
 import 'package:engine_io_shared/src/socket/socket.dart';
-import 'package:engine_io_shared/src/transports/exception.dart';
-import 'package:engine_io_shared/src/transports/polling/exception.dart';
+import 'package:engine_io_shared/src/transports/exceptions.dart';
+import 'package:engine_io_shared/src/transports/polling/exceptions.dart';
 import 'package:engine_io_shared/src/transports/polling/lock.dart';
 import 'package:engine_io_shared/src/transports/transport.dart';
 

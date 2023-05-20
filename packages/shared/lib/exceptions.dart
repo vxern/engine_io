@@ -3,8 +3,8 @@
 library exceptions;
 
 export 'src/exception.dart' show EngineException;
-export 'src/socket/exception.dart' show SocketException;
-export 'src/transports/exception.dart' show TransportException;
-export 'src/transports/polling/exception.dart' show PollingTransportException;
-export 'src/transports/websocket/exception.dart'
+export 'src/socket/exceptions.dart' show SocketException;
+export 'src/transports/exceptions.dart' show TransportException;
+export 'src/transports/polling/exceptions.dart' show PollingTransportException;
+export 'src/transports/websocket/exceptions.dart'
     show WebSocketTransportException;

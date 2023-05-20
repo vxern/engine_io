@@ -2,12 +2,13 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+
 import 'package:engine_io_shared/src/packets/packet.dart';
 import 'package:engine_io_shared/src/packets/types/message.dart';
 import 'package:engine_io_shared/src/socket/socket.dart';
-import 'package:engine_io_shared/src/transports/exception.dart';
+import 'package:engine_io_shared/src/transports/exceptions.dart';
 import 'package:engine_io_shared/src/transports/transport.dart';
-import 'package:engine_io_shared/src/transports/websocket/exception.dart';
+import 'package:engine_io_shared/src/transports/websocket/exceptions.dart';
 
 /// Transport used for websocket connections.
 mixin EngineWebSocketTransport<

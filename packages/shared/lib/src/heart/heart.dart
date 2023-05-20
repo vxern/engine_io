@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:engine_io_shared/src/heart/events.dart';
+
 /// The `Heart` is responsible for checking that connections are still active by
 /// 'beating' (ticking) at intervals and flagging up when it has not been reset
 /// before the timeout had elapsed.
@@ -40,14 +42,14 @@ class Heart with Events {
     void onTimeout() {
       timer._intervalTimer.cancel();
       timer._timeoutTimer.cancel();
-      timer._onTimeoutController.add(null);
+      timer.onTimeoutController.add(null);
     }
 
     Timer getTimeoutTimer() => Timer(interval + timeout, onTimeout);
 
     void onTick() {
       timer.isExpectingHeartbeat = true;
-      timer._onTickController.add(null);
+      timer.onTickController.add(null);
     }
 
     Timer getIntervalTimer() => Timer(interval, onTick);
@@ -68,26 +70,5 @@ class Heart with Events {
   void dispose() {
     _intervalTimer.cancel();
     _timeoutTimer.cancel();
-  }
-}
-
-/// Contains streams for events that can be emitted on the heart.
-mixin Events {
-  /// Controller for the `onTick` event stream.
-  final _onTickController = StreamController<void>.broadcast();
-
-  /// Controller for the `onTimeout` event stream.
-  final _onTimeoutController = StreamController<void>.broadcast();
-
-  /// Added to when the heartbeat ticks.
-  Stream<void> get onTick => _onTickController.stream;
-
-  /// Added to when the heartbeat times out.
-  Stream<void> get onTimeout => _onTimeoutController.stream;
-
-  /// Closes event streams.
-  Future<void> closeEventStreams() async {
-    _onTickController.close().ignore();
-    _onTimeoutController.close().ignore();
   }
 }

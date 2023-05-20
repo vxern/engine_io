@@ -1,4 +1,4 @@
-import 'package:engine_io_shared/src/transports/exception.dart';
+import 'package:engine_io_shared/src/transports/exceptions.dart';
 
 /// An exception that occurred on a polling transport.
 class PollingTransportException extends TransportException {

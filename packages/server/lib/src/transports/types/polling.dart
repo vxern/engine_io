@@ -1,12 +1,12 @@
 import 'dart:io' hide Socket;
 
-import 'package:engine_io_server/src/socket.dart';
 import 'package:engine_io_shared/exceptions.dart';
 import 'package:engine_io_shared/packets.dart';
 import 'package:engine_io_shared/transports.dart';
 
+import 'package:engine_io_server/src/socket.dart';
 import 'package:engine_io_server/src/transports/transport.dart';
-import 'package:engine_io_server/src/transports/websocket/websocket.dart';
+import 'package:engine_io_server/src/transports/types/websocket.dart';
 
 /// Transport used with long polling connections.
 class PollingTransport extends Transport<HttpRequest>

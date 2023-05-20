@@ -7,7 +7,7 @@ import 'package:engine_io_shared/socket.dart';
 import 'package:engine_io_shared/transports.dart';
 
 import 'package:engine_io_server/src/socket.dart';
-import 'package:engine_io_server/src/transports/polling/polling.dart';
+import 'package:engine_io_server/src/transports/types/polling.dart';
 
 /// Represents a medium by which the server is able to communicate with the
 /// client.
