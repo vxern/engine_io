@@ -22,8 +22,11 @@ abstract class EngineSocket<
   /// Whether the transport is in the process of being upgraded.
   bool get isUpgrading => upgrade.status != UpgradeStatus.none;
 
-  /// Whether the socket is disposing.
-  bool isDisposing = false;
+  /// Whether the socket is closed.
+  bool isClosed = false;
+
+  /// Whether the socket is disposed.
+  bool isDisposed = false;
 
   /// Creates an instance of `EngineSocket`.
   EngineSocket({required Duration upgradeTimeout})
@@ -49,16 +52,28 @@ abstract class EngineSocket<
         transport.onSend.listen(onSendController.add),
         transport.onMessage.listen(onMessageController.add),
         transport.onHeartbeat.listen(onHeartbeatController.add),
-        transport.onInitiateUpgrade.listen(onInitiateUpgradeController.add),
-        transport.onUpgrade.listen((transport) async {
-          await setTransport(transport);
-          onUpgradeController.add(transport);
+        transport.onInitiateUpgrade.listen((event) {
+          final (:next) = event;
+          onInitiateUpgradeController.add((current: transport, next: next));
         }),
-        transport.onException.listen((exception) async {
-          onTransportExceptionController.add(exception);
-          onExceptionController.add(SocketException.transportException);
+        transport.onUpgrade.listen((event) async {
+          final (:next) = event;
+          final previous = transport;
+          await setTransport(next);
+          onUpgradeController.add((previous: previous, current: next));
         }),
-        transport.onClose.listen(onTransportCloseController.add),
+        transport.onException.listen((event) async {
+          final (:exception) = event;
+          onTransportExceptionController
+              .add((transport: transport, exception: exception));
+          onExceptionController
+              .add((exception: SocketException.transportException));
+        }),
+        transport.onClose.listen((event) {
+          final (:reason) = event;
+          onTransportCloseController
+              .add((transport: transport, reason: reason));
+        }),
       ]);
 
     if (isInitial) {
@@ -77,17 +92,24 @@ abstract class EngineSocket<
   /// Sends a list of packets to this client.
   void sendAll(List<Packet> packet) => transport.sendAll(packet);
 
+  /// Emits an exception.
+  Future<void> except(SocketException exception) async {
+    if (!exception.isSuccess) {
+      onExceptionController.add((exception: exception));
+    }
+  }
+
   /// Disposes of this socket, closing event streams.
   Future<void> dispose() async {
-    if (isDisposing) {
+    if (isDisposed) {
       return;
     }
 
-    isDisposing = true;
+    isDisposed = true;
+
+    onCloseController.add((reason: null));
 
     await transport.dispose();
-
-    onCloseController.add(this);
 
     if (isUpgrading) {
       final probe = upgrade.probe;

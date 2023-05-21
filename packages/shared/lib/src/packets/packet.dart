@@ -21,13 +21,13 @@ class PacketContents {
 /// Represents a unit of data passed between parties, client and server.
 abstract class Packet {
   /// Defines packets that contain binary data.
-  static const _binaryPackets = {PacketType.binaryMessage};
+  static const binaryPackets = {PacketType.binaryMessage};
 
   /// Defines packets that contain JSON data.
-  static const _jsonPackets = {PacketType.open};
+  static const jsonPackets = {PacketType.open};
 
   /// Matches to a valid engine.io packet.
-  static final _packetExpression = RegExp(r'^([0-6b])(.*?)$');
+  static final packetExpression = RegExp(r'^([0-6b])(.*?)$');
 
   /// Reference to a close packet used as an alias.
   static const close = ClosePacket();
@@ -57,10 +57,10 @@ abstract class Packet {
   const Packet({required this.type});
 
   /// Indicates whether or not this packet has a binary payload.
-  bool get isBinary => _binaryPackets.contains(type);
+  bool get isBinary => binaryPackets.contains(type);
 
   /// Indicates whether or not this packet has a binary payload.
-  bool get isJSON => _jsonPackets.contains(type);
+  bool get isJSON => jsonPackets.contains(type);
 
   /// Gets the packet content in its encoded format.
   String get encoded => PacketContents.empty;
@@ -72,7 +72,7 @@ abstract class Packet {
   ///
   /// If the packet is invalid, throws a `FormatException`.
   static Packet decode(String encoded) {
-    final match = _packetExpression.firstMatch(encoded);
+    final match = packetExpression.firstMatch(encoded);
     if (match == null) {
       throw const FormatException('Invalid packet encoding.');
     }

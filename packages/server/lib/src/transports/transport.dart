@@ -99,7 +99,7 @@ abstract class Transport<IncomingData>
           sendAll(origin.packetBuffer);
         }
 
-        origin.onUpgradeController.add(this);
+        origin.onUpgradeController.add((next: this));
       case PacketType.textMessage:
       case PacketType.binaryMessage:
         break;

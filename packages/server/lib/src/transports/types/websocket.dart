@@ -59,9 +59,9 @@ class WebSocketTransport extends Transport
     websocket.listen(
       transport.receive,
       onDone: () {
-        if (!transport.isDisposing) {
+        if (!transport.isDisposed) {
           transport.onExceptionController
-              .add(TransportException.closedForcefully);
+              .add((exception: TransportException.closedForcefully));
         }
       },
     );

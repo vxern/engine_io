@@ -1,5 +1,3 @@
-// ignore_for_file: comment_references
-
 import 'dart:async';
 import 'dart:io' hide Socket;
 
@@ -7,34 +5,23 @@ import 'package:engine_io_shared/exceptions.dart';
 
 import 'package:engine_io_server/src/socket.dart';
 
-/// [request] - The HTTP request made by the client to connect to the server.
-///
-/// [client] - The client socket.
-typedef OnConnectEvent = ({HttpRequest request, Socket client});
-
-/// [request] - The HTTP request made by the client to connect to the server.
-///
-/// [exception] - The exception that occurred during connection.
-typedef OnConnectExceptionEvent = ({
-  HttpRequest request,
-  ConnectException exception
-});
-
 /// Contains streams for events that can be emitted on the server.
 mixin Events {
   /// Controller for the `onConnect` event stream.
-  final onConnectController = StreamController<OnConnectEvent>.broadcast();
+  final onConnectController =
+      StreamController<({HttpRequest request, Socket client})>.broadcast();
 
   /// Controller for the `onConnectException` event stream.
-  final onConnectExceptionController =
-      StreamController<OnConnectExceptionEvent>.broadcast();
+  final onConnectExceptionController = StreamController<
+      ({HttpRequest request, ConnectException exception})>.broadcast();
 
   /// Added to when a new connection is established.
-  Stream<OnConnectEvent> get onConnect => onConnectController.stream;
+  Stream<({HttpRequest request, Socket client})> get onConnect =>
+      onConnectController.stream;
 
   /// Added to when a connection could not be established.
-  Stream<OnConnectExceptionEvent> get onConnectException =>
-      onConnectExceptionController.stream;
+  Stream<({HttpRequest request, ConnectException exception})>
+      get onConnectException => onConnectExceptionController.stream;
 
   /// Closes all sinks.
   Future<void> closeEventSinks() async {

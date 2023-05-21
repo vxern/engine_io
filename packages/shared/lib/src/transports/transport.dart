@@ -32,8 +32,8 @@ abstract class EngineTransport<
   /// Whether the transport is closed.
   bool isClosed = false;
 
-  /// Whether the transport is disposing.
-  bool isDisposing = false;
+  /// Whether the transport is disposed.
+  bool isDisposed = false;
 
   /// Creates an instance of `Transport`.
   EngineTransport({
@@ -68,14 +68,14 @@ abstract class EngineTransport<
   /// If an exception occurred while processing a packet, this method will
   /// return `TransportException`. Otherwise `null`.
   Future<TransportException?> processPacket(Packet packet) async {
-    onReceiveController.add(packet);
+    onReceiveController.add((packet: packet));
 
     if (packet is MessagePacket) {
-      onMessageController.add(packet);
+      onMessageController.add((packet: packet));
     }
 
     if (packet is ProbePacket) {
-      onHeartbeatController.add(packet);
+      onHeartbeatController.add((packet: packet));
     }
 
     return null;
@@ -100,15 +100,12 @@ abstract class EngineTransport<
   /// handled by the server.
   TransportException except(TransportException exception) {
     if (socket.isUpgrading && socket.upgrade.isProbe(connectionType)) {
-      onUpgradeExceptionController.add(exception);
-      return exception;
+      onUpgradeExceptionController.add((exception: exception));
+    } else if (!exception.isSuccess) {
+      onExceptionController.add((exception: exception));
     }
 
-    if (!exception.isSuccess) {
-      onExceptionController.add(exception);
-    }
-
-    onCloseController.add(exception);
+    onCloseController.add((reason: exception));
 
     return exception;
   }
@@ -124,11 +121,11 @@ abstract class EngineTransport<
 
   /// Disposes of this transport, closing event streams.
   Future<void> dispose() async {
-    if (isDisposing) {
+    if (isDisposed) {
       return;
     }
 
-    isDisposing = true;
+    isDisposed = true;
 
     heart.dispose();
 

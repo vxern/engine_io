@@ -27,7 +27,7 @@ mixin EnginePollingTransport<
 
   /// The default content type for when the HTTP `Content-Type` header is not
   /// specified.
-  static const _implicitContentType = 'text/plain';
+  static const implicitContentType = 'text/plain';
 
   /// A queue containing the `Packet`s accumulated to be sent to this socket on
   /// the next HTTP poll cycle.
@@ -105,10 +105,10 @@ mixin EnginePollingTransport<
     }
 
     final specifiedContentType = getContentType(message);
-    final detectedContentType = _getPacketContentType(packets);
+    final detectedContentType = getPacketContentType(packets);
 
     if (specifiedContentType == null) {
-      if (detectedContentType != _implicitContentType) {
+      if (detectedContentType != implicitContentType) {
         return except(PollingTransportException.contentTypeDifferentToImplicit);
       }
     } else if (specifiedContentType != detectedContentType) {
@@ -139,7 +139,7 @@ mixin EnginePollingTransport<
     setStatusCode(message, 200);
 
     if (packetBuffer.isEmpty) {
-      setContentType(message, _implicitContentType);
+      setContentType(message, implicitContentType);
 
       get.unlock();
 
@@ -181,7 +181,7 @@ mixin EnginePollingTransport<
       packets.add(packetBuffer.removeFirst());
     }
 
-    final contentType = _getPacketContentType(packets);
+    final contentType = getPacketContentType(packets);
     final buffer = [
       ...chunks.first,
       for (final chunk in chunks.skip(1)) ...[
@@ -195,7 +195,7 @@ mixin EnginePollingTransport<
     writeToBuffer(message, buffer);
 
     for (final packet in packets) {
-      onSendController.add(packet);
+      onSendController.add((packet: packet));
     }
 
     get.unlock();
@@ -210,8 +210,8 @@ mixin EnginePollingTransport<
   /// 1. Binary (application/octet-stream)
   /// 2. JSON (application/json)
   /// 3. Plaintext (text/plain)
-  static String _getPacketContentType(List<Packet> packets) {
-    var contentType = _implicitContentType;
+  static String getPacketContentType(List<Packet> packets) {
+    var contentType = implicitContentType;
 
     for (final packet in packets) {
       if (packet.isBinary && contentType != 'application/octet-stream') {

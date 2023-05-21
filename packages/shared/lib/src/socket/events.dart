@@ -12,83 +12,88 @@ mixin Events<
     Transport extends EngineTransport<Transport, EngineSocket<dynamic, dynamic>,
         dynamic>> {
   /// Controller for the `onReceive` event stream.
-  final onReceiveController = StreamController<Packet>.broadcast();
+  final onReceiveController = StreamController<({Packet packet})>.broadcast();
 
   /// Controller for the `onSend` event stream.
-  final onSendController = StreamController<Packet>.broadcast();
+  final onSendController = StreamController<({Packet packet})>.broadcast();
 
   /// Controller for the `onMessage` event stream.
-  final onMessageController = StreamController<MessagePacket>.broadcast();
+  final onMessageController =
+      StreamController<({MessagePacket packet})>.broadcast();
 
   /// Controller for the `onHeartbeat` event stream.
-  final onHeartbeatController = StreamController<ProbePacket>.broadcast();
+  final onHeartbeatController =
+      StreamController<({ProbePacket packet})>.broadcast();
 
   /// Controller for the `onInitiateUpgrade` event stream.
-  final onInitiateUpgradeController = StreamController<Transport>.broadcast();
+  final onInitiateUpgradeController =
+      StreamController<({Transport current, Transport next})>.broadcast();
 
   /// Controller for the `onUpgrade` event stream.
-  final onUpgradeController = StreamController<Transport>.broadcast();
+  final onUpgradeController =
+      StreamController<({Transport previous, Transport current})>.broadcast();
 
   /// Controller for the `onUpgradeException` event stream.
-  final onUpgradeExceptionController =
-      StreamController<TransportException>.broadcast();
+  final onUpgradeExceptionController = StreamController<
+      ({Transport transport, TransportException exception})>.broadcast();
 
   /// Controller for the `onTransportException` event stream.
-  final onTransportExceptionController =
-      StreamController<TransportException>.broadcast();
+  final onTransportExceptionController = StreamController<
+      ({Transport transport, TransportException exception})>.broadcast();
 
   /// Controller for the `onTransportClose` event stream.
-  final onTransportCloseController =
-      StreamController<TransportException>.broadcast();
+  final onTransportCloseController = StreamController<
+      ({Transport transport, TransportException reason})>.broadcast();
 
   /// Controller for the `onException` event stream.
-  final onExceptionController = StreamController<SocketException>.broadcast();
+  final onExceptionController =
+      StreamController<({SocketException exception})>.broadcast();
 
   /// Controller for the `onClose` event stream.
-  final onCloseController = StreamController<EngineSocket>.broadcast();
+  final onCloseController =
+      StreamController<({SocketException? reason})>.broadcast();
 
   /// Added to when a packet is received from this socket.
-  Stream<Packet> get onReceive => onReceiveController.stream;
+  Stream<({Packet packet})> get onReceive => onReceiveController.stream;
 
   /// Added to when a packet is sent to this socket.
-  Stream<Packet> get onSend => onSendController.stream;
+  Stream<({Packet packet})> get onSend => onSendController.stream;
 
   /// Added to when a message packet is received.
-  Stream<MessagePacket> get onMessage => onMessageController.stream;
+  Stream<({MessagePacket packet})> get onMessage => onMessageController.stream;
 
   /// Added to when a heartbeat (ping / pong) packet is received.
-  Stream<ProbePacket> get onHeartbeat => onHeartbeatController.stream;
+  Stream<({ProbePacket packet})> get onHeartbeat =>
+      onHeartbeatController.stream;
 
   /// Added to when a transport upgrade is initiated.
-  Stream<Transport> get onInitiateUpgrade => onInitiateUpgradeController.stream;
+  Stream<({Transport current, Transport next})> get onInitiateUpgrade =>
+      onInitiateUpgradeController.stream;
 
-  /// Added to when a transport upgrade is complete.
-  Stream<Transport> get onUpgrade => onUpgradeController.stream;
+  /// Added to when:
+  /// - A transport upgrade is complete.
+  /// - A websocket-only connection is established.
+  Stream<({Transport? previous, Transport current})> get onUpgrade =>
+      onUpgradeController.stream;
 
   /// Added to when an exception occurs on a transport while upgrading.
-  Stream<TransportException> get onUpgradeException =>
-      onUpgradeExceptionController.stream;
+  Stream<({Transport transport, TransportException exception})>
+      get onUpgradeException => onUpgradeExceptionController.stream;
 
   /// Added to when an exception occurs on a transport.
-  Stream<TransportException> get onTransportException =>
-      onTransportExceptionController.stream;
+  Stream<({Transport transport, TransportException exception})>
+      get onTransportException => onTransportExceptionController.stream;
 
   /// Added to when a transport is designated to close.
-  Stream<TransportException> get onTransportClose =>
-      onTransportCloseController.stream;
+  Stream<({Transport transport, TransportException reason})>
+      get onTransportClose => onTransportCloseController.stream;
 
   /// Added to when an exception occurs on this socket.
-  Stream<SocketException> get onException => onExceptionController.stream;
+  Stream<({SocketException exception})> get onException =>
+      onExceptionController.stream;
 
   /// Added to when this socket is designated to close.
-  Stream<EngineSocket> get onClose => onCloseController.stream;
-
-  /// Emits an exception.
-  Future<void> except(SocketException exception) async {
-    if (!exception.isSuccess) {
-      onExceptionController.add(exception);
-    }
-  }
+  Stream<({SocketException? reason})> get onClose => onCloseController.stream;
 
   /// Closes all sinks.
   Future<void> closeEventSinks() async {

@@ -90,14 +90,14 @@ class PollingTransport extends Transport<HttpRequest>
     }
 
     if (skipUpgradeProcess) {
-      socket.transport.onUpgradeController.add(transport);
+      socket.transport.onUpgradeController.add((next: transport));
       await socket.setTransport(transport);
       return null;
     }
 
     socket.upgrade.markInitiated(socket, origin: this, probe: transport);
 
-    onInitiateUpgradeController.add(transport);
+    onInitiateUpgradeController.add((next: transport));
 
     return null;
   }

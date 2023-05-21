@@ -1,5 +1,3 @@
-// ignore_for_file: comment_references
-
 import 'dart:async';
 import 'dart:io' hide Socket;
 
@@ -20,11 +18,11 @@ class Server with Events {
   static const protocolVersion = 4;
 
   /// The HTTP methods allowed for an engine.io server.
-  static const _allowedMethods = {'GET', 'POST'};
+  static const allowedMethods = {'GET', 'POST'};
 
   /// HTTP methods concatenated beforehand to prevent having to do so on every
   /// preflight request received.
-  static final _allowedMethodsString = _allowedMethods.join(', ');
+  static final _allowedMethodsString = allowedMethods.join(', ');
 
   /// The settings in use.
   final ServerConfiguration configuration;
@@ -36,7 +34,7 @@ class Server with Events {
   /// Object responsible for managing clients connected to the server.
   final ClientManager clientManager = ClientManager();
 
-  bool _isDisposing = false;
+  bool isDisposed = false;
 
   Server._({
     required this.http,
@@ -56,23 +54,23 @@ class Server with Events {
       configuration: configuration,
     );
 
-    httpServer.listen(server._handleHttpRequest);
+    httpServer.listen(server.handleHttpRequest);
 
     return server;
   }
 
   /// Handles an incoming HTTP request.
-  Future<void> _handleHttpRequest(HttpRequest request) async {
+  Future<void> handleHttpRequest(HttpRequest request) async {
     final ipAddress = request.connectionInfo?.remoteAddress.address;
     if (ipAddress == null) {
-      await _respond(request, SocketException.ipAddressUnobtainable);
+      await respond(request, SocketException.ipAddressUnobtainable);
       return;
     }
 
     final clientByIP = clientManager.get(ipAddress: ipAddress);
 
     if (request.uri.path != '/${configuration.path}') {
-      await _close(clientByIP, request, SocketException.serverPathInvalid);
+      await close(clientByIP, request, SocketException.serverPathInvalid);
       return;
     }
 
@@ -94,8 +92,8 @@ class Server with Events {
       return;
     }
 
-    if (!_allowedMethods.contains(requestMethod)) {
-      await _close(clientByIP, request, SocketException.methodNotAllowed);
+    if (!allowedMethods.contains(requestMethod)) {
+      await close(clientByIP, request, SocketException.methodNotAllowed);
       return;
     }
 
@@ -103,7 +101,7 @@ class Server with Events {
     final isEstablishingConnection = !isConnected;
 
     if (requestMethod != 'GET' && isEstablishingConnection) {
-      await _close(clientByIP, request, SocketException.getExpected);
+      await close(clientByIP, request, SocketException.getExpected);
       return;
     }
 
@@ -115,13 +113,13 @@ class Server with Events {
             configuration.connection.availableConnectionTypes,
       );
     } on SocketException catch (exception) {
-      await _close(clientByIP, request, exception);
+      await close(clientByIP, request, exception);
       return;
     }
 
     if (!isEstablishingConnection) {
       if (parameters.sessionIdentifier == null) {
-        await _close(
+        await close(
           clientByIP,
           request,
           SocketException.sessionIdentifierRequired,
@@ -129,7 +127,7 @@ class Server with Events {
         return;
       }
     } else if (parameters.sessionIdentifier != null) {
-      await _close(
+      await close(
         clientByIP,
         request,
         SocketException.sessionIdentifierUnexpected,
@@ -140,7 +138,7 @@ class Server with Events {
     if (parameters.sessionIdentifier != null) {
       if (!configuration.sessionIdentifiers
           .validate(parameters.sessionIdentifier!)) {
-        await _close(
+        await close(
           clientByIP,
           request,
           SocketException.sessionIdentifierInvalid,
@@ -151,7 +149,7 @@ class Server with Events {
 
     final Socket client;
     if (isEstablishingConnection) {
-      client = await _handshake(
+      client = await handshake(
         request,
         ipAddress: ipAddress,
         connectionType: parameters.connectionType,
@@ -160,7 +158,7 @@ class Server with Events {
       final client_ =
           clientManager.get(sessionIdentifier: parameters.sessionIdentifier);
       if (client_ == null) {
-        await _close(
+        await close(
           clientByIP,
           request,
           SocketException.sessionIdentifierInvalid,
@@ -183,7 +181,7 @@ class Server with Events {
         skipUpgradeProcess: isEstablishingConnection,
       );
       if (exception != null) {
-        await _respond(request, exception);
+        await respond(request, exception);
         return;
       }
 
@@ -196,35 +194,35 @@ class Server with Events {
     }
 
     if (isWebsocketUpgradeRequest) {
-      await _close(client, request, SocketException.upgradeRequestUnexpected);
+      await close(client, request, SocketException.upgradeRequestUnexpected);
       return;
     }
 
     switch (requestMethod) {
       case 'GET':
         if (client.transport is! PollingTransport) {
-          await _close(client, request, SocketException.getRequestUnexpected);
+          await close(client, request, SocketException.getRequestUnexpected);
           return;
         }
 
         final exception = await (client.transport as PollingTransport)
             .offload(request.response);
         if (exception != null) {
-          await _respond(request, exception);
+          await respond(request, exception);
           break;
         }
 
         request.response.close().ignore();
       case 'POST':
         if (client.transport is! PollingTransport) {
-          await _close(client, request, SocketException.postRequestUnexpected);
+          await close(client, request, SocketException.postRequestUnexpected);
           return;
         }
 
         final exception =
             await (client.transport as PollingTransport).receive(request);
         if (exception != null) {
-          await _respond(request, exception);
+          await respond(request, exception);
           break;
         }
 
@@ -239,7 +237,7 @@ class Server with Events {
   /// All connections begin as polling before being upgraded to a better
   /// transport. If a connection is websocket-only, the transport will be
   /// upgraded immediately after the handshake.
-  Future<Socket> _handshake(
+  Future<Socket> handshake(
     HttpRequest request, {
     required String ipAddress,
     required ConnectionType connectionType,
@@ -256,14 +254,18 @@ class Server with Events {
         PollingTransport(socket: client, connection: configuration.connection);
     await client.setTransport(transport, isInitial: true);
 
-    client.onException.listen((_) => _disconnect(client));
-    client.onTransportClose.listen((exception) {
-      client.transport.close(exception);
-      _disconnect(client);
+    client.onException.listen((_) => disconnect(client));
+    client.onTransportClose.listen((event) {
+      final (:reason, transport: _) = event;
+
+      client.transport.close(reason);
+      disconnect(client);
     });
-    client.onUpgradeException.listen((exception) {
+    client.onUpgradeException.listen((event) {
+      final (:exception, transport: _) = event;
+
       client.upgrade.probe.close(exception);
-      _disconnect(client);
+      disconnect(client);
     });
 
     clientManager.add(client);
@@ -284,7 +286,7 @@ class Server with Events {
   }
 
   /// Responds to a HTTP request.
-  Future<void> _respond(
+  Future<void> respond(
     HttpRequest request,
     EngineException exception,
   ) async {
@@ -295,7 +297,7 @@ class Server with Events {
   }
 
   /// Disconnects a client.
-  Future<void> _disconnect(Socket client, [SocketException? exception]) async {
+  Future<void> disconnect(Socket client, [SocketException? exception]) async {
     clientManager.remove(client);
     if (exception != null) {
       await client.except(exception);
@@ -305,13 +307,13 @@ class Server with Events {
 
   /// Closes a connection with a client, responding to their request and
   /// disconnecting them.
-  Future<void> _close(
+  Future<void> close(
     Socket? client,
     HttpRequest request,
     SocketException exception,
   ) async {
     if (client != null) {
-      await _disconnect(client, exception);
+      await disconnect(client, exception);
     } else {
       final connectException =
           ConnectException.fromSocketException(exception, request: request);
@@ -319,19 +321,19 @@ class Server with Events {
           .add((request: request, exception: connectException));
     }
 
-    await _respond(request, exception);
+    await respond(request, exception);
   }
 
   /// Closes the underlying HTTP server, awaiting remaining requests to be
   /// handled before disposing.
   Future<void> dispose() async {
-    if (_isDisposing) {
+    if (isDisposed) {
       return;
     }
 
-    _isDisposing = true;
+    isDisposed = true;
 
-    await http.close().catchError((dynamic _) {});
+    await http.close().catchError((_) {});
     await clientManager.dispose();
     await closeEventSinks();
   }

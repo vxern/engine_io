@@ -7,60 +7,64 @@ import 'package:engine_io_shared/src/transports/transport.dart';
 /// Contains streams for events that can be emitted on the transport.
 mixin Events<Transport extends EngineTransport<dynamic, dynamic, dynamic>> {
   /// Controller for the `onReceive` event stream.
-  final onReceiveController = StreamController<Packet>();
+  final onReceiveController = StreamController<({Packet packet})>();
 
   /// Controller for the `onSend` event stream.
-  final onSendController = StreamController<Packet>();
+  final onSendController = StreamController<({Packet packet})>();
 
   /// Controller for the `onMessage` event stream.
-  final onMessageController = StreamController<MessagePacket>();
+  final onMessageController = StreamController<({MessagePacket packet})>();
 
   /// Controller for the `onHeartbeat` event stream.
-  final onHeartbeatController = StreamController<ProbePacket>();
+  final onHeartbeatController = StreamController<({ProbePacket packet})>();
 
   /// Controller for the `onInitiateUpgrade` event stream.
-  final onInitiateUpgradeController = StreamController<Transport>();
+  final onInitiateUpgradeController = StreamController<({Transport next})>();
 
   /// Controller for the `onUpgrade` event stream.
-  final onUpgradeController = StreamController<Transport>();
+  final onUpgradeController = StreamController<({Transport next})>();
 
   /// Controller for the `onUpgradeException` event stream.
   final onUpgradeExceptionController =
-      StreamController<TransportException>.broadcast();
+      StreamController<({TransportException exception})>.broadcast();
 
   /// Controller for the `onException` event stream.
-  final onExceptionController = StreamController<TransportException>();
+  final onExceptionController =
+      StreamController<({TransportException exception})>();
 
   /// Controller for the `onClose` event stream.
-  final onCloseController = StreamController<TransportException>();
+  final onCloseController = StreamController<({TransportException reason})>();
 
   /// Added to when a packet is received.
-  Stream<Packet> get onReceive => onReceiveController.stream;
+  Stream<({Packet packet})> get onReceive => onReceiveController.stream;
 
   /// Added to when a packet is sent.
-  Stream<Packet> get onSend => onSendController.stream;
+  Stream<({Packet packet})> get onSend => onSendController.stream;
 
   /// Added to when a message packet is received.
-  Stream<MessagePacket> get onMessage => onMessageController.stream;
+  Stream<({MessagePacket packet})> get onMessage => onMessageController.stream;
 
   /// Added to when a heartbeat (ping / pong) packet is received.
-  Stream<ProbePacket> get onHeartbeat => onHeartbeatController.stream;
+  Stream<({ProbePacket packet})> get onHeartbeat =>
+      onHeartbeatController.stream;
 
   /// Added to when a transport upgrade is initiated.
-  Stream<Transport> get onInitiateUpgrade => onInitiateUpgradeController.stream;
+  Stream<({Transport next})> get onInitiateUpgrade =>
+      onInitiateUpgradeController.stream;
 
   /// Added to when a transport upgrade is complete.
-  Stream<Transport> get onUpgrade => onUpgradeController.stream;
+  Stream<({Transport next})> get onUpgrade => onUpgradeController.stream;
 
   /// Added to when an exception occurs on a transport while upgrading.
-  Stream<TransportException> get onUpgradeException =>
+  Stream<({TransportException exception})> get onUpgradeException =>
       onUpgradeExceptionController.stream;
 
   /// Added to when an exception occurs.
-  Stream<TransportException> get onException => onExceptionController.stream;
+  Stream<({TransportException exception})> get onException =>
+      onExceptionController.stream;
 
   /// Added to when the transport is designated to close.
-  Stream<TransportException> get onClose => onCloseController.stream;
+  Stream<({TransportException reason})> get onClose => onCloseController.stream;
 
   /// Closes all sinks.
   Future<void> closeEventSinks() async {

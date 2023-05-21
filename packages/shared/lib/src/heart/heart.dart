@@ -7,11 +7,11 @@ import 'package:engine_io_shared/src/heart/events.dart';
 /// before the timeout had elapsed.
 class Heart with Events {
   /// The timer responsible for indicating when the next heartbeat should be.
-  Timer _intervalTimer;
+  Timer intervalTimer;
 
   /// The timer responsible for indicating the connection has timed out when not
   /// reset within a certain time interval.
-  Timer _timeoutTimer;
+  Timer timeoutTimer;
 
   /// Server-side:
   /// - Whether the server is expecting the client to respond with a
@@ -26,11 +26,10 @@ class Heart with Events {
   final void Function() reset;
 
   Heart._({
-    required Timer intervalTimer,
-    required Timer timeoutTimer,
+    required this.intervalTimer,
+    required this.timeoutTimer,
     required this.reset,
-  })  : _timeoutTimer = timeoutTimer,
-        _intervalTimer = intervalTimer;
+  });
 
   /// Creates an instance of `Heart`.
   factory Heart.create({
@@ -40,16 +39,16 @@ class Heart with Events {
     late final Heart timer;
 
     void onTimeout() {
-      timer._intervalTimer.cancel();
-      timer._timeoutTimer.cancel();
-      timer.onTimeoutController.add(null);
+      timer.intervalTimer.cancel();
+      timer.timeoutTimer.cancel();
+      timer.onTimeoutController.add(());
     }
 
     Timer getTimeoutTimer() => Timer(interval + timeout, onTimeout);
 
     void onTick() {
       timer.isExpectingHeartbeat = true;
-      timer.onTickController.add(null);
+      timer.onTickController.add(());
     }
 
     Timer getIntervalTimer() => Timer(interval, onTick);
@@ -59,16 +58,16 @@ class Heart with Events {
       timeoutTimer: getTimeoutTimer(),
       reset: () => timer
         ..isExpectingHeartbeat = false
-        .._intervalTimer.cancel()
-        .._intervalTimer = getIntervalTimer()
-        .._timeoutTimer.cancel()
-        .._timeoutTimer = getTimeoutTimer(),
+        ..intervalTimer.cancel()
+        ..intervalTimer = getIntervalTimer()
+        ..timeoutTimer.cancel()
+        ..timeoutTimer = getTimeoutTimer(),
     );
   }
 
   /// Disposes of this `Heart`.
   void dispose() {
-    _intervalTimer.cancel();
-    _timeoutTimer.cancel();
+    intervalTimer.cancel();
+    timeoutTimer.cancel();
   }
 }

@@ -114,8 +114,8 @@ void main() {
 
       unawaited(
         expectLater(
-          socket.onUpgradeException,
-          emits(signals(TransportException.transportAlreadyProbed)),
+          socket.onUpgradeException.first.then((event) => event.exception),
+          completion(signals(TransportException.transportAlreadyProbed)),
         ),
       );
 
@@ -133,8 +133,8 @@ void main() {
 
         unawaited(
           expectLater(
-            socket.onUpgradeException,
-            emits(signals(TransportException.transportNotProbed)),
+            socket.onUpgradeException.first.then((event) => event.exception),
+            completion(signals(TransportException.transportNotProbed)),
           ),
         );
 
@@ -179,7 +179,7 @@ void main() {
       websocket.add(Packet.encode(const UpgradePacket()));
 
       await expectLater(
-        onException,
+        onException.then((event) => event.exception),
         completion(TransportException.transportAlreadyUpgraded),
       );
 
@@ -236,7 +236,10 @@ void main() {
 
       unawaited(
         expectLater(
-          onConnect.then((event) => event.client.onTransportException.first),
+          onConnect.then(
+            (event) => event.client.onTransportException.first
+                .then((event) => event.exception),
+          ),
           completion(TransportException.closedForcefully),
         ),
       );

@@ -52,10 +52,10 @@ class ClientManager {
   Future<void> dispose() async {
     final futures = <Future<void>>[];
     for (final client in clients.values) {
+      const exception = SocketException.serverClosing;
+
       futures.add(
-        client
-            .except(SocketException.serverClosing)
-            .then<void>((_) => client.dispose()),
+        client.except(exception).then<void>((_) => client.dispose()),
       );
     }
 

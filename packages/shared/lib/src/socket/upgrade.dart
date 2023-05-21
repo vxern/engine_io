@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:engine_io_shared/exceptions.dart';
 import 'package:engine_io_shared/src/socket/socket.dart';
 import 'package:engine_io_shared/transports.dart';
 
@@ -23,6 +22,9 @@ class UpgradeState<
     Socket extends EngineSocket<Transport, dynamic>> {
   static const _defaultUpgradeState = UpgradeStatus.none;
 
+  /// The amount of time to wait before abandoning the upgrade.
+  final Duration upgradeTimeout;
+
   /// The current state of the upgrade.
   UpgradeStatus get status => _status;
   UpgradeStatus _status = _defaultUpgradeState;
@@ -38,17 +40,10 @@ class UpgradeState<
   /// Keeps track of the upgrade timing out.
   late Timer timer;
 
-  late final Timer Function() _getTimer;
-
-  StreamSubscription<TransportException>? _exceptionSubscription;
+  StreamSubscription? _exceptionSubscription;
 
   /// Creates an instance of `UpgradeState`.
-  UpgradeState({required Duration upgradeTimeout}) {
-    _getTimer = () => Timer(upgradeTimeout, () async {
-          await _probe?.dispose();
-          await reset();
-        });
-  }
+  UpgradeState({required this.upgradeTimeout});
 
   /// Marks the upgrade process as initiated.
   void markInitiated(
@@ -59,9 +54,18 @@ class UpgradeState<
     _status = UpgradeStatus.initiated;
     _origin = origin;
     _probe = probe;
-    _exceptionSubscription = probe.onUpgradeException
-        .listen(socket.onUpgradeExceptionController.add);
-    timer = _getTimer();
+    _exceptionSubscription = probe.onUpgradeException.listen(
+      (event) {
+        final (:exception) = event;
+        socket.onUpgradeExceptionController.add(
+          (transport: probe, exception: exception),
+        );
+      },
+    );
+    timer = Timer(upgradeTimeout, () async {
+      await _probe?.dispose();
+      await reset();
+    });
   }
 
   /// Marks the new transport as probed.
@@ -73,8 +77,8 @@ class UpgradeState<
     _origin = null;
     _probe = null;
     timer.cancel();
+    _exceptionSubscription?.cancel().ignore();
     _exceptionSubscription = null;
-    await _exceptionSubscription?.cancel();
   }
 
   /// Alias for `reset()`;

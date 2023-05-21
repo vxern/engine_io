@@ -9,7 +9,7 @@ import 'package:engine_io_server/engine_io_server.dart';
 import '../matchers.dart';
 import '../shared.dart';
 
-const _uuid = Uuid();
+const uuid = Uuid();
 
 void main() {
   late HttpClient client;
@@ -53,7 +53,7 @@ void main() {
     test('rejects session identifiers that do not exist.', () async {
       unawaited(expectLater(socket.onException, emits(anything)));
 
-      final (response, _) = await get(client, sessionIdentifier: _uuid.v4());
+      final (response, _) = await get(client, sessionIdentifier: uuid.v4());
 
       expect(response, signals(SocketException.sessionIdentifierInvalid));
     });
@@ -75,10 +75,10 @@ void main() {
       unawaited(
         expectLater(
           socket.onSend,
-          emitsInOrder(const <Packet>[
-            TextMessagePacket(data: 'first'),
-            TextMessagePacket(data: 'second'),
-            TextMessagePacket(data: 'third'),
+          emitsInOrder(const [
+            (packet: TextMessagePacket(data: 'first')),
+            (packet: TextMessagePacket(data: 'second')),
+            (packet: TextMessagePacket(data: 'third')),
           ]),
         ),
       );

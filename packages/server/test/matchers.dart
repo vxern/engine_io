@@ -5,18 +5,18 @@ import 'package:test/expect.dart';
 import 'package:engine_io_server/engine_io_server.dart';
 
 class _Signals extends Matcher {
-  final EngineException _exception;
+  final EngineException exception;
 
-  const _Signals(this._exception);
+  const _Signals(this.exception);
 
   @override
   bool matches(dynamic item, _) =>
-      item.statusCode == _exception.statusCode &&
-      item.reasonPhrase == _exception.reasonPhrase;
+      item.statusCode == exception.statusCode &&
+      item.reasonPhrase == exception.reasonPhrase;
 
   @override
   Description describe(Description description) => description.add(
-        '''represents an exception with status code ${_exception.statusCode} and reason "${_exception.reasonPhrase}".''',
+        '''represents an exception with status code ${exception.statusCode} and reason "${exception.reasonPhrase}".''',
       );
 }
 

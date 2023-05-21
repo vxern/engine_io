@@ -18,7 +18,7 @@ mixin EngineWebSocketTransport<
     on EngineTransport<Transport, Socket, dynamic> {
   /// The salt used to transform a websocket key to a token during a websocket
   /// upgrade.
-  static const _websocketSalt = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
+  static const websocketSalt = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 
   /// The socket interfacing with the other party.
   WebSocket get websocket;
@@ -43,7 +43,7 @@ mixin EngineWebSocketTransport<
       }
     }
 
-    final utf8Bytes = utf8.encode('$key$_websocketSalt');
+    final utf8Bytes = utf8.encode('$key$websocketSalt');
     final sha1Bytes = sha1.convert(utf8Bytes);
     final encoded = base64.encode(sha1Bytes.bytes);
 
@@ -84,7 +84,7 @@ mixin EngineWebSocketTransport<
       websocket.add(Packet.encode(packet));
     }
 
-    onSendController.add(packet);
+    onSendController.add((packet: packet));
   }
 
   /// Closes the websocket connection.

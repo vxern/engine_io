@@ -5,7 +5,7 @@ import 'package:engine_io_shared/transports.dart';
 import 'package:uuid/uuid.dart';
 
 /// Object responsible for creating unique identifiers for `Socket`s.
-const _uuid = Uuid();
+const uuid = Uuid();
 
 /// Contains functions used in generating and validating session identifiers.
 class SessionIdentifierConfiguration {
@@ -23,7 +23,7 @@ class SessionIdentifierConfiguration {
   });
 
   /// The default method to generate a session identifier. (UUID v4)
-  static String _generateSessionIdentifier(HttpRequest request) => _uuid.v4();
+  static String _generateSessionIdentifier(HttpRequest request) => uuid.v4();
 
   /// The default method to validate a session identifier. (UUID v4)
   static bool _validateSessionIdentifier(String id) =>

@@ -141,10 +141,10 @@ void main() {
       () async {
         final (socket, open) = await connect(server, client);
 
-        expect(socket.onException, neverEmits(anything));
-        expect(socket.onClose, emits(anything));
         expect(socket.onTransportException, neverEmits(anything));
         expect(socket.onTransportClose, emits(anything));
+        expect(socket.onException, neverEmits(anything));
+        expect(socket.onClose, emits(anything));
 
         unawaited(
           post(
