@@ -60,7 +60,7 @@ mixin EnginePollingTransport<
   @override
   Future<TransportException?> receive(IncomingData message) async {
     if (post.isLocked) {
-      return except(PollingTransportException.duplicatePostRequest);
+      return raise(PollingTransportException.duplicatePostRequest);
     }
 
     post.lock();
@@ -70,7 +70,7 @@ mixin EnginePollingTransport<
       bytes =
           await message.fold(<int>[], (buffer, bytes) => buffer..addAll(bytes));
     } on Exception catch (_) {
-      return except(PollingTransportException.readingBodyFailed);
+      return raise(PollingTransportException.readingBodyFailed);
     }
 
     final contentLength = () {
@@ -82,16 +82,16 @@ mixin EnginePollingTransport<
       return contentLength;
     }();
     if (bytes.length != contentLength) {
-      return except(PollingTransportException.contentLengthDisparity);
+      return raise(PollingTransportException.contentLengthDisparity);
     } else if (contentLength > connection.maximumChunkBytes) {
-      return except(PollingTransportException.contentLengthLimitExceeded);
+      return raise(PollingTransportException.contentLengthLimitExceeded);
     }
 
     final String body;
     try {
       body = utf8.decode(bytes);
     } on FormatException {
-      return except(PollingTransportException.decodingBodyFailed);
+      return raise(PollingTransportException.decodingBodyFailed);
     }
 
     final List<Packet> packets;
@@ -101,7 +101,7 @@ mixin EnginePollingTransport<
           .map(Packet.decode)
           .toList();
     } on FormatException {
-      return except(PollingTransportException.decodingPacketsFailed);
+      return raise(PollingTransportException.decodingPacketsFailed);
     }
 
     final specifiedContentType = getContentType(message);
@@ -109,15 +109,15 @@ mixin EnginePollingTransport<
 
     if (specifiedContentType == null) {
       if (detectedContentType != implicitContentType) {
-        return except(PollingTransportException.contentTypeDifferentToImplicit);
+        return raise(PollingTransportException.contentTypeDifferentToImplicit);
       }
     } else if (specifiedContentType != detectedContentType) {
-      return except(PollingTransportException.contentTypeDifferentToSpecified);
+      return raise(PollingTransportException.contentTypeDifferentToSpecified);
     }
 
     final exception = await processPackets(packets);
     if (exception != null) {
-      return except(exception);
+      return raise(exception);
     }
 
     post.unlock();

@@ -119,13 +119,13 @@ abstract class Transport<IncomingData>
     required bool skipUpgradeProcess,
   }) async {
     if (!this.connectionType.upgradesTo.contains(connectionType)) {
-      return except(TransportException.upgradeCourseNotAllowed);
+      return raise(TransportException.upgradeCourseNotAllowed);
     }
 
     if (socket.isUpgrading) {
       await socket.upgrade.probe.dispose();
       await socket.upgrade.reset();
-      return except(TransportException.upgradeAlreadyInitiated);
+      return raise(TransportException.upgradeAlreadyInitiated);
     }
 
     return null;

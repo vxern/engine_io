@@ -51,7 +51,7 @@ class PollingTransport extends Transport<HttpRequest>
   @override
   Future<TransportException?> offload(HttpResponse message) async {
     if (get.isLocked) {
-      return except(PollingTransportException.duplicateGetRequest);
+      return raise(PollingTransportException.duplicateGetRequest);
     }
 
     final exception = super.offload(message);
@@ -75,7 +75,7 @@ class PollingTransport extends Transport<HttpRequest>
     }
 
     if (connectionType != ConnectionType.websocket) {
-      return except(TransportException.upgradeCourseNotAllowed);
+      return raise(TransportException.upgradeCourseNotAllowed);
     }
 
     final WebSocketTransport transport;
@@ -86,7 +86,7 @@ class PollingTransport extends Transport<HttpRequest>
         socket: socket,
       );
     } on TransportException catch (exception) {
-      return except(exception);
+      return raise(exception);
     }
 
     if (skipUpgradeProcess) {
@@ -103,8 +103,14 @@ class PollingTransport extends Transport<HttpRequest>
   }
 
   @override
-  Future<void> dispose() async {
+  Future<bool> dispose() async {
+    final canContinue = await super.dispose();
+    if (!canContinue) {
+      return false;
+    }
+
     heart.dispose();
-    await super.dispose();
+
+    return true;
   }
 }

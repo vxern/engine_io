@@ -4,10 +4,11 @@ import 'dart:collection';
 import 'package:engine_io_shared/exceptions.dart';
 
 import 'package:engine_io_server/src/socket.dart';
+import 'package:engine_io_shared/mixins.dart';
 
 /// Object responsible for maintaining references to and handling `Socket`s of
 /// clients connected to the `Server`.
-class ClientManager {
+class ClientManager with Disposable {
   /// Clients identified by their session IDs.
   final HashMap<String, Socket> clients = HashMap();
 
@@ -49,19 +50,28 @@ class ClientManager {
 
   /// Disposes of this `ClientManager` by removing and disposing of all managed
   /// clients.
-  Future<void> dispose() async {
+  @override
+  Future<bool> dispose() async {
+    final canContinue = await super.dispose();
+    if (!canContinue) {
+      return false;
+    }
+
     final futures = <Future<void>>[];
     for (final client in clients.values) {
       const exception = SocketException.serverClosing;
 
-      futures.add(
-        client.except(exception).then<void>((_) => client.dispose()),
-      );
+      // TODO(vxern): Close instead of raising exception.
+      client.raise(exception);
+
+      futures.add(client.dispose());
     }
 
     clients.clear();
     sessionIdentifiers.clear();
 
     await Future.wait<void>(futures);
+
+    return true;
   }
 }

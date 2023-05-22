@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:engine_io_shared/src/mixins.dart';
 import 'package:engine_io_shared/src/packets/packet.dart';
 import 'package:engine_io_shared/src/socket/events.dart';
 import 'package:engine_io_shared/src/socket/exceptions.dart';
@@ -9,9 +10,10 @@ import 'package:engine_io_shared/src/transports/transport.dart';
 
 /// An interface for communication between connected parties, client and server.
 abstract class EngineSocket<
-    Transport extends EngineTransport<Transport, EngineSocket<dynamic, dynamic>,
-        dynamic>,
-    Socket extends EngineSocket<Transport, dynamic>> with Events<Transport> {
+        Transport extends EngineTransport<Transport,
+            EngineSocket<dynamic, dynamic>, dynamic>,
+        Socket extends EngineSocket<Transport, dynamic>>
+    with Events<Transport>, Raisable<SocketException>, Disposable {
   /// The transport currently in use for communication.
   late Transport transport;
 
@@ -21,12 +23,6 @@ abstract class EngineSocket<
 
   /// Whether the transport is in the process of being upgraded.
   bool get isUpgrading => upgrade.status != UpgradeStatus.none;
-
-  /// Whether the socket is closed.
-  bool isClosed = false;
-
-  /// Whether the socket is disposed.
-  bool isDisposed = false;
 
   /// Creates an instance of `EngineSocket`.
   EngineSocket({required Duration upgradeTimeout})
@@ -92,21 +88,23 @@ abstract class EngineSocket<
   /// Sends a list of packets to this client.
   void sendAll(List<Packet> packet) => transport.sendAll(packet);
 
-  /// Emits an exception.
-  Future<void> except(SocketException exception) async {
+  @override
+  SocketException raise(SocketException exception) {
     if (!exception.isSuccess) {
       onExceptionController.add((exception: exception));
     }
+
+    return exception;
   }
 
-  /// Disposes of this socket, closing event streams.
-  Future<void> dispose() async {
-    if (isDisposed) {
-      return;
+  @override
+  Future<bool> dispose() async {
+    final canContinue = await super.dispose();
+    if (!canContinue) {
+      return false;
     }
 
-    isDisposed = true;
-
+    // TODO(vxern): This should be in the `close()` method.
     onCloseController.add((reason: null));
 
     await transport.dispose();
@@ -118,6 +116,8 @@ abstract class EngineSocket<
       await probe.dispose();
     }
 
-    return closeEventSinks();
+    await closeEventSinks();
+
+    return true;
   }
 }

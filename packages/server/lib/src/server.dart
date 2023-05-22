@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' hide Socket;
 
 import 'package:engine_io_shared/exceptions.dart';
+import 'package:engine_io_shared/mixins.dart';
 import 'package:engine_io_shared/packets.dart';
 import 'package:engine_io_shared/transports.dart' show ConnectionType;
 
@@ -13,7 +14,7 @@ import 'package:engine_io_server/src/socket.dart';
 import 'package:engine_io_server/src/transports/types/polling.dart';
 
 /// The engine.io server.
-class Server with Events {
+class Server with Events, Disposable {
   /// The version of the engine.io protocol this server operates on.
   static const protocolVersion = 4;
 
@@ -33,8 +34,6 @@ class Server with Events {
 
   /// Object responsible for managing clients connected to the server.
   final ClientManager clientManager = ClientManager();
-
-  bool isDisposed = false;
 
   Server._({
     required this.http,
@@ -300,7 +299,7 @@ class Server with Events {
   Future<void> disconnect(Socket client, [SocketException? exception]) async {
     clientManager.remove(client);
     if (exception != null) {
-      await client.except(exception);
+      client.raise(exception);
     }
     await client.dispose();
   }
@@ -326,15 +325,18 @@ class Server with Events {
 
   /// Closes the underlying HTTP server, awaiting remaining requests to be
   /// handled before disposing.
-  Future<void> dispose() async {
-    if (isDisposed) {
-      return;
+  @override
+  Future<bool> dispose() async {
+    final canContinue = await super.dispose();
+    if (!canContinue) {
+      return false;
     }
-
-    isDisposed = true;
 
     await http.close().catchError((_) {});
     await clientManager.dispose();
+
     await closeEventSinks();
+
+    return true;
   }
 }

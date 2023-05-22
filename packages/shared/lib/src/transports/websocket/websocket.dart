@@ -57,19 +57,19 @@ mixin EngineWebSocketTransport<
       try {
         packet = Packet.decode(data);
       } on FormatException {
-        return except(WebSocketTransportException.decodingPacketFailed);
+        return raise(WebSocketTransportException.decodingPacketFailed);
       }
     } else if (data is List<int>) {
       // Over websockets, binary message packets are sent as a raw stream of
       // raw bytes. No need to decode.
       packet = BinaryMessagePacket(data: Uint8List.fromList(data));
     } else {
-      return except(WebSocketTransportException.unknownDataType);
+      return raise(WebSocketTransportException.unknownDataType);
     }
 
     final exception = await processPacket(packet);
     if (exception != null) {
-      return except(exception);
+      return raise(exception);
     }
 
     return null;
@@ -89,12 +89,21 @@ mixin EngineWebSocketTransport<
 
   /// Closes the websocket connection.
   @override
-  Future<void> close(TransportException exception) async {
-    await super.close(exception);
+  Future<bool> close(TransportException exception) async {
+    final canContinue = await super.close(exception);
+    if (!canContinue) {
+      return false;
+    }
 
-    final statusCode =
-        exception is WebSocketTransportException ? exception.statusCode : 1008;
+    final int statusCode;
+    if (exception is WebSocketTransportException) {
+      statusCode = exception.statusCode;
+    } else {
+      statusCode = 1008; // Policy violation.
+    }
 
     await websocket.close(statusCode, exception.reasonPhrase);
+
+    return true;
   }
 }

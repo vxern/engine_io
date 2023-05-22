@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:engine_io_shared/packets.dart';
 import 'package:engine_io_shared/src/heart/heart.dart';
+import 'package:engine_io_shared/src/mixins.dart';
 import 'package:engine_io_shared/src/options.dart';
 import 'package:engine_io_shared/src/socket/socket.dart';
 import 'package:engine_io_shared/src/transports/connection_type.dart';
@@ -13,9 +14,14 @@ import 'package:engine_io_shared/src/transports/exceptions.dart';
 /// The method by which packets are encoded or decoded depends on the transport
 /// used.
 abstract class EngineTransport<
-    Transport extends EngineTransport<dynamic, dynamic, dynamic>,
-    Socket extends EngineSocket<dynamic, dynamic>,
-    IncomingData> with Events<Transport> {
+        Transport extends EngineTransport<dynamic, dynamic, dynamic>,
+        Socket extends EngineSocket<dynamic, dynamic>,
+        IncomingData>
+    with
+        Events<Transport>,
+        Raisable<TransportException>,
+        Closable<TransportException>,
+        Disposable {
   /// The connection type corresponding to this transport.
   final ConnectionType connectionType;
 
@@ -29,12 +35,6 @@ abstract class EngineTransport<
   /// active.
   final Heart heart;
 
-  /// Whether the transport is closed.
-  bool isClosed = false;
-
-  /// Whether the transport is disposed.
-  bool isDisposed = false;
-
   /// Creates an instance of `Transport`.
   EngineTransport({
     required this.connectionType,
@@ -44,7 +44,7 @@ abstract class EngineTransport<
           interval: connection.heartbeatInterval,
           timeout: connection.heartbeatTimeout,
         ) {
-    heart.onTimeout.listen((_) => except(TransportException.heartbeatTimeout));
+    heart.onTimeout.listen((_) => raise(TransportException.heartbeatTimeout));
   }
 
   /// Receives data from the remote party.
@@ -96,39 +96,42 @@ abstract class EngineTransport<
     return null;
   }
 
-  /// Signals that an exception occurred on the transport, and returns it to be
-  /// handled by the server.
-  TransportException except(TransportException exception) {
+  /// Signals that an exception occurred on the transport.
+  @override
+  TransportException raise(TransportException exception) {
     if (socket.isUpgrading && socket.upgrade.isProbe(connectionType)) {
       onUpgradeExceptionController.add((exception: exception));
     } else if (!exception.isSuccess) {
       onExceptionController.add((exception: exception));
     }
 
+    // TODO(vxern): This should be in the `close()` method.
     onCloseController.add((reason: exception));
 
     return exception;
   }
 
-  /// Closes any connection underlying this transport with an exception.
-  Future<void> close(TransportException exception) async {
-    if (isClosed) {
-      return;
+  @override
+  Future<bool> close(TransportException exception) async {
+    final canContinue = await super.close(exception);
+    if (!canContinue) {
+      return false;
     }
 
-    isClosed = true;
+    return true;
   }
 
-  /// Disposes of this transport, closing event streams.
-  Future<void> dispose() async {
-    if (isDisposed) {
-      return;
+  @override
+  Future<bool> dispose() async {
+    final canContinue = await super.dispose();
+    if (!canContinue) {
+      return false;
     }
-
-    isDisposed = true;
 
     heart.dispose();
 
-    return closeEventSinks();
+    await closeEventSinks();
+
+    return true;
   }
 }
