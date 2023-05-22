@@ -33,7 +33,7 @@ class Server with Events, Disposable {
   final HttpServer http;
 
   /// Object responsible for managing clients connected to the server.
-  final ClientManager clientManager = ClientManager();
+  final ClientManager clients = ClientManager();
 
   Server._({
     required this.http,
@@ -53,20 +53,20 @@ class Server with Events, Disposable {
       configuration: configuration,
     );
 
-    httpServer.listen(server.handleHttpRequest);
+    httpServer.listen(server.handleRequest);
 
     return server;
   }
 
   /// Handles an incoming HTTP request.
-  Future<void> handleHttpRequest(HttpRequest request) async {
+  Future<void> handleRequest(HttpRequest request) async {
     final ipAddress = request.connectionInfo?.remoteAddress.address;
     if (ipAddress == null) {
       await respond(request, SocketException.ipAddressUnobtainable);
       return;
     }
 
-    final clientByIP = clientManager.get(ipAddress: ipAddress);
+    final clientByIP = clients.get(ipAddress: ipAddress);
 
     if (request.uri.path != '/${configuration.path}') {
       await close(clientByIP, request, SocketException.serverPathInvalid);
@@ -96,7 +96,7 @@ class Server with Events, Disposable {
       return;
     }
 
-    final isConnected = clientManager.isConnected(ipAddress);
+    final isConnected = clients.isConnected(ipAddress);
     final isEstablishingConnection = !isConnected;
 
     if (requestMethod != 'GET' && isEstablishingConnection) {
@@ -148,14 +148,14 @@ class Server with Events, Disposable {
 
     final Socket client;
     if (isEstablishingConnection) {
-      client = await handshake(
+      client = await openConnection(
         request,
         ipAddress: ipAddress,
         connectionType: parameters.connectionType,
       );
     } else {
       final client_ =
-          clientManager.get(sessionIdentifier: parameters.sessionIdentifier);
+          clients.get(sessionIdentifier: parameters.sessionIdentifier);
       if (client_ == null) {
         await close(
           clientByIP,
@@ -199,36 +199,46 @@ class Server with Events, Disposable {
 
     switch (requestMethod) {
       case 'GET':
-        if (client.transport is! PollingTransport) {
-          await close(client, request, SocketException.getRequestUnexpected);
-          return;
-        }
-
-        final exception = await (client.transport as PollingTransport)
-            .offload(request.response);
-        if (exception != null) {
-          await respond(request, exception);
-          break;
-        }
-
-        request.response.close().ignore();
+        unawaited(processGetRequest(client, request));
       case 'POST':
-        if (client.transport is! PollingTransport) {
-          await close(client, request, SocketException.postRequestUnexpected);
-          return;
-        }
-
-        final exception =
-            await (client.transport as PollingTransport).receive(request);
-        if (exception != null) {
-          await respond(request, exception);
-          break;
-        }
-
-        request.response
-          ..statusCode = HttpStatus.ok
-          ..close().ignore();
+        unawaited(processPostRequest(client, request));
     }
+  }
+
+  /// Handles a HTTP GET request sent to the server.
+  Future<void> processGetRequest(Socket client, HttpRequest request) async {
+    if (client.transport is! PollingTransport) {
+      await close(client, request, SocketException.getRequestUnexpected);
+      return;
+    }
+
+    final exception =
+        await (client.transport as PollingTransport).offload(request.response);
+    if (exception != null) {
+      await respond(request, exception);
+      return;
+    }
+
+    request.response.close().ignore();
+  }
+
+  /// Handles a HTTP POST request sent to the server.
+  Future<void> processPostRequest(Socket client, HttpRequest request) async {
+    if (client.transport is! PollingTransport) {
+      await close(client, request, SocketException.postRequestUnexpected);
+      return;
+    }
+
+    final exception =
+        await (client.transport as PollingTransport).receive(request);
+    if (exception != null) {
+      await respond(request, exception);
+      return;
+    }
+
+    request.response
+      ..statusCode = HttpStatus.ok
+      ..close().ignore();
   }
 
   /// Opens a polling connection with a client.
@@ -236,38 +246,36 @@ class Server with Events, Disposable {
   /// All connections begin as polling before being upgraded to a better
   /// transport. If a connection is websocket-only, the transport will be
   /// upgraded immediately after the handshake.
-  Future<Socket> handshake(
+  Future<Socket> openConnection(
     HttpRequest request, {
     required String ipAddress,
     required ConnectionType connectionType,
   }) async {
-    final sessionIdentifier =
-        configuration.sessionIdentifiers.generate(request);
-
     final client = Socket(
-      sessionIdentifier: sessionIdentifier,
+      sessionIdentifier: configuration.sessionIdentifiers.generate(request),
       ipAddress: ipAddress,
       upgradeTimeout: configuration.upgradeTimeout,
     );
-    final transport =
-        PollingTransport(socket: client, connection: configuration.connection);
-    await client.setTransport(transport, isInitial: true);
+    await client.setTransport(
+      PollingTransport(socket: client, connection: configuration.connection),
+      isInitial: true,
+    );
 
-    client.onException.listen((_) => disconnect(client));
+    client.onException.listen((_) => clients.disconnect(client));
     client.onTransportClose.listen((event) {
       final (:reason, transport: _) = event;
 
       client.transport.close(reason);
-      disconnect(client);
+      clients.disconnect(client);
     });
     client.onUpgradeException.listen((event) {
       final (:exception, transport: _) = event;
 
       client.upgrade.probe.close(exception);
-      disconnect(client);
+      clients.disconnect(client);
     });
 
-    clientManager.add(client);
+    clients.add(client);
     onConnectController.add((request: request, client: client));
 
     final openPacket = OpenPacket(
@@ -284,7 +292,8 @@ class Server with Events, Disposable {
     return client;
   }
 
-  /// Responds to a HTTP request.
+  /// Taking an [exception], responds to a HTTP [request], setting its status
+  /// code and reason phrase based on the exception.
   Future<void> respond(
     HttpRequest request,
     EngineException exception,
@@ -295,15 +304,6 @@ class Server with Events, Disposable {
       ..close().ignore();
   }
 
-  /// Disconnects a client.
-  Future<void> disconnect(Socket client, [SocketException? exception]) async {
-    clientManager.remove(client);
-    if (exception != null) {
-      client.raise(exception);
-    }
-    await client.dispose();
-  }
-
   /// Closes a connection with a client, responding to their request and
   /// disconnecting them.
   Future<void> close(
@@ -312,7 +312,7 @@ class Server with Events, Disposable {
     SocketException exception,
   ) async {
     if (client != null) {
-      await disconnect(client, exception);
+      await clients.disconnect(client, exception);
     } else {
       final connectException =
           ConnectException.fromSocketException(exception, request: request);
@@ -333,10 +333,12 @@ class Server with Events, Disposable {
     }
 
     await http.close().catchError((_) {});
-    await clientManager.dispose();
+    await clients.dispose();
 
     await closeEventSinks();
 
     return true;
   }
 }
+
+mixin HttpHandling {}

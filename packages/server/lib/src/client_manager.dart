@@ -48,6 +48,15 @@ class ClientManager with Disposable {
     sessionIdentifiers.remove(client.ipAddress);
   }
 
+  /// Disconnects a client.
+  Future<void> disconnect(Socket client, [SocketException? exception]) async {
+    remove(client);
+    if (exception != null) {
+      client.raise(exception);
+    }
+    await client.dispose();
+  }
+
   /// Disposes of this `ClientManager` by removing and disposing of all managed
   /// clients.
   @override

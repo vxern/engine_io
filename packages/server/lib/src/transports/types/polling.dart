@@ -54,9 +54,12 @@ class PollingTransport extends Transport<HttpRequest>
       return raise(PollingTransportException.duplicateGetRequest);
     }
 
-    final exception = super.offload(message);
+    final exception = await super.offload(message);
+    if (exception != null) {
+      return exception;
+    }
 
-    return exception;
+    return null;
   }
 
   @override
