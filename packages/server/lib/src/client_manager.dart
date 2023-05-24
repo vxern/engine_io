@@ -6,10 +6,10 @@ import 'package:engine_io_shared/exceptions.dart';
 import 'package:engine_io_server/src/socket.dart';
 import 'package:engine_io_shared/mixins.dart';
 
-/// Object responsible for maintaining references to and handling `Socket`s of
+/// Class responsible for maintaining references to and handling `Socket`s of
 /// clients connected to the `Server`.
 class ClientManager with Disposable {
-  /// Clients identified by their session IDs.
+  /// Client sockets identified by their session IDs.
   final HashMap<String, Socket> clients = HashMap();
 
   /// Session IDs identified by the remote IP address of the client they belong
@@ -36,19 +36,23 @@ class ClientManager with Disposable {
     return socket;
   }
 
-  /// Taking a [client], adds it to the client lists.
+  /// Taking a [client] socket, begins tracking it by adding a references to it
+  /// to [clients] and its IP address to [sessionIdentifiers].
   void add(Socket client) {
     clients[client.sessionIdentifier] = client;
     sessionIdentifiers[client.ipAddress] = client.sessionIdentifier;
   }
 
-  /// Taking a [client], removes it from the client lists.
+  /// Taking a [client] socket, stops tracking it by removing references to it
+  /// from [clients], and by removing its IP address from [sessionIdentifiers].
   void remove(Socket client) {
     clients.remove(client.sessionIdentifier);
     sessionIdentifiers.remove(client.ipAddress);
   }
 
-  /// Disconnects a client.
+  /// Disconnects a [client] socket by [remove]-ing it from the manager,
+  /// (optionally) raising an exception on the [client] socket, and finally
+  /// disposing of it.
   Future<void> disconnect(Socket client, [SocketException? exception]) async {
     remove(client);
     if (exception != null) {
@@ -57,8 +61,16 @@ class ClientManager with Disposable {
     await client.dispose();
   }
 
-  /// Disposes of this `ClientManager` by removing and disposing of all managed
-  /// clients.
+  /// [disconnect]s all managed client sockets.
+  Future<void> disconnectAll([SocketException? exception]) async {
+    final futures = <Future<void>>[];
+    for (final client in List.of(clients.values)) {
+      futures.add(disconnect(client, exception));
+    }
+    await Future.wait(futures);
+  }
+
+  /// Disposes of [ClientManager], disconnecting all managed client sockets.
   @override
   Future<bool> dispose() async {
     final canContinue = await super.dispose();
@@ -66,20 +78,7 @@ class ClientManager with Disposable {
       return false;
     }
 
-    final futures = <Future<void>>[];
-    for (final client in clients.values) {
-      const exception = SocketException.serverClosing;
-
-      // TODO(vxern): Close instead of raising exception.
-      client.raise(exception);
-
-      futures.add(client.dispose());
-    }
-
-    clients.clear();
-    sessionIdentifiers.clear();
-
-    await Future.wait<void>(futures);
+    await disconnectAll(SocketException.serverClosing);
 
     return true;
   }
