@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:engine_io_shared/src/mixins.dart';
 import 'package:engine_io_shared/src/packets/packet.dart';
 import 'package:engine_io_shared/src/packets/types/message.dart';
 import 'package:engine_io_shared/src/socket/exceptions.dart';
@@ -10,7 +11,7 @@ import 'package:engine_io_shared/src/transports/transport.dart';
 /// Contains streams for events that can be emitted on the socket.
 mixin Events<
     Transport extends EngineTransport<Transport, EngineSocket<dynamic, dynamic>,
-        dynamic>> {
+        dynamic>> implements Emittable {
   /// Controller for the `onReceive` event stream.
   final onReceiveController = StreamController<({Packet packet})>.broadcast();
 
@@ -95,7 +96,7 @@ mixin Events<
   /// Added to when this socket is designated to close.
   Stream<({SocketException? reason})> get onClose => onCloseController.stream;
 
-  /// Closes all sinks.
+  @override
   Future<void> closeEventSinks() async {
     onReceiveController.close().ignore();
     onSendController.close().ignore();

@@ -1,11 +1,14 @@
 import 'dart:async';
 
-import 'package:engine_io_shared/packets.dart';
+import 'package:engine_io_shared/src/mixins.dart';
+import 'package:engine_io_shared/src/packets/packet.dart';
+import 'package:engine_io_shared/src/packets/types/message.dart';
 import 'package:engine_io_shared/src/transports/exceptions.dart';
 import 'package:engine_io_shared/src/transports/transport.dart';
 
 /// Contains streams for events that can be emitted on the transport.
-mixin Events<Transport extends EngineTransport<dynamic, dynamic, dynamic>> {
+mixin Events<Transport extends EngineTransport<dynamic, dynamic, dynamic>>
+    implements Emittable {
   /// Controller for the `onReceive` event stream.
   final onReceiveController = StreamController<({Packet packet})>();
 
@@ -66,7 +69,7 @@ mixin Events<Transport extends EngineTransport<dynamic, dynamic, dynamic>> {
   /// Added to when the transport is designated to close.
   Stream<({TransportException reason})> get onClose => onCloseController.stream;
 
-  /// Closes all sinks.
+  @override
   Future<void> closeEventSinks() async {
     onReceiveController.close().ignore();
     onSendController.close().ignore();

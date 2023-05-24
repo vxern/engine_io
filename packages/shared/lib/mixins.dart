@@ -2,4 +2,4 @@
 /// packages.
 library mixins;
 
-export 'src/mixins.dart' show Closable, Disposable, Raisable;
+export 'src/mixins.dart' show Closable, Disposable, Emittable, Raisable;

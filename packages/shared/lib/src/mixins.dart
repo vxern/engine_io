@@ -39,3 +39,10 @@ mixin Disposable {
     return isDisposed = true;
   }
 }
+
+/// Models an object that emits events through streams, which have to be closed
+/// during disposal.
+mixin Emittable {
+  /// Closes all sinks.
+  Future<void> closeEventSinks();
+}
