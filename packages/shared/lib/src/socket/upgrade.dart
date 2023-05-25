@@ -42,7 +42,7 @@ class UpgradeState<
 
   StreamSubscription? _exceptionSubscription;
 
-  /// Creates an instance of `UpgradeState`.
+  /// Creates an instance of [UpgradeState].
   UpgradeState({required this.upgradeTimeout});
 
   /// Marks the upgrade process as initiated.
@@ -81,7 +81,7 @@ class UpgradeState<
     _exceptionSubscription = null;
   }
 
-  /// Alias for `reset()`;
+  /// Alias for [reset];
   Future<void> markComplete() => reset();
 
   /// Checks if a given connection type is the connection type of the origin

@@ -24,7 +24,7 @@ abstract class EngineSocket<
   /// Whether the transport is in the process of being upgraded.
   bool get isUpgrading => upgrade.status != UpgradeStatus.none;
 
-  /// Creates an instance of `EngineSocket`.
+  /// Creates an instance of [EngineSocket].
   EngineSocket({required Duration upgradeTimeout})
       : upgrade = UpgradeState(upgradeTimeout: upgradeTimeout);
 

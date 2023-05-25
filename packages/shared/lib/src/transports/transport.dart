@@ -28,14 +28,14 @@ abstract class EngineTransport<
   /// A reference to the connection options.
   final ConnectionOptions connection;
 
-  /// A reference to the socket that is using this transport instance.
+  /// A reference to the [Socket] that is using this transport instance.
   final Socket socket;
 
-  /// Instance of `Heart` responsible for ensuring that the connection is still
+  /// Instance of [Heart] responsible for ensuring that the connection is still
   /// active.
   final Heart heart;
 
-  /// Creates an instance of `Transport`.
+  /// Creates an instance of [EngineTransport].
   EngineTransport({
     required this.connectionType,
     required this.connection,
@@ -50,23 +50,23 @@ abstract class EngineTransport<
   /// Receives data from the remote party.
   ///
   /// If an exception occurred while processing data, this method will return
-  /// `TransportException`. Otherwise `null`.
+  /// [TransportException]. Otherwise `null`.
   Future<TransportException?> receive(IncomingData data);
 
-  /// Sends a `Packet` to the remote party.
+  /// Sends a [Packet] to the remote party.
   void send(Packet packet);
 
-  /// Taking a list of `Packet`s, sends them all to the remote party.
+  /// Taking a list of [Packet]s, sends them all to the remote party.
   void sendAll(Iterable<Packet> packets) {
     for (final packet in packets) {
       send(packet);
     }
   }
 
-  /// Processes a `Packet`.
+  /// Processes a [Packet].
   ///
   /// If an exception occurred while processing a packet, this method will
-  /// return `TransportException`. Otherwise `null`.
+  /// return [TransportException]. Otherwise `null`.
   Future<TransportException?> processPacket(Packet packet) async {
     onReceiveController.add((packet: packet));
 
@@ -81,10 +81,10 @@ abstract class EngineTransport<
     return null;
   }
 
-  /// Taking a list of `Packet`s, processes them.
+  /// Taking a list of [Packet]s, processes them.
   ///
   /// If an exception occurred while processing packets, this method will return
-  /// `TransportException`. Otherwise `null`.
+  /// [TransportException]. Otherwise `null`.
   Future<TransportException?> processPackets(List<Packet> packets) async {
     for (final packet in packets) {
       final exception = await processPacket(packet);
@@ -128,7 +128,7 @@ abstract class EngineTransport<
       return false;
     }
 
-    heart.dispose();
+    await heart.dispose();
 
     await closeEventSinks();
 

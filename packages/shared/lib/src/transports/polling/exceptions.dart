@@ -5,7 +5,7 @@ class PollingTransportException extends TransportException {
   @override
   bool get isSuccess => statusCode >= 200 && statusCode < 300;
 
-  /// Creates an instance of `PollingTransportException`.
+  /// Creates an instance of [PollingTransportException].
   const PollingTransportException({
     required super.statusCode,
     required super.reasonPhrase,

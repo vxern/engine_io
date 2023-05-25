@@ -16,7 +16,7 @@ import 'package:engine_io_server/src/transports/types/polling.dart';
 /// used.
 abstract class Transport<IncomingData>
     extends EngineTransport<Transport, Socket, IncomingData> {
-  /// Creates an instance of `Transport`.
+  /// Creates an instance of [Transport].
   Transport({
     required super.connectionType,
     required super.connection,

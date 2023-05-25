@@ -9,33 +9,33 @@ import 'package:engine_io_shared/src/transports/transport.dart';
 /// Contains streams for events that can be emitted on the transport.
 mixin Events<Transport extends EngineTransport<dynamic, dynamic, dynamic>>
     implements Emittable {
-  /// Controller for the `onReceive` event stream.
+  /// Controller for the [onReceive] event stream.
   final onReceiveController = StreamController<({Packet packet})>();
 
-  /// Controller for the `onSend` event stream.
+  /// Controller for the [onSend] event stream.
   final onSendController = StreamController<({Packet packet})>();
 
-  /// Controller for the `onMessage` event stream.
+  /// Controller for the [onMessage] event stream.
   final onMessageController = StreamController<({MessagePacket packet})>();
 
-  /// Controller for the `onHeartbeat` event stream.
+  /// Controller for the [onHeartbeat] event stream.
   final onHeartbeatController = StreamController<({ProbePacket packet})>();
 
-  /// Controller for the `onInitiateUpgrade` event stream.
+  /// Controller for the [onInitiateUpgrade] event stream.
   final onInitiateUpgradeController = StreamController<({Transport next})>();
 
-  /// Controller for the `onUpgrade` event stream.
+  /// Controller for the [onUpgrade] event stream.
   final onUpgradeController = StreamController<({Transport next})>();
 
-  /// Controller for the `onUpgradeException` event stream.
+  /// Controller for the [onUpgradeException] event stream.
   final onUpgradeExceptionController =
       StreamController<({TransportException exception})>.broadcast();
 
-  /// Controller for the `onException` event stream.
+  /// Controller for the [onException] event stream.
   final onExceptionController =
       StreamController<({TransportException exception})>();
 
-  /// Controller for the `onClose` event stream.
+  /// Controller for the [onClose] event stream.
   final onCloseController = StreamController<({TransportException reason})>();
 
   /// Added to when a packet is received.

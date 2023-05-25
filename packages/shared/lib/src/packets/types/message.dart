@@ -8,10 +8,12 @@ import 'package:engine_io_shared/src/packets/type.dart';
 ///
 /// Either party, server or client, sends a message to the other.
 abstract class MessagePacket<DataType> extends Packet {
-  /// The data sent with this packet.
+  /// The data sent with this [MessagePacket].
   final DataType data;
 
-  /// Creates an instance of `MessagePacket`.
+  /// Creates an instance of [MessagePacket].
+  ///
+  /// [data] - The data being sent with this packet.
   const MessagePacket({required super.type, required this.data});
 
   @override
@@ -24,14 +26,14 @@ abstract class MessagePacket<DataType> extends Packet {
 ///
 /// [data] is a plaintext message.
 class TextMessagePacket extends MessagePacket<String> {
-  /// Creates an instance of `TextMessagePacket`.
+  /// Creates an instance of [TextMessagePacket].
   const TextMessagePacket({required super.data})
       : super(type: PacketType.textMessage);
 
   @override
   String get encoded => data;
 
-  /// Decodes `content`, creating an instance of `TextMessagePacket`.
+  /// Decodes [content], creating an instance of [TextMessagePacket].
   factory TextMessagePacket.decode(String content) =>
       TextMessagePacket(data: content);
 }
@@ -42,20 +44,20 @@ class TextMessagePacket extends MessagePacket<String> {
 ///
 /// [data] is a list of 8-bit unsigned integers.
 class BinaryMessagePacket extends MessagePacket<Uint8List> {
-  /// Creates an instance of `BinaryMessagePacket`.
+  /// Creates an instance of [BinaryMessagePacket].
   const BinaryMessagePacket({required super.data})
       : super(type: PacketType.binaryMessage);
 
-  /// ⚠️ Throws a `FormatException` if [data] is not a valid set of
+  /// ⚠️ Throws a [FormatException] if [data] is not a valid set of
   /// bytes in UTF-8.
   @override
   String get encoded => base64.encode(data);
 
   /// Decodes [content], which should be a base64-encoded string in UTF-8.
   ///
-  /// Returns an instance of `BinaryMessagePacket`.
+  /// Returns an instance of [BinaryMessagePacket].
   ///
-  /// ⚠️ Throws a `FormatException` if [content] is not a valid base64-encoded
+  /// ⚠️ Throws a [FormatException] if [content] is not a valid base64-encoded
   /// string in UTF-8.
   factory BinaryMessagePacket.decode(String content) {
     try {

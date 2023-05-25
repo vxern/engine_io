@@ -1,5 +1,4 @@
-/// A from-scratch implementation of the engine.io client and server, the system
-/// underlying socket.io.
+/// A from-scratch implementation of the engine.io server.
 library engine_io_server;
 
 export 'package:engine_io_shared/exceptions.dart';

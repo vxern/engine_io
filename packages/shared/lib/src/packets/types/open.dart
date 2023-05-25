@@ -30,7 +30,7 @@ class OpenPacket extends Packet {
   final int maximumChunkBytes;
   static const _maximumChunkBytes = 'maxPayload';
 
-  /// Creates an instance of `OpenPacket`.
+  /// Creates an instance of [OpenPacket].
   const OpenPacket({
     required this.sessionIdentifier,
     required this.availableConnectionUpgrades,
@@ -52,12 +52,16 @@ class OpenPacket extends Packet {
       );
 
   /// Decodes [content], which should be a valid JSON-encoded object with the
-  /// expected properties `sid`, `upgrades`, `pingInterval`, `pingTimeout` and
-  /// `maxPayload`.
+  /// expected properties:
+  /// - `sid`
+  /// - `upgrades`
+  /// - `pingInterval`
+  /// - `pingTimeout`
+  /// - `maxPayload`
   ///
-  /// Returns an instance of `OpenPacket`.
+  /// Returns an instance of [OpenPacket].
   ///
-  /// ⚠️ Throws a `FormatException` if:
+  /// ⚠️ Throws a [FormatException] if:
   /// - [content] is not a valid JSON-encoded object.
   /// - A connection type is not supported.
   /// - A property of the decoded JSON object is not valid.

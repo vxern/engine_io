@@ -5,7 +5,7 @@ class WebSocketTransportException extends TransportException {
   @override
   bool get isSuccess => statusCode == 1000; // Normal closure
 
-  /// Creates an instance of `WebSocketTransportException`.
+  /// Creates an instance of [WebSocketTransportException].
   const WebSocketTransportException({
     required super.statusCode,
     required super.reasonPhrase,

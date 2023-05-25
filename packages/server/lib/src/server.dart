@@ -9,12 +9,29 @@ import 'package:engine_io_shared/transports.dart' show ConnectionType;
 import 'package:engine_io_server/src/client_manager.dart';
 import 'package:engine_io_server/src/configuration.dart';
 import 'package:engine_io_server/src/events.dart';
-import 'package:engine_io_server/src/query.dart';
 import 'package:engine_io_server/src/socket.dart';
 import 'package:engine_io_server/src/transports/types/polling.dart';
 
+/// Contains the parameters extracted from a HTTP query.
+typedef QueryParameters = ({
+  int protocolVersion,
+  ConnectionType connectionType,
+  String? sessionIdentifier
+});
+
 /// The engine.io server.
 class Server with Events, Disposable {
+  /// The version of the engine.io protocol in use.
+  static const _protocolVersion = 'EIO';
+
+  /// The type of connection the client wishes to use or to upgrade to.
+  static const _connectionType = 'transport';
+
+  /// The client's session identifier.
+  ///
+  /// This value can only be equal to `null` when initiating a connection.
+  static const _sessionIdentifier = 'sid';
+
   /// The version of the engine.io protocol this server operates on.
   static const protocolVersion = 4;
 
@@ -41,7 +58,7 @@ class Server with Events, Disposable {
   }) : configuration =
             configuration ?? ServerConfiguration.defaultConfiguration;
 
-  /// Creates an instance of `Server` that immediately begins to listen for
+  /// Creates an instance of [Server] that immediately begins to listen for
   /// incoming requests.
   static Future<Server> bind(
     Uri uri, {
@@ -106,7 +123,7 @@ class Server with Events, Disposable {
 
     final QueryParameters parameters;
     try {
-      parameters = await QueryParameters.read(
+      parameters = readQuery(
         request,
         availableConnectionTypes:
             configuration.connection.availableConnectionTypes,
@@ -115,9 +132,11 @@ class Server with Events, Disposable {
       await close(clientByIP, request, exception);
       return;
     }
+    final (protocolVersion: _, :connectionType, :sessionIdentifier) =
+        parameters;
 
     if (!isEstablishingConnection) {
-      if (parameters.sessionIdentifier == null) {
+      if (sessionIdentifier == null) {
         await close(
           clientByIP,
           request,
@@ -125,7 +144,7 @@ class Server with Events, Disposable {
         );
         return;
       }
-    } else if (parameters.sessionIdentifier != null) {
+    } else if (sessionIdentifier != null) {
       await close(
         clientByIP,
         request,
@@ -134,9 +153,8 @@ class Server with Events, Disposable {
       return;
     }
 
-    if (parameters.sessionIdentifier != null) {
-      if (!configuration.sessionIdentifiers
-          .validate(parameters.sessionIdentifier!)) {
+    if (sessionIdentifier != null) {
+      if (!configuration.sessionIdentifiers.validate(sessionIdentifier)) {
         await close(
           clientByIP,
           request,
@@ -151,11 +169,10 @@ class Server with Events, Disposable {
       client = await openConnection(
         request,
         ipAddress: ipAddress,
-        connectionType: parameters.connectionType,
+        connectionType: connectionType,
       );
     } else {
-      final client_ =
-          clients.get(sessionIdentifier: parameters.sessionIdentifier);
+      final client_ = clients.get(sessionIdentifier: sessionIdentifier);
       if (client_ == null) {
         await close(
           clientByIP,
@@ -168,15 +185,14 @@ class Server with Events, Disposable {
       client = client_;
     }
 
-    final isSeekingUpgrade =
-        parameters.connectionType != client.transport.connectionType;
+    final isSeekingUpgrade = connectionType != client.transport.connectionType;
     final isWebsocketUpgradeRequest =
         WebSocketTransformer.isUpgradeRequest(request);
 
     if (isSeekingUpgrade) {
       final exception = await client.transport.handleUpgradeRequest(
         request,
-        connectionType: parameters.connectionType,
+        connectionType: connectionType,
         skipUpgradeProcess: isEstablishingConnection,
       );
       if (exception != null) {
@@ -203,6 +219,64 @@ class Server with Events, Disposable {
       case 'POST':
         unawaited(processPostRequest(client, request));
     }
+  }
+
+  /// Taking a HTTP request, reads the parameters from the query.
+  ///
+  /// Returns an instance of [QueryParameters].
+  ///
+  /// ⚠️ Throws a [SocketException] if any of the parameters are invalid.
+  QueryParameters readQuery(
+    HttpRequest request, {
+    required Set<ConnectionType> availableConnectionTypes,
+  }) {
+    final int protocolVersion;
+    final ConnectionType connectionType;
+    final String? sessionIdentifier;
+
+    {
+      final protocolVersion_ = request.uri.queryParameters[_protocolVersion];
+      final connectionType_ = request.uri.queryParameters[_connectionType];
+      final sessionIdentifier_ =
+          request.uri.queryParameters[_sessionIdentifier];
+
+      if (protocolVersion_ == null || connectionType_ == null) {
+        throw SocketException.missingMandatoryParameters;
+      }
+
+      try {
+        protocolVersion = int.parse(protocolVersion_);
+      } on FormatException {
+        throw SocketException.protocolVersionInvalidType;
+      }
+
+      if (protocolVersion != Server.protocolVersion) {
+        if (protocolVersion <= 0 ||
+            protocolVersion > Server.protocolVersion + 1) {
+          throw SocketException.protocolVersionInvalid;
+        }
+
+        throw SocketException.protocolVersionUnsupported;
+      }
+
+      try {
+        connectionType = ConnectionType.byName(connectionType_);
+      } on FormatException {
+        throw SocketException.connectionTypeInvalid;
+      }
+
+      if (!availableConnectionTypes.contains(connectionType)) {
+        throw SocketException.connectionTypeUnavailable;
+      }
+
+      sessionIdentifier = sessionIdentifier_;
+    }
+
+    return (
+      protocolVersion: protocolVersion,
+      connectionType: connectionType,
+      sessionIdentifier: sessionIdentifier,
+    );
   }
 
   /// Handles a HTTP GET request sent to the server.
@@ -314,10 +388,8 @@ class Server with Events, Disposable {
     if (client != null) {
       await clients.disconnect(client, exception);
     } else {
-      final connectException =
-          ConnectException.fromSocketException(exception, request: request);
       onConnectExceptionController
-          .add((request: request, exception: connectException));
+          .add((request: request, exception: exception));
     }
 
     await respond(request, exception);
@@ -340,5 +412,3 @@ class Server with Events, Disposable {
     return true;
   }
 }
-
-mixin HttpHandling {}

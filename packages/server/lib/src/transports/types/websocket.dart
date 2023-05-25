@@ -13,7 +13,10 @@ class WebSocketTransport extends Transport
   @override
   final WebSocket websocket;
 
-  /// Creates an instance of `WebSocketTransport`.
+  /// Creates an instance of [WebSocketTransport].
+  ///
+  /// [websocket] - The websocket object used for sending and receiving
+  /// messages.
   WebSocketTransport({
     required super.connection,
     required super.socket,
@@ -24,14 +27,14 @@ class WebSocketTransport extends Transport
   /// with the websocket magic string, hashing it using sha1, and encoding it as
   /// base64 before returning it.
   ///
-  /// ⚠️ Throws a `TransportException` if the passed key is not a valid 16-byte
+  /// ⚠️ Throws a [TransportException] if the passed key is not a valid 16-byte
   /// base64-encoded UTF-8 string.
   static String transformKey(String key) =>
       EngineWebSocketTransport.transformKey(key);
 
   /// Taking a HTTP request, upgrades it to a websocket transport.
   ///
-  /// ⚠️ Throws a `TransportException` if:
+  /// ⚠️ Throws a [TransportException] if:
   /// - The request was not a valid websocket upgrade request.
   /// - The websocket key was not valid.
   static Future<WebSocketTransport> fromRequest(

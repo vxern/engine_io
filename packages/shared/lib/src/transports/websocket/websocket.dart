@@ -27,7 +27,7 @@ mixin EngineWebSocketTransport<
   /// with the websocket magic string, hashing it using sha1, and encoding it as
   /// base64 before returning it.
   ///
-  /// ⚠️ Throws a `TransportException` if the passed key is not a valid 16-byte
+  /// ⚠️ Throws a [TransportException] if the passed key is not a valid 16-byte
   /// base64-encoded UTF-8 string.
   static String transformKey(String key) {
     {

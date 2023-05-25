@@ -2,18 +2,18 @@ import 'dart:async';
 import 'dart:collection';
 
 import 'package:engine_io_shared/exceptions.dart';
-
-import 'package:engine_io_server/src/socket.dart';
 import 'package:engine_io_shared/mixins.dart';
 
-/// Class responsible for maintaining references to and handling `Socket`s of
-/// clients connected to the `Server`.
+import 'package:engine_io_server/src/socket.dart';
+
+/// Class responsible for maintaining references to and handling [Socket]s of
+/// clients connected to the engine.io server.
 class ClientManager with Disposable {
-  /// Client sockets identified by their session IDs.
+  /// Client [Socket]s identified by their session IDs.
   final HashMap<String, Socket> clients = HashMap();
 
-  /// Session IDs identified by the remote IP address of the client they belong
-  /// to.
+  /// Session IDs identified by the remote IP address of the client [Socket]
+  /// they belong to.
   final HashMap<String, String> sessionIdentifiers = HashMap();
 
   /// Determines whether a client is connected by checking if their IP address
@@ -22,11 +22,11 @@ class ClientManager with Disposable {
       sessionIdentifiers.containsKey(ipAddress);
 
   /// Taking either an [ipAddress] or a [sessionIdentifier], matches the
-  /// parameter to a client `Socket`.
+  /// parameter to a client [Socket].
   Socket? get({String? ipAddress, String? sessionIdentifier}) {
     assert(
       ipAddress != null || sessionIdentifier != null,
-      '''At least one parameter, either `ipAddress` or `sessionIdentifier` must be supplied.''',
+      '''At least one parameter, either `ipAddress` or `sessionIdentifier`, must be supplied.''',
     );
 
     final sessionIdentifier_ =

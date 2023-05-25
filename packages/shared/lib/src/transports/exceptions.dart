@@ -1,3 +1,4 @@
+import 'package:engine_io_shared/src/packets/type.dart';
 import 'package:engine_io_shared/src/exception.dart';
 
 /// An exception that occurred on the transport.
@@ -5,7 +6,7 @@ class TransportException extends EngineException {
   @override
   bool get isSuccess => statusCode >= 200 && statusCode < 300;
 
-  /// Creates an instance of `TransportException`.
+  /// Creates an instance of [TransportException].
   const TransportException({
     required super.statusCode,
     required super.reasonPhrase,
@@ -17,8 +18,8 @@ class TransportException extends EngineException {
     reasonPhrase: 'Did not respond to a heartbeat in time.',
   );
 
-  /// The client sent a hearbeat (a `pong` request) that the server did not
-  /// expect to receive.
+  /// The client sent a hearbeat (a [PacketType.pong] request) that the server
+  /// did not expect to receive.
   static const heartbeatUnexpected = TransportException(
     statusCode: 400,
     reasonPhrase:
@@ -27,8 +28,9 @@ class TransportException extends EngineException {
 
   /// The client sent a packet it should not have sent.
   ///
-  /// Packets that are illegal for the client to send include `open`, `close`,
-  /// non-probe `ping` and probe `pong` packets.
+  /// Packets that are illegal for the client to send include [PacketType.open],
+  /// [PacketType.close], non-probe [PacketType.ping] and probe
+  /// [PacketType.pong] packets.
   static const packetIllegal = TransportException(
     statusCode: 400,
     reasonPhrase:
@@ -64,28 +66,28 @@ class TransportException extends EngineException {
     reasonPhrase: 'The transport is not being upgraded.',
   );
 
-  /// The client sent a duplicate probe `ping` packet.
+  /// The client sent a duplicate probe [PacketType.ping] packet.
   static const transportAlreadyProbed = TransportException(
     statusCode: 400,
     reasonPhrase: 'Attempted to probe transport that has already been probed.',
   );
 
-  /// The client sent an `upgrade` packet without having sent a probe `ping`
-  /// packet.
+  /// The client sent an [PacketType.upgrade] packet without having sent a probe
+  /// [PacketType.ping] packet.
   static const transportNotProbed = TransportException(
     statusCode: 400,
     reasonPhrase: 'Attempted to upgrade transport without probing first.',
   );
 
-  /// The client sent a duplicate `upgrade` packet.
+  /// The client sent a duplicate [PacketType.upgrade] packet.
   static const transportAlreadyUpgraded = TransportException(
     statusCode: 400,
     reasonPhrase:
         'Attempted to upgrade transport that has already been upgraded.',
   );
 
-  /// The client sent a probe `ping` packet to the old transport, rather than
-  /// the new one.
+  /// The client sent a probe [PacketType.ping] packet to the old transport,
+  /// rather than the new one.
   static const transportIsOrigin = TransportException(
     statusCode: 400,
     reasonPhrase: 'Attempted to probe the transport that is being upgraded.',

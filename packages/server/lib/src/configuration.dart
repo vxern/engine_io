@@ -4,19 +4,27 @@ import 'package:engine_io_shared/options.dart' as shared;
 import 'package:engine_io_shared/transports.dart';
 import 'package:uuid/uuid.dart';
 
-/// Object responsible for creating unique identifiers for `Socket`s.
+import 'package:engine_io_server/src/server.dart';
+
+/// Object responsible for creating unique identifiers for connected clients.
 const uuid = Uuid();
 
-/// Contains functions used in generating and validating session identifiers.
+/// Defines the functions used to generate and validate session identifiers of
+/// clients connected to the server.
 class SessionIdentifierConfiguration {
-  /// Function that takes a HTTP request and returns a unique session
-  /// identifier.
+  /// Takes a HTTP [request] and returns a unique session identifier.
   final String Function(HttpRequest request) generate;
 
-  /// Function that takes a session identifier and validates it.
+  /// Takes a session identifier and validates it is in the correct format.
   final bool Function(String id) validate;
 
-  /// Creates an instance of `UUID`.
+  /// Creates an instance of [SessionIdentifierConfiguration].
+  ///
+  /// [generate] - The function to use to generate the unique ID. The default
+  /// algorithm used is version 4 of UUID.
+  ///
+  /// [validate] - The function to use to validate a unique ID is in the
+  /// expected format. The default algorithm used is version 4 of UUID.
   const SessionIdentifierConfiguration({
     required this.generate,
     required this.validate,
@@ -50,7 +58,21 @@ class ConnectionOptions implements shared.ConnectionOptions {
   @override
   final int maximumChunkBytes;
 
-  /// Creates an instance of `ConnectionOptions`.
+  /// Creates an instance of [ConnectionOptions].
+  ///
+  /// [availableConnectionTypes] - The types of connection the server will
+  /// accept. It will not be possible for clients to establish a connection over
+  /// a transport type not featured in this set, and their request to open a
+  /// connection will be rejected with an exception.
+  ///
+  /// [heartbeatInterval] - The amount of time the server should wait in-between
+  /// pinging the client.
+  ///
+  /// [heartbeatTimeout] - The amount of time the server should wait for a
+  /// response from the client before closing the transport in question.
+  ///
+  /// [maximumChunkBytes] - The maximum number of bytes to be transmitted in a
+  /// given message. This limit applies to both HTTP and WebSocket messages.
   const ConnectionOptions({
     this.availableConnectionTypes = const {
       ConnectionType.polling,
@@ -78,22 +100,22 @@ Maximum chunk bytes: ${(maximumChunkBytes / 1024).toStringAsFixed(1)} KiB''';
   }
 }
 
-/// Settings used in configuring the engine.io `Server`.
+/// Settings used in configuring the engine.io [Server].
 class ServerConfiguration {
-  /// The path the `Server` should listen on for requests.
+  /// The path the [Server] should listen for requests on.
   final String path;
 
-  /// The options used for the connection.
+  /// The [ConnectionOptions] used for the connection.
   final ConnectionOptions connection;
 
-  /// The amount of time the server should wait for a transport upgrade to be
+  /// The amount of time the [Server] should wait for a transport upgrade to be
   /// finalised before cancelling it and closing the probe transport.
   final Duration upgradeTimeout;
 
-  /// The configuration for how session identifiers are generated and validated.
+  /// The configuration for session identifiers.
   final SessionIdentifierConfiguration sessionIdentifiers;
 
-  /// Creates an instance of `ServerConfiguration`.
+  /// Creates an instance of [ServerConfiguration].
   ServerConfiguration({
     this.path = 'engine.io/',
     this.connection = ConnectionOptions.defaultOptions,

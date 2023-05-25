@@ -12,45 +12,45 @@ import 'package:engine_io_shared/src/transports/transport.dart';
 mixin Events<
     Transport extends EngineTransport<Transport, EngineSocket<dynamic, dynamic>,
         dynamic>> implements Emittable {
-  /// Controller for the `onReceive` event stream.
+  /// Controller for the [onReceive] event stream.
   final onReceiveController = StreamController<({Packet packet})>.broadcast();
 
-  /// Controller for the `onSend` event stream.
+  /// Controller for the [onSend] event stream.
   final onSendController = StreamController<({Packet packet})>.broadcast();
 
-  /// Controller for the `onMessage` event stream.
+  /// Controller for the [onMessage] event stream.
   final onMessageController =
       StreamController<({MessagePacket packet})>.broadcast();
 
-  /// Controller for the `onHeartbeat` event stream.
+  /// Controller for the [onHeartbeat] event stream.
   final onHeartbeatController =
       StreamController<({ProbePacket packet})>.broadcast();
 
-  /// Controller for the `onInitiateUpgrade` event stream.
+  /// Controller for the [onInitiateUpgrade] event stream.
   final onInitiateUpgradeController =
       StreamController<({Transport current, Transport next})>.broadcast();
 
-  /// Controller for the `onUpgrade` event stream.
+  /// Controller for the [onUpgrade] event stream.
   final onUpgradeController =
       StreamController<({Transport previous, Transport current})>.broadcast();
 
-  /// Controller for the `onUpgradeException` event stream.
+  /// Controller for the [onUpgradeException] event stream.
   final onUpgradeExceptionController = StreamController<
       ({Transport transport, TransportException exception})>.broadcast();
 
-  /// Controller for the `onTransportException` event stream.
+  /// Controller for the [onTransportException] event stream.
   final onTransportExceptionController = StreamController<
       ({Transport transport, TransportException exception})>.broadcast();
 
-  /// Controller for the `onTransportClose` event stream.
+  /// Controller for the [onTransportClose] event stream.
   final onTransportCloseController = StreamController<
       ({Transport transport, TransportException reason})>.broadcast();
 
-  /// Controller for the `onException` event stream.
+  /// Controller for the [onException] event stream.
   final onExceptionController =
       StreamController<({SocketException exception})>.broadcast();
 
-  /// Controller for the `onClose` event stream.
+  /// Controller for the [onClose] event stream.
   final onCloseController =
       StreamController<({SocketException? reason})>.broadcast();
 

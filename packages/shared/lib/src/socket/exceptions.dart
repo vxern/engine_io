@@ -6,7 +6,7 @@ class SocketException extends EngineException {
   @override
   bool get isSuccess => statusCode >= 200 && statusCode < 300;
 
-  /// Creates an instance of `SocketException`.
+  /// Creates an instance of [SocketException].
   const SocketException({
     required super.statusCode,
     required super.reasonPhrase,

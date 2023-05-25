@@ -12,9 +12,9 @@ class PacketContents {
   /// An empty packet content.
   static const empty = '';
 
-  /// Applies to packets of type `PacketType.ping` and `PacketType.pong` when
-  /// used to 'probe' a new `Transport`, i.e. ensuring that it is operational
-  /// and is processing packets.
+  /// Applies to packets of type [PacketType.ping] and [PacketType.pong] when
+  /// used to 'probe' a new transport, i.e. ensuring that it is operational and
+  /// is processing packets.
   static const probe = 'probe';
 }
 
@@ -53,7 +53,7 @@ abstract class Packet {
   /// The type of this packet.
   final PacketType type;
 
-  /// Creates an instance of `Packet` with the given [type].
+  /// Creates an instance of [Packet] with the given [type].
   const Packet({required this.type});
 
   /// Indicates whether or not this packet has a binary payload.
@@ -70,7 +70,7 @@ abstract class Packet {
 
   /// Taking an packet in its [encoded] format, attempts to decode it.
   ///
-  /// If the packet is invalid, throws a `FormatException`.
+  /// ⚠️ Throws a [FormatException] if the [encoded] packet is invalid.
   static Packet decode(String encoded) {
     final match = packetExpression.firstMatch(encoded);
     if (match == null) {
@@ -106,8 +106,8 @@ abstract class Packet {
   }
 }
 
-/// A packet used in the upgrade process to ensure that a new `Transport` is
-/// operational and is processing packets before upgrading.
+/// A packet used in the upgrade process to ensure that a new transport
+/// is operational and is processing packets before upgrading.
 abstract class ProbePacket extends Packet {
   /// Determines whether or not this is a probe packet.
   final bool isProbe;
@@ -117,7 +117,10 @@ abstract class ProbePacket extends Packet {
   /// This value is known beforehand and determined by the value of [isProbe].
   final String _content;
 
-  /// Creates an instance of `ProbePacket`.
+  /// Creates an instance of [ProbePacket].
+  ///
+  /// [isProbe] - Whether the packet is a probe packet, used for probing a new
+  /// transport, rather than for the heartbeat.
   const ProbePacket({required super.type, required this.isProbe})
       : _content = isProbe ? PacketContents.probe : PacketContents.empty;
 

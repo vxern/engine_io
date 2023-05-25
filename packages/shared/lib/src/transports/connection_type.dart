@@ -6,17 +6,17 @@ enum ConnectionType {
   /// A polling connection over HTTP merely imitating a real-time connection.
   polling(upgradesTo: {ConnectionType.websocket});
 
-  /// Defines the `ConnectionType`s this `ConnectionType` can be upgraded to.
+  /// Defines the [ConnectionType]s this [ConnectionType] can be upgraded to.
   final Set<ConnectionType> upgradesTo;
 
-  /// Creates an instance of `ConnectionType`.
+  /// Creates an instance of [ConnectionType].
   const ConnectionType({required Set<ConnectionType>? upgradesTo})
       : upgradesTo = upgradesTo ?? const {};
 
-  /// Matches [name] to a `ConnectionType`.
+  /// Matches [name] to a [ConnectionType].
   ///
-  /// ⚠️ Throws a `FormatException` If [name] does not match the name of any
-  /// supported `ConnectionType`.
+  /// ⚠️ Throws a [FormatException] If [name] does not match the name of any
+  /// supported [ConnectionType].
   factory ConnectionType.byName(String name) {
     for (final type in ConnectionType.values) {
       if (type.name == name) {

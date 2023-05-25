@@ -29,8 +29,8 @@ mixin EnginePollingTransport<
   /// specified.
   static const implicitContentType = 'text/plain';
 
-  /// A queue containing the `Packet`s accumulated to be sent to this socket on
-  /// the next HTTP poll cycle.
+  /// A queue containing the [Packet]s accumulated to be sent over this
+  /// transport on the next HTTP poll cycle.
   final Queue<Packet> packetBuffer = Queue();
 
   /// Lock for GET requests.
@@ -39,22 +39,22 @@ mixin EnginePollingTransport<
   /// Lock for POST requests.
   final post = Lock();
 
-  /// Method for extracting the content type from a `HttpMessage`.
+  /// Method for extracting the content type from [message].
   String? getContentType(IncomingData message);
 
-  /// Method for getting the content length of a `HttpMessage`.
+  /// Method for getting the content length of [message].
   int getContentLength(IncomingData message);
 
   /// Method for setting the status code of an outgoing message.
   void setStatusCode(OutgoingData message, int statusCode);
 
-  /// Method for setting the content type of a `HttpMessage`.
+  /// Method for setting the content type of [message].
   void setContentType(OutgoingData message, String contentType);
 
-  /// Method for setting the content length of a `HttpMessage`.
+  /// Method for setting the content length of [message].
   void setContentLength(OutgoingData message, int contentLength);
 
-  /// Taking a list of bytes, writes them to a `HttpMessage`.
+  /// Taking a list of bytes, writes them to [message].
   void writeToBuffer(OutgoingData message, List<int> bytes);
 
   @override
@@ -128,7 +128,7 @@ mixin EnginePollingTransport<
   /// Taking a HTTP response object, attempts to offload packets onto it,
   /// concatenating them before closing the response.
   ///
-  /// On failure returns a `TransportException`, otherwise `null`.
+  /// Returns a [TransportException] on failure, otherwise `null`.
   Future<TransportException?> offload(OutgoingData message) async {
     get.lock();
 

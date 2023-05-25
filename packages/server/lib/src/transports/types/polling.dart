@@ -18,7 +18,7 @@ class PollingTransport extends Transport<HttpRequest>
   /// for more information.
   static final recordSeparator = EnginePollingTransport.recordSeparator;
 
-  /// Creates an instance of `PollingTransport`.
+  /// Creates an instance of [PollingTransport].
   PollingTransport({required super.connection, required super.socket})
       : super(connectionType: ConnectionType.polling);
 
@@ -111,8 +111,6 @@ class PollingTransport extends Transport<HttpRequest>
     if (!canContinue) {
       return false;
     }
-
-    heart.dispose();
 
     return true;
   }

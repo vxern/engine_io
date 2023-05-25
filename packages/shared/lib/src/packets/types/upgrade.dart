@@ -7,6 +7,6 @@ import 'package:engine_io_shared/src/packets/type.dart';
 /// having received a reply from the server, indicates to the server that the
 /// transport is now upgraded to the new one.
 class UpgradePacket extends Packet {
-  /// Creates an instance of `UpgradePacket`.
+  /// Creates an instance of [UpgradePacket].
   const UpgradePacket() : super(type: PacketType.upgrade);
 }
