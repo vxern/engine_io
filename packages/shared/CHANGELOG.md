@@ -1,0 +1,30 @@
+# 0.1.0
+
+- Packets:
+  - Define the available types of packet in the `PacketType` enum.
+  - Define the `Packet` class as the super-type of all packets.
+  - Model packets:
+    - `open`: `OpenPacket`
+    - `close`: `ClosePacket`
+    - `ping`: `PingPacket` : `ProbePacket`
+    - `pong`: `PongPacket` : `ProbePacket`
+    - `message`: `TextMessagePacket`, `BinaryMessagePacket` : `MessagePacket`
+    - `upgrade`: `UpgradePacket`
+    - `noop`: `NoopPacket`
+- Define the `Socket` class as an interface to the connection between client and
+  server.
+  - Define the `UpgradeState` class to manage the state of transport upgrades.
+- Transports:
+  - Define the `Transport` class:
+    - Define the `PollingTransport` mixin.
+    - Define the `WebSocketTransport` mixin.
+  - Define the `Heart` class to manage the heartbeat mechanism.
+  - Define the available connection types in the `ConnectionType` enum.
+- Options:
+  - Define connection options in the `ConnectionOptions` class.
+- Exceptions:
+  - Define the `EngineException` class:
+    - Define the `SocketException` class.
+    - Define the `TransportException` class:
+      - Define the `PollingTransportException` class.
+      - Define the `WebSocketTransportException` class.

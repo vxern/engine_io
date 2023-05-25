@@ -1,0 +1,21 @@
+publish_to: none
+
+name: engine_io_client
+version: 0.1.0
+
+description: >-
+  A purely Dart implementation of the engine.io client,
+  made with quality and correctness in mind.
+
+homepage: https://github.com/wordcollector/engine_io
+repository: https://github.com/wordcollector/engine_io
+issue_tracker: https://github.com/wordcollector/engine_io/issues
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dev_dependencies:
+  words: ^0.4.1 # Lints.
+
+import_sorter:
+  comments: false

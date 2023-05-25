@@ -1,0 +1,24 @@
+publish_to: none
+
+name: engine_io_shared
+version: 0.1.0
+
+description: Shared dependency of the engine.io server and client.
+
+homepage: https://github.com/wordcollector/engine_io
+repository: https://github.com/wordcollector/engine_io
+issue_tracker: https://github.com/wordcollector/engine_io/issues
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  crypto: ^3.0.3 # Cryptography functions. (Only `sha1` is used.)
+
+dev_dependencies:
+  import_sorter: ^4.6.0 # Sorting imports.
+  test: ^1.24.2 # Testing.
+  words: ^0.4.1 # Lints.
+
+import_sorter:
+  comments: false
