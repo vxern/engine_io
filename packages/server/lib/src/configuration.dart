@@ -45,19 +45,7 @@ class SessionIdentifierConfiguration {
 }
 
 /// Options for the connection.
-class ConnectionOptions implements shared.ConnectionOptions {
-  @override
-  final Set<ConnectionType> availableConnectionTypes;
-
-  @override
-  final Duration heartbeatInterval;
-
-  @override
-  final Duration heartbeatTimeout;
-
-  @override
-  final int maximumChunkBytes;
-
+class ConnectionOptions extends shared.ConnectionOptions {
   /// Creates an instance of [ConnectionOptions].
   ///
   /// [availableConnectionTypes] - The types of connection the server will
@@ -74,30 +62,17 @@ class ConnectionOptions implements shared.ConnectionOptions {
   /// [maximumChunkBytes] - The maximum number of bytes to be transmitted in a
   /// given message. This limit applies to both HTTP and WebSocket messages.
   const ConnectionOptions({
-    this.availableConnectionTypes = const {
+    super.availableConnectionTypes = const {
       ConnectionType.polling,
       ConnectionType.websocket,
     },
-    this.heartbeatInterval = const Duration(seconds: 15),
-    this.heartbeatTimeout = const Duration(seconds: 10),
-    this.maximumChunkBytes = 1024 * 128,
+    super.heartbeatInterval = const Duration(seconds: 15),
+    super.heartbeatTimeout = const Duration(seconds: 10),
+    super.maximumChunkBytes = 1024 * 128,
   });
 
   /// The default connection options.
   static const defaultOptions = ConnectionOptions();
-
-  @override
-  String toString() {
-    final connectionTypesFormatted = availableConnectionTypes
-        .map((connectionType) => connectionType.name)
-        .join(', ');
-
-    return '''
-Available connection types: $connectionTypesFormatted
-Heartbeat interval: ${heartbeatInterval.inSeconds.toStringAsFixed(1)} s
-Heartbeat timeout: ${heartbeatTimeout.inSeconds.toStringAsFixed(1)} s
-Maximum chunk bytes: ${(maximumChunkBytes / 1024).toStringAsFixed(1)} KiB''';
-  }
 }
 
 /// Settings used in configuring the engine.io [Server].
@@ -149,8 +124,21 @@ class ServerConfiguration {
   static final defaultConfiguration = ServerConfiguration();
 
   @override
-  String toString() => '''
+  String toString() =>
+      '''
 Server path: $path
 $connection
 Upgrade timeout: ${upgradeTimeout.inSeconds.toStringAsFixed(1)} s''';
+
+  @override
+  bool operator ==(Object other) =>
+      other is ServerConfiguration &&
+      other.path == path &&
+      other.connection == connection &&
+      other.upgradeTimeout == upgradeTimeout &&
+      other.sessionIdentifiers == sessionIdentifiers;
+
+  @override
+  int get hashCode =>
+      Object.hash(path, connection, upgradeTimeout, sessionIdentifiers);
 }

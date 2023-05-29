@@ -18,4 +18,13 @@ abstract class EngineException implements Exception {
     required this.statusCode,
     required this.reasonPhrase,
   });
+
+  @override
+  bool operator ==(Object other) =>
+      other is EngineException &&
+      other.statusCode == statusCode &&
+      other.reasonPhrase == reasonPhrase;
+
+  @override
+  int get hashCode => Object.hash(statusCode, reasonPhrase);
 }

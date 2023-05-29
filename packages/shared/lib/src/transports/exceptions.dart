@@ -1,5 +1,5 @@
-import 'package:engine_io_shared/src/packets/type.dart';
 import 'package:engine_io_shared/src/exception.dart';
+import 'package:engine_io_shared/src/packets/type.dart';
 
 /// An exception that occurred on the transport.
 class TransportException extends EngineException {

@@ -1,5 +1,6 @@
 import 'package:engine_io_shared/src/packets/type.dart';
 import 'package:engine_io_shared/src/transports/connection_type.dart';
+import 'package:engine_io_shared/src/utils.dart';
 
 /// Options for the connection.
 ///
@@ -38,4 +39,33 @@ class ConnectionOptions {
     required this.heartbeatTimeout,
     required this.maximumChunkBytes,
   });
+
+  @override
+  String toString() {
+    final connectionTypesFormatted = availableConnectionTypes
+        .map((connectionType) => connectionType.name)
+        .join(', ');
+
+    return '''
+Available connection types: $connectionTypesFormatted
+Heartbeat interval: ${heartbeatInterval.inSeconds.toStringAsFixed(1)} s
+Heartbeat timeout: ${heartbeatTimeout.inSeconds.toStringAsFixed(1)} s
+Maximum chunk bytes: ${(maximumChunkBytes / 1024).toStringAsFixed(1)} KiB''';
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is ConnectionOptions &&
+      setsEqual(other.availableConnectionTypes, availableConnectionTypes) &&
+      other.heartbeatInterval == heartbeatInterval &&
+      other.heartbeatTimeout == heartbeatTimeout &&
+      other.maximumChunkBytes == maximumChunkBytes;
+
+  @override
+  int get hashCode => Object.hash(
+        availableConnectionTypes,
+        heartbeatInterval,
+        heartbeatTimeout,
+        maximumChunkBytes,
+      );
 }
