@@ -23,7 +23,7 @@ dev_dependencies:
   async: ^2.11.0 # Testing streams.
   import_sorter: ^4.6.0 # Sorting imports.
   test: ^1.24.2 # Testing.
-  words: ^0.4.1 # Lints.
+  words: ^0.4.2 # Lints.
 
 import_sorter:
   comments: false
