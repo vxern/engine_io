@@ -92,18 +92,20 @@ class ServerConfiguration {
 
   /// Creates an instance of [ServerConfiguration].
   ServerConfiguration({
-    this.path = 'engine.io/',
+    this.path = '/engine.io/',
     this.connection = ConnectionOptions.defaultOptions,
     this.upgradeTimeout = const Duration(seconds: 15),
     this.sessionIdentifiers =
         SessionIdentifierConfiguration.defaultConfiguration,
   })  : assert(
-          !path.startsWith('/'),
-          'The server path must not start with a slash.',
+          path.startsWith('/'),
+          'The server path must start with a slash. '
+          "Example: '${ServerConfiguration.defaultConfiguration.path}'",
         ),
         assert(
           path.endsWith('/'),
-          'The server path must end with a slash.',
+          'The server path must end with a slash. '
+          "Example: '${ServerConfiguration.defaultConfiguration.path}'",
         ),
         assert(
           connection.availableConnectionTypes.isNotEmpty,
@@ -124,8 +126,7 @@ class ServerConfiguration {
   static final defaultConfiguration = ServerConfiguration();
 
   @override
-  String toString() =>
-      '''
+  String toString() => '''
 Server path: $path
 $connection
 Upgrade timeout: ${upgradeTimeout.inSeconds.toStringAsFixed(1)} s''';

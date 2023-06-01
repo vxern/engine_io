@@ -75,7 +75,7 @@ class Server with Events, Disposable {
 
     final clientByIP = clients.get(ipAddress: ipAddress);
 
-    if (request.uri.path != '/${configuration.path}') {
+    if (request.uri.path != configuration.path) {
       await close(clientByIP, request, SocketException.serverPathInvalid);
       return;
     }
