@@ -14,8 +14,17 @@ issue_tracker: https://github.com/wordcollector/engine_io/issues
 environment:
   sdk: '>=3.0.0 <4.0.0'
 
+dependencies:
+  engine_io_shared:
+    path: ../shared
+  universal_io: ^2.2.1
+
 dev_dependencies:
-  words: ^0.4.1 # Lints.
+  engine_io_server: # Testing server-client connection.
+    path: ../server
+  import_sorter: ^4.6.0 # Sorting imports.
+  test: ^1.24.3 # Testing.
+  words: ^0.4.2 # Lints.
 
 import_sorter:
   comments: false
