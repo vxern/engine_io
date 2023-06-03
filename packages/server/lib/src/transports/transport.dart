@@ -21,7 +21,7 @@ abstract class Transport<IncomingData>
     required super.connectionType,
     required super.connection,
     required super.socket,
-  }) {
+  }) : super(isSender: true) {
     heart.onTick.listen((_) => send(Packet.ping));
   }
 
@@ -72,7 +72,7 @@ abstract class Transport<IncomingData>
           break;
         }
 
-        heart.reset();
+        heart.beat();
       case PacketType.close:
         exception = TransportException.requestedClosure;
       case PacketType.upgrade:
