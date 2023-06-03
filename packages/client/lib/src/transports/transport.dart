@@ -14,5 +14,5 @@ abstract class Transport<IncomingData>
     required super.connectionType,
     required super.connection,
     required super.socket,
-  });
+  }) : super(isSender: false);
 }

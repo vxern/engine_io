@@ -40,11 +40,14 @@ abstract class EngineTransport<
     required this.connectionType,
     required this.connection,
     required this.socket,
-  }) : heart = Heart.create(
-          interval: connection.heartbeatInterval,
-          timeout: connection.heartbeatTimeout,
+    required bool isSender,
+  }) : heart = Heart(
+          isSender: isSender,
+          heartbeatInterval: connection.heartbeatInterval,
+          heartbeatTimeout: connection.heartbeatTimeout,
         ) {
     heart.onTimeout.listen((_) => raise(TransportException.heartbeatTimeout));
+    heart.start();
   }
 
   /// Receives data from the remote party.
