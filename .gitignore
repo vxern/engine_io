@@ -1,7 +1,8 @@
 # Files and directories created by pub
 
 .dart_tool/
+.idea/
 .packages
-melos_engine_io_client.iml
-pubspec_overrides.yaml
+melos_engine_io.iml
 pubspec.lock
+pubspec_overrides.yaml

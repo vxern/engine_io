@@ -1,0 +1,35 @@
+name: engine_io
+
+packages:
+  - packages/*
+
+scripts:
+  tests:
+    run: >-
+      melos run analyze &&
+      melos run format &&
+      melos run test:example &&
+      melos run test:test
+  test:test:
+    run: dart test --concurrency 1
+    exec:
+      concurrency: 1
+      failFast: true
+    description: Run tests in each constituent package.
+  test:example:
+    run: dart run --verbosity error ./example/example.dart
+    exec:
+      failFast: true
+    description: Run the example file (example.dart) in each constituent package.
+    packageFilters:
+      dirExists: example
+  analyze:
+    run: dart analyze
+    exec:
+      failFast: true
+    description: Run the Dart analyzer in each constituent package.
+  format:
+    run: >-
+      dart format . &&
+      dart run import_sorter:main
+    description: Run the Dart formatter in each constituent package.

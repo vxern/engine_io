@@ -1,5 +1,6 @@
-import 'package:engine_io_server/engine_io_server.dart';
 import 'dart:io';
+
+import 'package:engine_io_server/engine_io_server.dart';
 
 void main() async {
   final server = await Server.bind(Uri.http('localhost', '/engine.io'));
@@ -33,5 +34,6 @@ void main() async {
   );
   print(server.configuration);
 
+  // Dispose of the server once it is no longer needed, freeing resources.
   await server.dispose();
 }

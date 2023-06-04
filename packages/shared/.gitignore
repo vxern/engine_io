@@ -2,4 +2,5 @@
 
 .dart_tool/
 .packages
+melos_engine_io_shared.iml
 pubspec.lock
