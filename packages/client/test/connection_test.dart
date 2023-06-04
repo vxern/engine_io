@@ -59,7 +59,7 @@ void main() async {
       await client.dispose();
 
       expect(client.isDisposed, isTrue);
-      expect(client.server.isDisposed, isTrue);
+      expect(client.socket.isDisposed, isTrue);
 
       await server.dispose();
     });

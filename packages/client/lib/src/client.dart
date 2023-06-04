@@ -29,14 +29,14 @@ class Client with Disposable {
   final HttpClient http;
 
   /// Reference to the [Socket] used for interfacing with the server.
-  final Socket server;
+  final Socket socket;
 
   /// Creates an instance of [Client].
   Client({
     required this.sessionIdentifier,
     required this.configuration,
     required this.http,
-    required this.server,
+    required this.socket,
   });
 
   /// Taking a [uri], attempts to connect to an engine.io server.
@@ -117,7 +117,7 @@ class Client with Disposable {
         upgradeTimeout: upgradeTimeout,
       ),
       http: http,
-      server: server,
+      socket: server,
     );
 
     return client;
@@ -131,7 +131,7 @@ class Client with Disposable {
     }
 
     http.close();
-    await server.dispose();
+    await socket.dispose();
 
     return true;
   }
