@@ -7,15 +7,21 @@ description: >-
   A purely Dart implementation of the engine.io client,
   made with quality and correctness in mind.
 
-homepage: https://github.com/wordcollector/engine_io
-repository: https://github.com/wordcollector/engine_io
-issue_tracker: https://github.com/wordcollector/engine_io/issues
+homepage: https://github.com/WordCollector/engine_io/tree/main/packages/client
+repository: https://github.com/WordCollector/engine_io/tree/main/packages/client
+issue_tracker: https://github.com/WordCollector/engine_io/tree/main/packages/client/issues
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
 
-dev_dependencies:
-  words: ^0.4.1 # Lints.
+dependencies:
+  engine_io_shared:
+    path: ../shared
+  universal_io: ^2.2.1
 
-import_sorter:
-  comments: false
+dev_dependencies:
+  engine_io_server: # Testing server-client connection.
+    path: ../server
+  # Precise versions are specified in the monorepo.
+  test: any # Testing.
+  words: any # Lints.

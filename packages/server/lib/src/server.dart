@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' hide Socket;
 
 import 'package:engine_io_shared/exceptions.dart';
+import 'package:engine_io_shared/keys.dart';
 import 'package:engine_io_shared/mixins.dart';
 import 'package:engine_io_shared/packets.dart';
 import 'package:engine_io_shared/transports.dart' show ConnectionType;
@@ -21,17 +22,6 @@ typedef QueryParameters = ({
 
 /// The engine.io server.
 class Server with Events, Disposable {
-  /// The version of the engine.io protocol in use.
-  static const _protocolVersion = 'EIO';
-
-  /// The type of connection the client wishes to use or to upgrade to.
-  static const _connectionType = 'transport';
-
-  /// The client's session identifier.
-  ///
-  /// This value can only be equal to `null` when initiating a connection.
-  static const _sessionIdentifier = 'sid';
-
   /// The version of the engine.io protocol this server operates on.
   static const protocolVersion = 4;
 
@@ -85,7 +75,7 @@ class Server with Events, Disposable {
 
     final clientByIP = clients.get(ipAddress: ipAddress);
 
-    if (request.uri.path != '/${configuration.path}') {
+    if (request.uri.path != configuration.path) {
       await close(clientByIP, request, SocketException.serverPathInvalid);
       return;
     }
@@ -235,10 +225,12 @@ class Server with Events, Disposable {
     final String? sessionIdentifier;
 
     {
-      final protocolVersion_ = request.uri.queryParameters[_protocolVersion];
-      final connectionType_ = request.uri.queryParameters[_connectionType];
+      final protocolVersion_ =
+          request.uri.queryParameters[QueryParameterKeys.protocolVersion];
+      final connectionType_ =
+          request.uri.queryParameters[QueryParameterKeys.connectionType];
       final sessionIdentifier_ =
-          request.uri.queryParameters[_sessionIdentifier];
+          request.uri.queryParameters[QueryParameterKeys.sessionIdentifier];
 
       if (protocolVersion_ == null || connectionType_ == null) {
         throw SocketException.missingMandatoryParameters;

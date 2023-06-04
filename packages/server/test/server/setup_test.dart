@@ -34,7 +34,7 @@ void main() {
     });
 
     test('sets a custom configuration.', () async {
-      final configuration = ServerConfiguration(path: 'custom-path/');
+      final configuration = ServerConfiguration(path: '/custom-path/');
 
       final server = await Server.bind(remoteUrl, configuration: configuration);
 
