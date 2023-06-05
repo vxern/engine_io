@@ -27,4 +27,7 @@ abstract class EngineException implements Exception {
 
   @override
   int get hashCode => Object.hash(statusCode, reasonPhrase);
+
+  @override
+  String toString() => '$statusCode, $reasonPhrase';
 }
