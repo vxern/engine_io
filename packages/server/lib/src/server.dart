@@ -290,13 +290,14 @@ class Server with Events, Disposable {
 
   /// Handles a HTTP POST request sent to the server.
   Future<void> processPostRequest(Socket client, HttpRequest request) async {
-    if (client.transport is! PollingTransport) {
+    final transport = client.transport;
+
+    if (transport is! PollingTransport) {
       await close(client, request, SocketException.postRequestUnexpected);
       return;
     }
 
-    final exception =
-        await (client.transport as PollingTransport).receive(request);
+    final exception = await transport.receive(request);
     if (exception != null) {
       await respond(request, exception);
       return;
@@ -322,10 +323,6 @@ class Server with Events, Disposable {
       ipAddress: ipAddress,
       upgradeTimeout: configuration.upgradeTimeout,
     );
-    await client.setTransport(
-      PollingTransport(socket: client, connection: configuration.connection),
-      isInitial: true,
-    );
 
     client.onException.listen((_) => clients.disconnect(client));
     client.onTransportClose.listen((event) {
@@ -340,6 +337,11 @@ class Server with Events, Disposable {
       client.upgrade.probe.close(exception);
       clients.disconnect(client);
     });
+
+    await client.setTransport(
+      PollingTransport(socket: client, connection: configuration.connection),
+      isInitial: true,
+    );
 
     clients.add(client);
     onConnectController.add((request: request, client: client));

@@ -45,9 +45,6 @@ mixin EnginePollingTransport<
   /// Method for getting the content length of [message].
   int getContentLength(IncomingData message);
 
-  /// Method for setting the status code of an outgoing message.
-  void setStatusCode(OutgoingData message, int statusCode);
-
   /// Method for setting the content type of [message].
   void setContentType(OutgoingData message, String contentType);
 
@@ -58,13 +55,10 @@ mixin EnginePollingTransport<
   void writeToBuffer(OutgoingData message, List<int> bytes);
 
   @override
+  void send(Packet packet) => packetBuffer.add(packet);
+
+  @override
   Future<TransportException?> receive(IncomingData message) async {
-    if (post.isLocked) {
-      return raise(PollingTransportException.duplicatePostRequest);
-    }
-
-    post.lock();
-
     final List<int> bytes;
     try {
       bytes =
@@ -120,8 +114,6 @@ mixin EnginePollingTransport<
       return raise(exception);
     }
 
-    post.unlock();
-
     return null;
   }
 
@@ -130,18 +122,8 @@ mixin EnginePollingTransport<
   ///
   /// Returns a [TransportException] on failure, otherwise `null`.
   Future<TransportException?> offload(OutgoingData message) async {
-    get.lock();
-
-    // NOTE: The code responsible for sending back a `noop` packet to a
-    // pending GET request that would normally be here is not required
-    // because this package does not support deferred responses.
-
-    setStatusCode(message, 200);
-
     if (packetBuffer.isEmpty) {
       setContentType(message, implicitContentType);
-
-      get.unlock();
 
       return null;
     }
@@ -197,8 +179,6 @@ mixin EnginePollingTransport<
     for (final packet in packets) {
       onSendController.add((packet: packet));
     }
-
-    get.unlock();
 
     return null;
   }

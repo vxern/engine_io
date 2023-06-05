@@ -1,7 +1,6 @@
 import 'dart:io' hide Socket;
 
 import 'package:engine_io_shared/exceptions.dart';
-import 'package:engine_io_shared/packets.dart';
 import 'package:engine_io_shared/transports.dart';
 
 import 'package:engine_io_server/src/socket.dart';
@@ -37,7 +36,7 @@ class PollingTransport extends Transport<HttpRequest>
   void setContentType(HttpResponse message, String contentType) =>
       message.headers.set(HttpHeaders.contentTypeHeader, contentType);
 
-  @override
+  /// Method for setting the status code of a response.
   void setStatusCode(HttpResponse message, int statusCode) =>
       message.statusCode = statusCode;
 
@@ -46,7 +45,19 @@ class PollingTransport extends Transport<HttpRequest>
       message.add(bytes);
 
   @override
-  void send(Packet packet) => packetBuffer.add(packet);
+  Future<TransportException?> receive(HttpRequest message) async {
+    if (post.isLocked) {
+      return raise(PollingTransportException.duplicatePostRequest);
+    }
+
+    post.lock();
+
+    final exception = await super.receive(message);
+
+    post.unlock();
+
+    return exception;
+  }
 
   @override
   Future<TransportException?> offload(HttpResponse message) async {
@@ -54,12 +65,19 @@ class PollingTransport extends Transport<HttpRequest>
       return raise(PollingTransportException.duplicateGetRequest);
     }
 
-    final exception = await super.offload(message);
-    if (exception != null) {
-      return exception;
-    }
+    get.lock();
 
-    return null;
+    // NOTE: The code responsible for sending back a `noop` packet to a
+    // pending GET request that would normally be here is not required
+    // because this package does not support deferred responses.
+
+    setStatusCode(message, 200);
+
+    final exception = await super.offload(message);
+
+    get.unlock();
+
+    return exception;
   }
 
   @override
