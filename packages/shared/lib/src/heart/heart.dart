@@ -89,6 +89,10 @@ class Heart with Events, Disposable {
 
   /// Starts the [Heart].
   void start() {
+    if (isReceiver) {
+      isExpectingHeartbeat = true;
+    }
+
     switch (nextAction) {
       case HeartAction.beat:
         timer = Timer(heartbeatInterval, () {
@@ -109,7 +113,6 @@ class Heart with Events, Disposable {
   /// resetting the current [timer] and [nextAction] to the default action.
   void beat() {
     if (isReceiver) {
-      isExpectingHeartbeat = true;
       onTickController.add(());
     } else {
       isExpectingHeartbeat = false;
