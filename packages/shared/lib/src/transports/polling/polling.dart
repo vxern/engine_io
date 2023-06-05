@@ -81,6 +81,10 @@ mixin EnginePollingTransport<
       return raise(PollingTransportException.contentLengthLimitExceeded);
     }
 
+    if (bytes.isEmpty) {
+      return null;
+    }
+
     final String body;
     try {
       body = utf8.decode(bytes);
