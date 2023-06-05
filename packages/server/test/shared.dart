@@ -21,7 +21,7 @@ Future<GetResult> getRaw(
   String? sessionIdentifier,
 }) async {
   final url = serverUrl.replace(
-    queryParameters: <String, String>{
+    queryParameters: {
       if (protocolVersion != null) 'EIO': protocolVersion,
       if (connectionType != null) 'transport': connectionType,
       if (sessionIdentifier != null) 'sid': sessionIdentifier,
@@ -80,7 +80,7 @@ Future<HttpClientResponse> post(
   ContentType? contentType,
 }) async {
   final url = serverUrl.replace(
-    queryParameters: <String, String>{
+    queryParameters: {
       'EIO': Server.protocolVersion.toString(),
       'transport': connectionType ?? ConnectionType.polling.name,
       'sid': sessionIdentifier,
@@ -109,7 +109,7 @@ Future<HttpClientResponse> upgradeRequest(
   String? connectionType,
 }) async {
   final url = serverUrl.replace(
-    queryParameters: <String, String>{
+    queryParameters: {
       'EIO': Server.protocolVersion.toString(),
       'transport': connectionType ?? ConnectionType.websocket.name,
       if (sessionIdentifier != null) 'sid': sessionIdentifier,
