@@ -6,7 +6,6 @@ import 'package:engine_io_shared/src/packets/packet.dart';
 import 'package:engine_io_shared/src/socket/socket.dart';
 import 'package:engine_io_shared/src/transports/exceptions.dart';
 import 'package:engine_io_shared/src/transports/polling/exceptions.dart';
-import 'package:engine_io_shared/src/transports/polling/lock.dart';
 import 'package:engine_io_shared/src/transports/transport.dart';
 
 /// Provides polling transport
@@ -32,12 +31,6 @@ mixin EnginePollingTransport<
   /// A queue containing the [Packet]s accumulated to be sent over this
   /// transport on the next HTTP poll cycle.
   final Queue<Packet> packetBuffer = Queue();
-
-  /// Lock for GET requests.
-  final get = Lock();
-
-  /// Lock for POST requests.
-  final post = Lock();
 
   /// Method for extracting the content type from [message].
   String? getContentType(IncomingData message);

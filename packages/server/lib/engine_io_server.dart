@@ -6,8 +6,8 @@ export 'package:engine_io_shared/packets.dart';
 export 'package:engine_io_shared/socket.dart';
 export 'package:engine_io_shared/transports.dart' show ConnectionType;
 
-export 'src/transports/types/polling.dart' show PollingTransport;
-export 'src/transports/types/websocket.dart' show WebSocketTransport;
+export 'src/transports/polling/polling.dart' show PollingTransport;
+export 'src/transports/websocket/websocket.dart' show WebSocketTransport;
 export 'src/transports/transport.dart' show Transport;
 export 'src/configuration.dart' show ConnectionOptions, ServerConfiguration;
 export 'src/server.dart' show Server;

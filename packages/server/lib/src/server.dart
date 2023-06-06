@@ -11,7 +11,7 @@ import 'package:engine_io_server/src/client_manager.dart';
 import 'package:engine_io_server/src/configuration.dart';
 import 'package:engine_io_server/src/events.dart';
 import 'package:engine_io_server/src/socket.dart';
-import 'package:engine_io_server/src/transports/types/polling.dart';
+import 'package:engine_io_server/src/transports/polling/polling.dart';
 
 /// Contains the parameters extracted from a HTTP query.
 typedef QueryParameters = ({

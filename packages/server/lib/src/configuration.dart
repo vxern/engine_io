@@ -126,8 +126,7 @@ class ServerConfiguration {
   static final defaultConfiguration = ServerConfiguration();
 
   @override
-  String toString() =>
-      '''
+  String toString() => '''
 Server path: $path
 $connection
 Upgrade timeout: ${upgradeTimeout.inSeconds.toStringAsFixed(1)} s''';
