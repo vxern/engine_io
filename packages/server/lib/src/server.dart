@@ -205,9 +205,11 @@ class Server with Events, Disposable {
 
     switch (requestMethod) {
       case 'GET':
-        unawaited(processGetRequest(client, request));
+        // ignore: unawaited_futures
+        processGetRequest(client, request);
       case 'POST':
-        unawaited(processPostRequest(client, request));
+        // ignore: unawaited_futures
+        processPostRequest(client, request);
     }
   }
 
