@@ -57,11 +57,12 @@ abstract class EngineTransport<
   Future<TransportException?> receive(IncomingData data);
 
   /// Sends a [Packet] to the remote party.
-  void send(Packet packet);
+  Future<void> send(Packet packet);
 
   /// Taking a list of [Packet]s, sends them all to the remote party.
-  void sendAll(Iterable<Packet> packets) {
+  Future<void> sendAll(Iterable<Packet> packets) async {
     for (final packet in packets) {
+      // ignore: unawaited_futures
       send(packet);
     }
   }

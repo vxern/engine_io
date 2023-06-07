@@ -48,7 +48,7 @@ mixin EnginePollingTransport<
   void writeToBuffer(OutgoingData message, List<int> bytes);
 
   @override
-  void send(Packet packet) => packetBuffer.add(packet);
+  Future<void> send(Packet packet) async => packetBuffer.add(packet);
 
   @override
   Future<TransportException?> receive(IncomingData message) async {

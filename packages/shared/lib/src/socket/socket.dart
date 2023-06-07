@@ -83,10 +83,10 @@ abstract class EngineSocket<
   }
 
   /// Sends a packet to this client.
-  void send(Packet packet) => transport.send(packet);
+  Future<void> send(Packet packet) async => transport.send(packet);
 
   /// Sends a list of packets to this client.
-  void sendAll(List<Packet> packet) => transport.sendAll(packet);
+  Future<void> sendAll(List<Packet> packet) async => transport.sendAll(packet);
 
   @override
   SocketException raise(SocketException exception) {

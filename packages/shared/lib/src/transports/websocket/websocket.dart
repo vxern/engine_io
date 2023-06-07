@@ -76,7 +76,7 @@ mixin EngineWebSocketTransport<
   }
 
   @override
-  void send(Packet packet) {
+  Future<void> send(Packet packet) async {
     // Do not encode binary message packets over websockets.
     if (packet is BinaryMessagePacket) {
       websocket.add(packet.data);
